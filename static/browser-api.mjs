@@ -19,7 +19,7 @@ import {
   wavBlob,
   base64Bytes,
   encodeMP3,
-} from "./audio.mjs";
+} from "./audio.mjs?v=2.1.2";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();

@@ -1,5 +1,5 @@
 /* lamejs is self-hosted; no network or credentials are used by the encoder. */
-importScripts("./vendor/lame.min.js");
+importScripts("./vendor/lame.min.js?v=1.2.1");
 self.onmessage = (event) => {
   try {
     const { pcm, rate } = event.data,
@@ -22,3 +22,5 @@ self.onmessage = (event) => {
     self.postMessage({ error: true });
   }
 };
+
+self.postMessage({ ready: true });

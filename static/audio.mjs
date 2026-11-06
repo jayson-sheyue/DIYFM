@@ -147,25 +147,107 @@ export function mixPCM(voice, music) {
   }
   return out;
 }
-export function encodeMP3(pcm) {
+export function encodeMP3(
+  pcm,
+  {
+    workerFactory = () =>
+      new Worker(new URL("./mp3-worker.js?v=2.1.2", import.meta.url)),
+    loadEncoder = () => import("./vendor/lame-encoder.mjs?v=1.2.1"),
+    yieldToPage = () => new Promise((resolve) => setTimeout(resolve, 0)),
+  } = {},
+) {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL("./mp3-worker.js", import.meta.url));
-    const timeout = setTimeout(() => {
-      worker.terminate();
-      reject(new Error("MP3 编码超时，请重试，原音频仍保留。"));
-    }, 180000);
-    worker.onmessage = (e) => {
-      clearTimeout(timeout);
-      worker.terminate();
-      e.data.error
-        ? reject(new Error("MP3 编码未完成，原音频仍保留。"))
-        : resolve(new Blob(e.data.chunks, { type: "audio/mpeg" }));
+    let worker,
+      startup,
+      phase = "worker";
+    const stopWorker = () => {
+      clearTimeout(startup);
+      if (worker) {
+        worker.onmessage = worker.onerror = worker.onmessageerror = null;
+        worker.terminate();
+        worker = null;
+      }
     };
-    worker.onerror = () => {
+    const finish = (failure, blob) => {
+      if (phase === "done") return;
+      phase = "done";
       clearTimeout(timeout);
-      worker.terminate();
-      reject(new Error("无法启动 MP3 编码，请确认浏览器允许本站脚本运行。"));
+      stopWorker();
+      failure ? reject(failure) : resolve(blob);
     };
-    worker.postMessage({ pcm, rate: RATE }, [pcm.buffer]);
+    const timeout = setTimeout(
+      () => finish(new Error("MP3 编码超时，请重试，原音频仍保留。")),
+      180000,
+    );
+    const fallback = async () => {
+      if (phase !== "worker") return;
+      phase = "fallback";
+      stopWorker();
+      try {
+        const { default: lame } = await loadEncoder();
+        if (phase === "done") return;
+        const encoder = new lame.Mp3Encoder(1, RATE, 128),
+          chunks = [];
+        // Small batches keep navigation responsive and avoid a second full-size PCM buffer.
+        for (let offset = 0; offset < pcm.length; offset += 1152) {
+          if (phase === "done") return;
+          const samples = new Int16Array(Math.min(1152, pcm.length - offset));
+          for (let i = 0; i < samples.length; i++)
+            samples[i] = Math.max(
+              -32768,
+              Math.min(32767, pcm[offset + i] * 32767),
+            );
+          const output = encoder.encodeBuffer(samples);
+          if (output.length) chunks.push(new Uint8Array(output));
+          if (offset % (1152 * 16) === 0) await yieldToPage();
+        }
+        if (phase === "done") return;
+        const end = encoder.flush();
+        if (end.length) chunks.push(new Uint8Array(end));
+        finish(null, new Blob(chunks, { type: "audio/mpeg" }));
+      } catch {
+        finish(
+          new Error(
+            "MP3 编码器加载或运行失败，请刷新页面后重试。原音频仍保留。",
+          ),
+        );
+      }
+    };
+    try {
+      worker = workerFactory();
+      worker.onmessage = (event) => {
+        if (phase !== "worker") return;
+        if (event.data?.ready) {
+          clearTimeout(startup);
+          try {
+            // Preserve the input for fallback if the Worker fails after startup.
+            worker.postMessage({ pcm, rate: RATE });
+          } catch {
+            void fallback();
+          }
+        } else if (event.data?.error) {
+          finish(new Error("MP3 编码未完成，原音频仍保留。"));
+        } else if (
+          Array.isArray(event.data?.chunks) &&
+          event.data.chunks.length
+        ) {
+          finish(null, new Blob(event.data.chunks, { type: "audio/mpeg" }));
+        } else {
+          void fallback();
+        }
+      };
+      worker.onerror = (event) => {
+        event.preventDefault?.();
+        void fallback();
+      };
+      worker.onmessageerror = () => {
+        void fallback();
+      };
+      startup = setTimeout(() => {
+        void fallback();
+      }, 8000);
+    } catch {
+      void fallback();
+    }
   });
 }

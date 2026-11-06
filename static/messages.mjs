@@ -1235,6 +1235,11 @@ export const MESSAGES = {
     ja: "MP3への変換が完了しませんでした。元の音声は保持されています。",
     "zh-CN": "MP3 编码未完成，原音频仍保留。",
   },
+  "MP3 编码器加载或运行失败，请刷新页面后重试。原音频仍保留。": {
+    en: "The MP3 encoder could not load or run. Refresh this page and try again. The original audio is safe.",
+    ja: "MP3エンコーダーを読み込めないか、実行できませんでした。ページを再読み込みして再試行してください。元の音声は保持されています。",
+    "zh-CN": "MP3 编码器加载或运行失败，请刷新页面后重试。原音频仍保留。",
+  },
   "无法启动 MP3 编码，请确认浏览器允许本站脚本运行。": {
     en: "Cannot start MP3 encoding. Check that this browser allows site scripts.",
     ja: "MP3への変換を開始できません。このサイトのスクリプトが許可されているか確認してください。",
