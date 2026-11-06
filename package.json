@@ -1,0 +1,18 @@
+{
+  "name": "diyfm",
+  "version": "2.0.0",
+  "private": true,
+  "description": "A private-by-default, bring-your-own-key language radio for GitHub Pages",
+  "scripts": {
+    "test": "node --test tests/*.js tests/*.mjs",
+    "build": "node scripts/build-pages.mjs",
+    "vendor": "node scripts/vendor.mjs"
+  },
+  "dependencies": {
+    "fflate": "0.8.2",
+    "lamejs": "1.2.1"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.2.4"
+  }
+}

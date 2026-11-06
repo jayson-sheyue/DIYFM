@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DIYFM — 来信语言电台</title>
+    <link rel="icon" type="image/svg+xml" href="./letter-radio.svg" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://generativelanguage.googleapis.com; worker-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <link rel="stylesheet" href="./app.css?v=2.0.0" />
+  </head>
+  <body>
+    <div class="chassis">
+      <aside class="dock">
+        <div class="brand">
+          <div class="brand-top">
+            <span class="brand-mark">DIYFM</span>
+            <button
+              type="button"
+              class="inbox-btn"
+              id="inbox-btn"
+              aria-expanded="false"
+              aria-controls="inbox"
+            >
+              消息
+              <span id="inbox-badge" hidden>0</span>
+            </button>
+          </div>
+          <div id="inbox" class="inbox" hidden>
+            <div class="inbox-head">
+              <strong>消息</strong>
+              <button type="button" class="linkish" id="inbox-close">
+                关闭
+              </button>
+            </div>
+            <ul id="inbox-list"></ul>
+            <p class="hint">
+              关闭或看过不会取消合成，也不会删除成片。试听命中缓存时不会记一条新消息。
+            </p>
+          </div>
+          <p class="brand-sub">听一封来信，走进另一种语言。</p>
+        </div>
+
+        <nav class="dock-nav" aria-label="主导航">
+          <button
+            type="button"
+            class="nav-btn is-on"
+            data-view="studio"
+            id="nav-studio"
+          >
+            <span>收听</span>
+          </button>
+          <button
+            type="button"
+            class="nav-btn"
+            data-view="settings"
+            id="nav-settings"
+          >
+            <span>设置</span>
+          </button>
+        </nav>
+
+        <div class="rack-section">
+          <div class="rack-head">
+            <span class="rack-title">节目</span>
+          </div>
+          <button type="button" class="new-channel" id="new-channel">
+            ＋ 新建频道
+          </button>
+          <ul id="show-list"></ul>
+        </div>
+
+        <footer class="dock-foot">
+          <p>英语 · 日语<br />一点日常，一点意外。</p>
+        </footer>
+      </aside>
+
+      <main class="desk">
+        <div id="conflict-bar" class="conflict" hidden></div>
+        <section id="studio"></section>
+        <section id="settings-view" hidden>
+          <header class="desk-head">
+            <div class="desk-title-group">
+              <p class="station-tag">自己的 Key，自己的电台</p>
+              <h1>设置</h1>
+            </div>
+            <div class="desk-actions">
+              <button type="button" class="quiet" id="export-backup">
+                导出备份
+              </button>
+              <button type="button" class="quiet" id="import-backup">
+                导入备份
+              </button>
+              <input
+                type="file"
+                id="backup-file"
+                accept=".zip,application/zip"
+                hidden
+              />
+              <button type="button" class="quiet" id="clear-preview-cache">
+                清理试听缓存
+              </button>
+              <button type="button" class="quiet" id="restore-settings">
+                恢复模型默认
+              </button>
+              <button type="button" class="primary" id="save-settings">
+                保存模型设置
+              </button>
+            </div>
+          </header>
+          <article class="spec-card key-card">
+            <header class="spec-head">
+              <span class="spec-index">01</span>
+              <div>
+                <h2>Google AI Studio API Key</h2>
+                <p class="spec-sub">
+                  每位测试者使用自己的 Key 和额度。本站不会提供或收集共享 Key。
+                </p>
+              </div>
+            </header>
+            <div class="spec-body">
+              <label for="api-key">你的 API Key</label>
+              <input
+                id="api-key"
+                class="mono-input"
+                type="password"
+                autocomplete="off"
+                spellcheck="false"
+                autocapitalize="off"
+                placeholder="从 Google AI Studio 复制，仅本页内存中使用"
+                aria-describedby="auth-note"
+              />
+              <div class="key-actions">
+                <button type="button" class="primary" id="enable-api-key">
+                  在本页启用 Key</button
+                ><button type="button" class="quiet" id="test-api-key">
+                  检查 Key</button
+                ><button type="button" class="quiet" id="clear-api-key">
+                  清除本页 Key</button
+                ><span id="key-state" class="hint" role="status"></span>
+              </div>
+              <p class="auth-note" id="auth-note"></p>
+              <p class="hint">
+                Key 不写入浏览器存储、备份、地址栏或仓库。只通过 HTTPS
+                请求头发给 Google；不要在不信任的网页或浏览器扩展环境中使用
+                Key。刷新、关闭或离开页面后会清除。
+              </p>
+              <p class="hint">
+                <a
+                  href="https://aistudio.google.com/apikey"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >获取 API Key</a
+                >
+                ·
+                <a
+                  href="https://ai.google.dev/gemini-api/docs/api-key"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >保护 Key</a
+                >
+                ·
+                <a
+                  href="https://ai.google.dev/gemini-api/docs/pricing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >费用与额度</a
+                >
+              </p>
+              <p class="hint">
+                “检查
+                Key”只读取所选文本模型的信息，不生成内容。制作、首次试听和底乐生成可能计费；清除
+                Key 后，已发出的任务仍使用其开始时的 Key 直至完成或失败。
+              </p>
+            </div>
+          </article>
+          <div class="auth-banner">
+            <p class="hint" id="settings-effect"></p>
+            <p class="hint">
+              频道、台本、成片和底乐只保存在当前浏览器。清除站点数据会移除这些内容，请及时导出备份。制作时请保持本页打开，切换应用内页面不影响制作；刷新或关闭网页会中断制作。
+            </p>
+          </div>
+          <div class="settings-rack">
+            <article class="spec-card">
+              <header class="spec-head">
+                <span class="spec-index">02</span>
+                <div>
+                  <h2>节目编排</h2>
+                  <p class="spec-sub">理解愿望、按需搜索、创作和审稿。</p>
+                </div>
+              </header>
+              <div class="spec-body">
+                <label
+                  >文本模型 ID<input
+                    id="set-llm"
+                    spellcheck="false"
+                    autocomplete="off"
+                    placeholder="gemini-3.8-flash"
+                /></label>
+                <p class="hint">
+                  <a
+                    href="https://ai.google.dev/gemini-api/docs/models"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >Google 模型目录</a
+                  >
+                </p>
+              </div>
+            </article>
+            <article class="spec-card">
+              <header class="spec-head">
+                <span class="spec-index">03</span>
+                <div>
+                  <h2>双人语音</h2>
+                  <p class="spec-sub">两位主持的自然对谈，声线在频道内选择。</p>
+                </div>
+              </header>
+              <div class="spec-body">
+                <label
+                  >TTS 模型 ID<input
+                    id="set-tts"
+                    spellcheck="false"
+                    autocomplete="off"
+                    placeholder="gemini-3.1-flash-tts-preview"
+                /></label>
+                <p class="hint">
+                  <a
+                    href="https://ai.google.dev/gemini-api/docs/speech-generation"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >语音生成文档</a
+                  >
+                </p>
+              </div>
+            </article>
+            <article class="spec-card">
+              <header class="spec-head">
+                <span class="spec-index">04</span>
+                <div>
+                  <h2>背景音乐</h2>
+                  <p class="spec-sub">
+                    默认 Lyria 3 Clip，生成短器乐并在本机循环混音。
+                  </p>
+                </div>
+              </header>
+              <div class="spec-body">
+                <label
+                  >音乐模型 ID<input
+                    id="set-lyria"
+                    spellcheck="false"
+                    autocomplete="off"
+                    placeholder="lyria-3-clip-preview"
+                /></label>
+                <p class="hint">
+                  AI Studio 版本使用 Gemini API 的 Interactions 音乐接口；旧
+                  Vertex Lyria 2 不适用于此处。无底乐时可在频道选择“无底乐”。
+                </p>
+                <p class="hint">
+                  <a
+                    href="https://ai.google.dev/gemini-api/docs/music-generation"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >音乐生成文档</a
+                  >
+                </p>
+              </div>
+            </article>
+          </div>
+        </section>
+        <section id="player" class="player" aria-label="播放器" hidden>
+          <div class="player-top">
+            <strong id="player-title">播放器</strong
+            ><button type="button" class="linkish" id="stop-player">
+              停止播放
+            </button>
+          </div>
+          <audio id="shared-audio" controls preload="none"></audio>
+          <div class="player-options">
+            <label class="mode-control"
+              >播放模式
+              <select id="playback-mode" data-playback-mode>
+                <option value="single">单曲循环</option>
+                <option value="channel" selected>频道内连播</option>
+              </select>
+            </label>
+            <label class="speed-control"
+              >播放速度
+              <select id="playback-speed">
+                <option value="0.75">0.75×</option>
+                <option value="0.9">0.9×</option>
+                <option value="1" selected>1.0×</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+              </select></label
+            >
+          </div>
+        </section>
+        <footer id="statusbar" class="statusbar" data-tone="info">
+          <div class="status-main">
+            <p id="status-text" role="status" aria-live="polite">
+              选择语言，说说想听什么，就能开始。
+            </p>
+          </div>
+          <button type="button" id="status-dismiss" hidden>知道了</button>
+        </footer>
+      </main>
+    </div>
+    <script type="module" src="./app-entry.mjs?v=2.0.0"></script>
+  </body>
+</html>

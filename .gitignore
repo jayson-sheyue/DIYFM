@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+.env
+data/
+node_modules/
+dist/
+.DS_Store
+*.pyc
+*.log
+.env.*
+!.env.example
+*credentials*.json
+*secrets*.json
+.coverage
+.pytest_cache/
+coverage/
+docs/screenshots/
