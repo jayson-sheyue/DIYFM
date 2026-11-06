@@ -41,6 +41,11 @@ npm run build
 - Chrome 内核内嵌浏览器：在只有静态 HTTP 文件服务的 `/DIYFM/` 子路径验收，主页与设置可用。未填 Key 时会引导到设置并保留愿望；使用合成无效 Key 只测试本地启用状态，启用后输入框清空，刷新后显示未填写。
 - ZIP：通过真实文件选择器导入两段明确标注的 4 秒静音 WAV，频道和台本显示正常。
 - MP3：实际浏览器 Worker 下载后，用 FFmpeg 解码检查有效性；此处不是假下载或仅断言按钮存在。
+- 播放：导入的静音成片通过 `blob:` 音频源实际进入播放状态，浏览器读取时长为 4 秒；停止按钮可以结束播放。
+- 窄屏：390 × 844 的设置页正常换行，页面宽度与视口均为 390，没有横向溢出。
 - 预览浏览器控制台未发现 error / warn；没有把本机成片发布为公共示例。
+- 本机旧库：重启更新后的本机入口，实际复制显示 3 个频道、4 集已完成节目；未删除旧 `data/` 文件，未将其上传。
+- 公开发布：仓库 `jayson-sheyue/DIYFM` 已确认为 public。首次 [Actions 构建与部署](https://github.com/jayson-sheyue/DIYFM/actions/runs/42174041618) 成功，静态产物通过检查；[HTTPS 站点](https://jayson-sheyue.github.io/DIYFM/) 实际返回 HTTP 200。
+- 线上浏览器：从空节目库打开公开站点，主页和 Key 设置正常，控制台无 error / warn。没有使用本机后端或共享 Key。
 
-GitHub Pages 线上工作流和 HTTPS 访问在发布完成后补记。Firefox / Safari 独立系统浏览器、长期容量和真实 Google Key 成功调用仍未验证。
+Firefox / Safari 独立系统浏览器、长期容量和真实 Google Key 成功调用仍未验证。
