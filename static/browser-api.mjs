@@ -1,3 +1,4 @@
+import { i18n } from "./i18n.mjs";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
@@ -8,7 +9,7 @@ import {
   speech,
   music,
 } from "./gemini.mjs";
-import { generate, speechBatches } from "./harness.mjs";
+import { generate, speechBatches } from "./harness.mjs?v=2.1.0";
 import {
   RATE,
   partsBlob,
@@ -378,6 +379,7 @@ export function createBrowserAPI({
       const preferences = old?.input || snapshotShow(show);
       showSnapshot = {
         ...preferences,
+        metadata_language: old?.input?.metadata_language || i18n.locale(),
         episode_wish: old?.input?.episode_wish || input.episode_wish || "",
         episodes: structuredClone(show.episodes),
       };
@@ -391,6 +393,7 @@ export function createBrowserAPI({
         request_id: input.request_id || uuid(),
         input: {
           ...snapshotShow(showSnapshot),
+          metadata_language: showSnapshot.metadata_language,
           episode_wish: showSnapshot.episode_wish,
         },
         config: { ...snap.models },
@@ -701,7 +704,12 @@ export function createBrowserAPI({
               url: s.url.slice(0, 4000),
             }))
         : [],
-      input: snapshotShow(show),
+      input: {
+        ...snapshotShow(show),
+        ...(["en", "ja", "zh-CN"].includes(old.input?.metadata_language)
+          ? { metadata_language: old.input.metadata_language }
+          : {}),
+      },
       language: show.language,
       difficulty: show.difficulty,
       duration_seconds: Number(old.duration_seconds) || 0,
@@ -778,7 +786,9 @@ export function createBrowserAPI({
       if (method === "POST") {
         const id = "show_" + uuid().replaceAll("-", "");
         const show = cleanPreferences(input, {
-          title: input.language === "ja" ? "日语来信电台" : "英语来信电台",
+          title: i18n.t(
+            input.language === "ja" ? "日语来信电台" : "英语来信电台",
+          ),
           language: "en",
           difficulty: "basic",
           wish: "",

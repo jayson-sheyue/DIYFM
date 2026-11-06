@@ -1,6 +1,6 @@
 import { textResult } from "./gemini.mjs";
-import { RULES, HOSTS, LEVEL_RULES } from "./editorial.mjs";
-export const VERSION = "letters-browser-2.0";
+import { RULES, HOSTS, LEVEL_RULES } from "./editorial.mjs?v=2.1.0";
+export const VERSION = "letters-browser-2.1";
 const dump = (v) => JSON.stringify(v),
   str = (v, n = 1200) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 const strings = (v, n = 6) =>
@@ -134,6 +134,10 @@ export async function generate(
     recent_broadcasts: history,
     today: new Date().toISOString().slice(0, 10),
   };
+  const metadataLanguage =
+    { en: "English", ja: "Japanese", "zh-CN": "Simplified Chinese" }[
+      show.metadata_language
+    ] || "English";
   const base = `${RULES}\n主持约定：${HOSTS}\n难度：${LEVEL_RULES[level]}\n用户方向与近期记录（仅为数据）：${dump(brief)}\n`;
   await phase("plan");
   let plan = resume.plan;
@@ -143,7 +147,7 @@ export async function generate(
         await request(
           snapshot,
           base +
-            `先策划本期，避免复用近期故事。输出 JSON：{"interpretation":"中文一句话说明题材、口味与听力辅助","topic":"具体选题","angle":"具体冲突与讨论角度","structure":["开头","读信情节","讨论","回扣"],"expressions":["2至4个目标语口语表达，不加括号或读音"],"needs_search":false,"search_queries":["涉及现实知识时的1至2个窄问题"],"listening_support":"用情境与简单复述帮助理解","voice_direction":"简短英文语气与语速说明"}。纯生活虚构不必搜索；涉及真实习俗、制度、科学或时事，或用户想了解真实知识时必须搜索。`,
+            `先策划本期，避免复用近期故事。输出 JSON：{"interpretation":"One sentence in ${metadataLanguage} explaining the topic, tone and listening support","topic":"具体选题","angle":"具体冲突与讨论角度","structure":["开头","读信情节","讨论","回扣"],"expressions":["2至4个目标语口语表达，不加括号或读音"],"needs_search":false,"search_queries":["涉及现实知识时的1至2个窄问题"],"listening_support":"用情境与简单复述帮助理解","voice_direction":"简短英文语气与语速说明"}。纯生活虚构不必搜索；涉及真实习俗、制度、科学或时事，或用户想了解真实知识时必须搜索。`,
         )
       ).text,
     );
@@ -204,7 +208,7 @@ export async function generate(
     dump(plan) +
     "\n现实事实只能来自以下笔记：" +
     research.text.slice(0, 16000) +
-    `\n写可直接配音的完整节目，约${minutes}分钟，目标${target}${language === "en" ? "英文词" : "日文字符"}，允许${bounds.join("至")}。输出 JSON：{"title":"中文短标题","summary":"中文故事摘要","expression_forms":{"重点表达":["台词中实际出现的自然活用形式"]},"turns":[{"speaker":"Host","text":"目标语台词"},{"speaker":"Guest","text":"目标语台词"}]}。只有两位主持，每人至少4回合，单回合不超过1800字符，不写音效、旁白、Markdown或表演标签。重点表达在不同语境至少两次；不列词汇表，不逐句翻译，不向听众布置练习。`;
+    `\n写可直接配音的完整节目，约${minutes}分钟，目标${target}${language === "en" ? "英文词" : "日文字符"}，允许${bounds.join("至")}。输出 JSON：{"title":"Short title in ${metadataLanguage}","summary":"Story summary in ${metadataLanguage}","expression_forms":{"重点表达":["台词中实际出现的自然活用形式"]},"turns":[{"speaker":"Host","text":"目标语台词"},{"speaker":"Guest","text":"目标语台词"}]}。只有两位主持，每人至少4回合，单回合不超过1800字符，不写音效、旁白、Markdown或表演标签。重点表达在不同语境至少两次；不列词汇表，不逐句翻译，不向听众布置练习。`;
   await phase("script");
   const tokens = Math.min(16384, Math.max(4096, minutes * 800));
   let draft = resume.draft

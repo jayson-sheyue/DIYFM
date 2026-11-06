@@ -97,18 +97,27 @@ test("authorization keys with dots are accepted unchanged without inferring a Ve
   const key = "AQ." + "synthetic-not-a-real-key_".repeat(15);
   const vault = newVault();
   vault.set("  " + key + "  ");
-  for (const invalid of [key + "\r\nInjected: header", "https://example.com/" + key, "x".repeat(4097)]) {
+  for (const invalid of [
+    key + "\r\nInjected: header",
+    "https://example.com/" + key,
+    "x".repeat(4097),
+  ]) {
     assert.throws(() => vault.set(invalid));
     assert.equal(vault.snapshot(DEFAULT_MODELS).key, key);
   }
   let seen;
-  await googleRequest(vault.snapshot(DEFAULT_MODELS), "models/gemini-3.8-flash", undefined, {
-    method: "GET",
-    fetcher: async (url, config) => {
-      seen = { url, config };
-      return new Response("{}");
+  await googleRequest(
+    vault.snapshot(DEFAULT_MODELS),
+    "models/gemini-3.8-flash",
+    undefined,
+    {
+      method: "GET",
+      fetcher: async (url, config) => {
+        seen = { url, config };
+        return new Response("{}");
+      },
     },
-  });
+  );
   assert.equal(seen.config.headers["x-goog-api-key"], key);
   assert.equal(new URL(seen.url).hostname, "generativelanguage.googleapis.com");
   assert.ok(!seen.url.includes(key));
@@ -447,4 +456,67 @@ test("required research without real sources fails before speech or script gener
     /可追溯来源/,
   );
   assert.equal(calls, 2);
+});
+test("episode metadata language is captured separately from the listening language", async () => {
+  const { i18n } = await import("../static/i18n.mjs");
+  i18n.setLocale("ja");
+  let seen;
+  const gate = new Promise((resolve) => {
+    seen = resolve;
+  });
+  let input;
+  try {
+    const { api, show } = await fixture({
+      editor: async (snapshot) => {
+        input = snapshot;
+        await gate;
+        return structuredClone(content);
+      },
+    });
+    await call(api, `/api/shows/${show.id}/episodes`, "POST", {
+      request_id: "metadata-locale-01",
+    });
+    i18n.setLocale("zh-CN");
+    seen();
+    const { ep } = await finished(api, show.id);
+    assert.equal(ep.input.metadata_language, "ja");
+    assert.equal(input.metadata_language, "ja");
+    assert.equal(ep.language, "en");
+    assert.equal(input.language, "en");
+    const archive = await (await api.fetch("/api/backup")).arrayBuffer();
+    const restored = createBrowserAPI({ library: makeLibrary() });
+    await restored.ready;
+    await restored.importBackup(archive);
+    const restoredEpisode = (await call(restored, "/api/shows")).data.shows[0]
+      .episodes[0];
+    assert.equal(restoredEpisode.input.metadata_language, "ja");
+  } finally {
+    i18n.setLocale("en");
+    seen?.();
+  }
+  let prompt;
+  await assert.rejects(
+    () =>
+      generate(
+        {
+          language: "ja",
+          difficulty: "beginner",
+          length: "BRIEF",
+          metadata_language: "en",
+        },
+        { models: DEFAULT_MODELS },
+        "",
+        async () => {},
+        async () => {},
+        {},
+        async (s, p) => {
+          prompt = p;
+          throw Error("stop-after-planning");
+        },
+      ),
+    /stop-after-planning/,
+  );
+  assert.match(prompt, /One sentence in English/);
+  assert.match(prompt, /"language":"日语"/);
+  assert.doesNotMatch(prompt, /中文搭桥/);
 });

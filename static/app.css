@@ -222,7 +222,7 @@ p {
   background: #f0f3f8;
   font-size: 12px;
 }
-.inbox-btn span {
+.inbox-btn #inbox-badge {
   display: inline-block;
   background: var(--blue);
   color: white;
@@ -1457,4 +1457,54 @@ p {
 }
 .inbox-failure .hint {
   margin: 6px 0 0;
+}
+
+.language-settings {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 210px);
+  align-items: center;
+  gap: 10px 20px;
+  margin: 22px 0;
+}
+.language-settings > label {
+  font-weight: 650;
+}
+.language-settings .hint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.radio-heading h1 {
+  overflow-wrap: anywhere;
+}
+.voice-row label,
+.desk-title-group {
+  min-width: 0;
+}
+@media (max-width: 720px) {
+  .language-settings {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .language-settings select {
+    width: 100%;
+  }
+  .section-heading {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 720px) {
+  .rack-section {
+    min-width: 0;
+  }
+  .rack-section #show-list {
+    flex: 1;
+    min-width: 0;
+  }
+  #show-list li.rack-empty {
+    white-space: normal;
+    max-width: none;
+    min-width: 0;
+    flex: 1;
+  }
 }

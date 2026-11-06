@@ -1,84 +1,92 @@
-# DIYFM · 来信语言电台
+# DIYFM · Letter Radio
 
-**选英语或日语，说一句想听什么，让两位主持陪你听一封虚构来信。**
+[English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
-DIYFM 把语言学习做成可以持续听下去的 FM：独立的小故事、自然对谈、在情境中复现的表达。它以纯输入为主，不要求投料、答题、录音、跟读或打卡。
+**Choose English or Japanese, tell us what you feel like hearing, and listen to two hosts open a fictional letter.**
 
-[打开公开测试站点](https://jayson-sheyue.github.io/DIYFM/) · [Google AI Studio 获取 Key](https://aistudio.google.com/apikey) · [接口与官方文档](docs/api-references.md) · [测试与验证范围](docs/testing.md)
+DIYFM turns language listening into radio you want to return to: self-contained stories, natural conversation and useful expressions recurring in context. It is listening first. You do not need to supply research material, answer quizzes, record your voice, shadow the hosts or maintain a streak.
 
-> **v2 是每人自带 Key 的纯静态应用。** GitHub Pages 只托管程序；文本、语音和音乐请求由浏览器直接发给 Google。每位使用者填写自己的 Key、承担自己的调用费用，拥有自己的浏览器节目库。公开网址不代表模型调用免费。
+[Open the public test site](https://jayson-sheyue.github.io/DIYFM/) · [Get a Google AI Studio key](https://aistudio.google.com/apikey) · [API references](docs/api-references.md) · [Verification record](docs/testing.md)
 
-## 能做什么
+> **v2.1 is a static, bring-your-own-key application.** GitHub Pages hosts the application; your browser sends text, speech and music requests directly to Google. Each visitor provides their own key, pays for their own requests and has a separate browser library. Free hosting does not mean free model usage.
 
-- 英语 / 日语，入门 / 基础 / 进阶，约 3 / 5 / 10 / 15 分钟。
-- 一句长期频道愿望，加可选的“这期换个口味”；不用先搜集材料。
-- 两位主持、独立虚构来信；每集情节完整，不依赖长篇连续剧的人设记忆。
-- 后台编排规则迁移到浏览器：策划 → 必要时 Google Search 核查 → 创作 → 结构检查与审稿 → 双人语音 → 底乐混音。
-- 两位主持声线可选、可试听；底乐可选、可重新生成，也可选择“无底乐”。
-- 制作进度、失败详情和重试保留在消息盒子。已检查台本及已完成的语音片段可以复用。
-- 播放、暂停、慢速 / 倍速、单曲循环、频道内连播、MP3 下载、台本与来源查看。
-- 频道 / 单集删除，ZIP 备份、合并导入；已保存成片不因清理试听缓存而丢失。
+## Features
 
-## 第一次使用
+- English or Japanese; Beginner, Elementary or Advanced; approximately 3, 5, 10 or 15 minutes.
+- One lasting channel wish, plus an optional twist for a single episode. No material gathering required.
+- Two hosts and an independent fictional letter in each episode, without a long-running cast to remember.
+- Browser-based editorial rules: plan → Google Search verification when needed → write → structural checks and review → two-host speech → background music mixing.
+- Selectable, previewable voices; selectable and regenerable music, including a voice-only option.
+- Progress, failed attempts and retry controls in Messages. Reviewed scripts and compatible completed speech segments can be reused.
+- Play, pause, speed controls, repeat one, channel playback, MP3 downloads, scripts and actual search sources.
+- Delete channels or individual episodes; export ZIP backups and merge imports. Clearing previews does not delete finished episodes.
 
-1. 打开测试站点，到 **设置**，从 Google AI Studio 获取自己的 Gemini API Key。
-2. 粘贴到密码输入框，点击 **在本页启用 Key**。输入框会清空，只显示是否启用，不回显 Key。
-3. 可点 **检查 Key**：仅读取所选文本模型的信息，不发起内容生成。这不代表语音和音乐权限也已验证。
-4. 回到 **收听**，选语言，写一句愿望，例如：“想听室友之间有点离谱的小误会，轻松好笑一点，英语别太难。”
-5. 难度默认基础，时长默认约 5 分钟。第一次制作前，也可以展开 **声音与底乐** 选择两位主持、试听或改底乐。
-6. 点 **开始收听**。可以在应用内切换页面查看消息，但请保持这个网页打开。
-7. 完成后点击播放，可下载 MP3，展开台本查看保存的表达、输入和真实返回的搜索来源。
+## Interface language
 
-Key 在刷新、关闭或离开页面后清除，需要重新填写。**已保存的频道和成片不会因此清除。** 进入页面、读取台本、重播、导入导出不调用生成模型；制作、首次试听、强制重做试听或音乐会产生相应请求，按 Google 的费用、额度与地区政策执行。
+The first visit uses **English**, regardless of your operating system or browser language. Open **Settings → Interface language** to choose **English / 日本語 / 中文**. Your explicit choice is saved in the current browser and restored after refreshing. Switching takes effect immediately without refreshing, clearing your key, interrupting production or resetting the player.
 
-支持 AI Studio 的新版授权 Key（包括 `AQ.` 开头），不会按前缀判断服务类型。当前公共版只连接 Gemini Developer API，**尚未适配 Vertex AI Express Mode**；后者需要不同的 API 地址及能力适配，不能仅放行 Key 格式就视为支持。请使用允许访问 Generative Language API 的 Key。
+The interface and listening languages are independent: you can use a Japanese interface to listen to English, for example. Wishes, existing titles and scripts keep their original text. New episodes capture the interface language for their supporting metadata when production starts; retries retain that choice. Switching does not translate saved works or generate additional model requests. Missing interface translations fall back to English.
 
-### 模型设置
+## First use
 
-| 功能 | 默认模型 | 接口 |
-| --- | --- | --- |
-| 策划、核查、创作与审稿 | `gemini-3.8-flash` | Gemini `generateContent`，核查时使用 Google Search |
-| 双人语音与声线试听 | `gemini-3.1-flash-tts-preview` | Gemini `generateContent` 音频输出 |
-| 约 30 秒器乐底乐 | `lyria-3-clip-preview` | Gemini Interactions，`store: false` |
+1. Open the test site and go to **Settings**. Get your own Gemini API key from Google AI Studio.
+2. Paste it into **Your API key**, then click **Enable key for this page**. The field clears; the UI shows only whether a key is enabled.
+3. Optionally click **Check key**. This reads metadata for the selected text model without generating content. It does not verify speech or music access.
+4. Return to **Listen**, choose the listening language and describe a wish, such as: “Funny misunderstandings between roommates, lighthearted and in easy English.”
+5. The defaults are Elementary and about 5 minutes. Expand **Voices & background music** to choose and preview the two hosts and music before your first episode.
+6. Click **Make my first episode**. You may switch views inside the app and check Messages, but keep the webpage open.
+7. When ready, play the episode, download its MP3, or open **Script & episode details** for expressions, input and returned search sources.
 
-模型 ID 可以手工修改；是否可用取决于你的 Key、地区、计费和模型能力，不会偷偷换模型。旧版的 Vertex `lyria-002` 不适用于 AI Studio 接口；可填写 Developer API 支持的音乐模型，例如 `lyria-3.5`，但时长与费用可能不同。底乐失败会保留纯人声成片，并明确提示；内容或语音失败不会伪装成完整节目。
+Refreshing, closing or leaving clears the key, so you will need to enter it again. **Saved channels and audio remain.** Opening the page, reading scripts, replaying and importing/exporting do not call generation models. Production, first previews and explicit regeneration send requests subject to Google's pricing, quota and regional rules.
 
-### 播放与管理
+New AI Studio authorization keys, including those beginning with `AQ.`, are accepted without guessing their service from the prefix. The public application connects only to the **Gemini Developer API**. **Vertex AI Express Mode is not integrated**; it requires different endpoints and capability handling. Use a key authorized for the Generative Language API.
 
-- **单曲循环**：反复播放当前一集。
-- **频道内连播**：按当前频道列表从上到下播放已完成的来信；最后一集回到第一集，跳过失败和制作中记录。
-- 模式可在来信区和底部播放器切换，两处同步并在当前浏览器记住；换集沿用倍速，暂停或停止后不会自行恢复。
-- 声线和底乐试听只播一次，不加入频道队列。
-- **删除本集** 保留频道偏好和其他来信；**删除频道** 移除其全部记录与音频。操作前会确认，无法撤销，可先导出备份。制作中或 MP3 准备下载时拒绝冲突删除。
+### Models
 
-## Key、隐私和数据边界
+| Function                                       | Default model                  | API                                                      |
+| ---------------------------------------------- | ------------------------------ | -------------------------------------------------------- |
+| Planning, verification, writing and review     | `gemini-3.8-flash`             | Gemini `generateContent`; Google Search for verification |
+| Two-host speech and voice previews             | `gemini-3.1-flash-tts-preview` | Gemini `generateContent` with audio output               |
+| Approximately 30 seconds of instrumental music | `lyria-3-clip-preview`         | Gemini Interactions with `store: false`                  |
 
-- Key 只保存在当前页面的 JavaScript 内存中；不写入 `localStorage`、`sessionStorage`、IndexedDB、URL、日志、ZIP 备份、GitHub 仓库或构建产物。
-- 请求只发往固定的 `https://generativelanguage.googleapis.com`，通过 `x-goog-api-key` 请求头鉴权；不提供可携带 Key 的任意代理地址，也不跟随 API 重定向。
-- 模型错误使用本地整理的提示，不直接展示可能含敏感信息的供应商错误正文。
-- 页面不加载分析脚本、第三方 CDN 脚本或广告。MP3 / ZIP 库均随站点托管；内容安全策略限制脚本和网络来源。
-- **这不是把 Key 加密后藏进前端的共享服务。** 使用者自己、浏览器开发者工具、获授权的扩展以及被攻陷的页面环境仍可能读取运行中的凭据。只在可信设备、可信站点和扩展环境中使用 Key，并在 Google 侧限制权限、检查用量、设置预算提醒，泄露后及时撤销。
-- Google 会接收你的愿望、生成所需台本和相关请求，并按其条款处理。本站不替代 Google 的数据与计费政策。
-- 频道、台本、音频、底乐、非秘密模型设置保存在当前源下的 IndexedDB；草稿、播放模式和消息已读状态使用浏览器本地存储。清除站点数据、隐私模式退出或浏览器淘汰存储可能造成丢失，请导出备份。
-- 不同浏览器、设备、`localhost` / `127.0.0.1`、本机站点 / GitHub Pages 的节目库相互独立。GitHub 同一账户下的 Pages 项目共享域名来源，不应把浏览器存储当成其他项目无法访问的秘密保险箱。
-- 静态版没有登录、服务器云存储或跨设备同步；他人无法通过本站界面看到你的浏览器节目库。**你的本机 `data/` 和现有成片不会发布到 GitHub。**
+Model IDs are editable. Availability depends on your key, region, billing and model capabilities; the application does not silently substitute models. Legacy Vertex `lyria-002` is not compatible with the AI Studio endpoint. A music model supported by the Developer API, such as `lyria-3.5`, may have different duration and costs. Music failure keeps the voice-only episode and shows a notice. Content or speech failure is not presented as a finished episode.
 
-详见 [安全说明](docs/security.md)。
+### Playback and management
 
-## 保存、重试与备份
+- **Repeat one** repeats the current episode.
+- **Play channel** follows the displayed order of ready episodes within that channel, wraps to the first after the last, and skips failed or unfinished records.
+- Change the mode above the episode list or in the bottom player. The controls stay synchronized and the browser remembers your choice. Speed carries across episodes; pausing or stopping does not resume automatically.
+- Voice and music previews play once and never enter the channel queue.
+- **Delete episode** keeps channel preferences and other letters. **Delete channel** removes all its records and audio. Both ask for confirmation, cannot be undone, and can be preceded by a backup. Conflicting deletion is refused during channel production or MP3 preparation.
 
-每次制作固定语言、偏好、模型和当前 Key 的内存快照。任务期间改变设置不影响已经提交的任务；清除 Key 会阻止后续新任务，已经发出的任务仍可能继续使用原快照，直到完成或失败。
+## Key, privacy and data boundaries
 
-失败记录留在消息盒子；重试沿用原输入，并尽量复用已保存的策划、搜索、已检查台本和兼容的语音片段。重试使用当前模型设置；没有完成或不兼容的阶段仍会再次调用服务。
+- Your key stays in this page's JavaScript memory. It is not written to `localStorage`, `sessionStorage`, IndexedDB, URLs, logs, ZIP backups, the repository or build artifacts.
+- Requests go only to the fixed `https://generativelanguage.googleapis.com` origin, with the key in an `x-goog-api-key` header. There is no arbitrary credential-carrying proxy address and API redirects are rejected.
+- Provider errors use sanitized messages rather than raw response bodies that might contain sensitive data.
+- There are no analytics, advertising or third-party CDN scripts. MP3 and ZIP libraries are hosted with the site; a content security policy restricts script and network sources.
+- This does not hide a shared key in frontend code. The visitor, developer tools, authorized extensions and a compromised page environment can still access runtime credentials. Use a trusted device, site and browser environment; restrict the key in Google, monitor usage, set budget alerts and revoke leaked keys promptly.
+- Google receives your wish, scripts needed for generation and associated requests under its own terms. This site does not replace Google's data or billing policies.
+- Channels, scripts, audio, music and ordinary model settings are stored in this origin's IndexedDB. Drafts, interface language, playback mode and message read state use local browser storage. Clearing site data, leaving private browsing or storage eviction can lose them: export backups.
+- Different browsers, devices, `localhost` versus `127.0.0.1`, and local versus Pages sites have independent libraries. Pages projects under the same GitHub account share an origin; browser storage is not a secret vault isolated from those projects.
+- There is no account system, server-side library or cross-device sync. Other visitors cannot browse your local library through this application. **Your local `data/` directory and existing recordings are not published to GitHub.**
 
-- 设置中的 **导出备份** 包含频道、台本、成片、底乐、制作片段与普通模型设置，不含 Key 和声线试听缓存。
-- **导入备份** 以新编号合并频道，不覆盖现有节目或当前模型 / Key。缺少成片文件、无效清单等情况会拒绝导入，保留原库。
-- 为控制浏览器内存，ZIP 导入 / 导出限制为 500MB；更大的节目库可逐集下载 MP3 后分批整理。
-- 页面刷新或关闭会中断制作，重新打开后会将失去执行者的任务标记为中断，不自动继续收费。浏览器后台节流、休眠和网络中断也可能影响任务完成。
+Additional details: [security notes](docs/security.md).
 
-## 在本机运行静态版
+## Saving, retrying and backups
 
-需要现代浏览器、Node.js 22+（用于安装、检查和构建）；提供静态文件的 HTTP 服务可以任选，不需要 ADC、GCP 项目 ID、Python 后端或部署共享 Key。
+Each production task captures preferences, listening language, metadata language, models and the current key. Changing settings during a task does not change its inputs. Clearing the key blocks new tasks; submitted tasks may continue with their original in-memory snapshot until completion or failure.
+
+Failed attempts remain in Messages. A retry uses the original input and reuses saved plans, research, reviewed scripts and compatible voice segments where available. It uses current model settings; incomplete or incompatible stages still need new service calls.
+
+- **Export backup** includes channels, scripts, completed audio, music, production segments and ordinary model settings. It excludes keys and voice-preview cache.
+- **Import backup** merges channels with new IDs, without replacing existing works or your current models/key. Invalid manifests and missing completed audio reject the import without replacing the library.
+- ZIP import/export is limited to 500 MB to control browser memory. For larger libraries, download individual MP3s and organize them in batches.
+- Refreshing or closing interrupts production. Reopening marks tasks without a surviving executor as interrupted and does not automatically resume paid generation. Browser throttling, sleep and network outages can also affect completion.
+
+## Run the static application locally
+
+Use a modern browser and Node.js 22+ for installation, tests and building. Any static HTTP server will do. The primary application needs no ADC, GCP project ID, Python backend or shared key deployment.
 
 ```bash
 git clone https://github.com/jayson-sheyue/DIYFM.git
@@ -88,56 +96,59 @@ npm run vendor
 npm test
 npm run build
 
-# 任选一个静态 HTTP 服务。例如系统已安装 Python 时：
+# One option, if Python is already installed:
 python3 -m http.server 5055 --directory dist
 ```
 
-打开 `http://localhost:5055/`。不要双击 `index.html` 以 `file://` 打开；ES modules、IndexedDB、Worker 等需要正常的网页来源。若 5055 已被占用，可改用其他端口。
+Open `http://localhost:5055/`. Do not double-click `index.html` using `file://`; ES modules, IndexedDB and Workers require a normal web origin. Choose another port if 5055 is occupied.
 
-### 旧版本机 Python 节目库
+### Legacy Python library
 
-原 Flask / Vertex 代码为旧库兼容保留，主静态应用不使用其 ADC 生成接口。原有 `data/` 不会被迁移脚本删除或加入 Git。
+The Flask/Vertex sources remain for legacy compatibility. The main static application does not use their ADC generation endpoints. Migration does not delete `data/` or add it to Git.
 
-已有旧版环境可运行原 `app.py`，首页跳转到 `/static/index.html`。仅在这个明确的本机路径下，新页面会尝试将旧库的频道、台本和成片复制到本浏览器；不会调用 Google 或更改旧文件。请先保留 `data/` 副本；若读取失败，原库仍在。
+An existing legacy environment can still run `app.py`, whose root redirects to `/static/index.html`. Only at this explicit local path does the browser attempt to copy legacy channels, scripts and completed audio into its library, without calling Google or changing the original files. Keep a copy of `data/` first; failed reads leave the original library intact.
 
-也可以将旧版导出的 ZIP 在新站点 **导入备份**。迁移不会复制 ADC 凭据，也不会把旧 Vertex 设置强行当作 Developer API 设置。迁移后的未完成记录可以回查；跨版本备份导入不保证复用所有旧中间阶段。
+You can also **Import backup** using a ZIP exported by the old version. Migration never copies ADC credentials or treats legacy Vertex configuration as Developer API configuration. Unfinished records remain available for inspection; cross-version imports do not guarantee reuse of every intermediate stage.
 
-## 发布到 GitHub Pages
+## Deploy to GitHub Pages
 
-仓库包含 `.github/workflows/pages.yml`：对 PR 做检查，向 `main` 推送后构建 `dist/` 并发布。
+The included `.github/workflows/pages.yml` checks pull requests, then builds `dist/` and deploys pushes to `main`.
 
-1. 在自己的 GitHub 账户创建公开仓库并推送源码。
-2. Repository **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。
-3. 运行工作流或推送到 `main`，等待 `Check and deploy DIYFM` 成功。
-4. 访问 `https://<你的账户>.github.io/<仓库名>/`。资源使用相对路径，支持项目子路径。
+1. Create a public repository in your GitHub account and push the source.
+2. Under **Settings → Pages → Build and deployment → Source**, choose **GitHub Actions**.
+3. Run the workflow or push to `main`; wait for **Check and deploy DIYFM** to succeed.
+4. Open `https://<account>.github.io/<repository>/`. Relative resources support project subpaths.
 
-**不需要设置任何 Gemini Key 仓库 Secret。** 不要在 Actions 环境变量、构建参数或网页配置里注入共享 Key；这会把 Key 暴露到公开站点。需要由站长承担调用费用时，应另做带访问控制与用量限制的服务端，不能靠 GitHub Pages 隐藏 Key。
+**No Gemini repository Secret is needed.** Never inject a shared key into Actions variables, build arguments or frontend configuration: that would expose it in the public site. A service funded by the owner needs a separate backend with access control and usage limits; Pages cannot conceal its key.
 
-## 实现结构
+## Source layout
 
 ```text
 static/
-  app.js / app.css / index.html    界面、播放、消息和管理
-  app-entry.mjs                   静态版启动与本机迁移边界
-  browser-api.mjs / library.mjs    任务、IndexedDB、备份与兼容接口
-  harness.mjs / editorial.mjs      固定编排规则与动态策划 / 审稿
-  gemini.mjs                      内存 Key、固定 Google API 适配
-  audio.mjs / mp3-worker.js        音频解码、混音、WAV 与 MP3
-  vendor/                        自托管的编码 / ZIP 库及许可证
-scripts/build-pages.mjs            静态产物与凭据模式检查
-tests/                            受控接口、存储、媒体和时序回归
+  app.js / app.css / index.html    UI, playback, messages and management
+  app-entry.mjs                   Static startup and local migration boundary
+  i18n.mjs / messages.mjs          Three UI languages, preference and messages
+  browser-api.mjs / library.mjs    Tasks, IndexedDB, backup and compatibility
+  harness.mjs / editorial.mjs      Editorial rules, planning and review
+  gemini.mjs                      Memory-only key and fixed-origin Google API
+  audio.mjs / mp3-worker.js        Decode, mix, WAV and MP3
+  vendor/                         Self-hosted encoding/ZIP libraries and licenses
+scripts/build-pages.mjs            Static artifact and credential-pattern check
+tests/                            Controlled API, storage, media and race tests
 ```
 
-程序不会将“出现过某个表达”标记为用户已掌握，也不保证教学效果、模型事实或发音永远正确。3 / 5 / 10 / 15 分钟是编排目标，实际以成片时长为准。搜索失败不会伪造来源；内容审稿最多修订一次。语音按批处理，降低一次失败丢失全部进度的代价。
+A featured expression does not mean the listener has mastered it. Learning outcomes, model facts and pronunciation are not guaranteed. Episode lengths are editorial targets; the actual duration is the audio's duration. Search failure never fabricates sources, editorial review allows at most one revision, and speech batches reduce the cost of restarting an incomplete task.
 
-## 开发检查与已知边界
+## Checks and current limits
 
 ```bash
-npm test            # 静态版规则、凭据边界、IndexedDB、备份、播放竞态
-npm run build       # 生成 dist 并检查已知凭据模式
-./scripts/check.sh  # 另含旧 Python 路径回归；需要原 Python 依赖
+npm test            # Static rules, credentials, storage, backup, i18n and playback races
+npm run build       # Build dist and scan known credential patterns
+./scripts/check.sh  # Also checks legacy Python paths; requires Python dependencies
 ```
 
-自动检查不等于真实 Google 账户联调；实际验证环境、服务调用和未验证项统一记录在 [docs/testing.md](docs/testing.md)。模型是否开放、地区、付费层级、配额及服务生命周期以 Google 为准；Key 检查成功不保证所有模型和 Google Search 可用。不同浏览器的下载、后台执行、存储额度和媒体行为也可能不同。
+Automated tests are not a substitute for real Google account integration. Actual environments, calls and unverified items are recorded in [the verification report](docs/testing.md). Account access, region, paid tier, quota and model lifecycle are controlled by Google. A successful key check does not prove every model or Search is available. Downloads, background execution, storage and media behavior also vary by browser.
 
-第三方代码与许可证见 [THIRD_PARTY.md](THIRD_PARTY.md)。本仓库公开供查看和测试，项目自身尚未选择额外的开源许可证；第三方组件沿用各自许可证。
+Some detailed developer documents are currently in Chinese. All three READMEs cover the same setup, configuration, security boundaries and known limits.
+
+See [THIRD_PARTY.md](THIRD_PARTY.md) for bundled code and licenses. This public repository is available for inspection and testing; no additional project license has been chosen. Third-party components retain their own licenses.

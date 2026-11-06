@@ -1,16 +1,16 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>DIYFM — 来信语言电台</title>
+    <title data-i18n="DIYFM — 来信语言电台">DIYFM — Letter Radio</title>
     <link rel="icon" type="image/svg+xml" href="./letter-radio.svg" />
     <meta name="referrer" content="no-referrer" />
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://generativelanguage.googleapis.com; worker-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'"
     />
-    <link rel="stylesheet" href="./app.css?v=2.0.0" />
+    <link rel="stylesheet" href="./app.css?v=2.1.0" />
   </head>
   <body>
     <div class="chassis">
@@ -25,33 +25,46 @@
               aria-expanded="false"
               aria-controls="inbox"
             >
-              消息
+              <span data-i18n="消息">Messages</span>
               <span id="inbox-badge" hidden>0</span>
             </button>
           </div>
           <div id="inbox" class="inbox" hidden>
             <div class="inbox-head">
-              <strong>消息</strong>
+              <strong><span data-i18n="消息">Messages</span></strong>
               <button type="button" class="linkish" id="inbox-close">
-                关闭
+                <span data-i18n="关闭">Close</span>
               </button>
             </div>
             <ul id="inbox-list"></ul>
             <p class="hint">
-              关闭或看过不会取消合成，也不会删除成片。试听命中缓存时不会记一条新消息。
+              <span
+                data-i18n="关闭或看过不会取消合成，也不会删除成片。试听命中缓存时不会记一条新消息。"
+                >Closing or reading messages does not cancel production or
+                delete audio. Cached previews do not create another
+                message.</span
+              >
             </p>
           </div>
-          <p class="brand-sub">听一封来信，走进另一种语言。</p>
+          <p class="brand-sub">
+            <span data-i18n="听一封来信，走进另一种语言。"
+              >A letter to another language.</span
+            >
+          </p>
         </div>
 
-        <nav class="dock-nav" aria-label="主导航">
+        <nav
+          class="dock-nav"
+          aria-label="Main navigation"
+          data-i18n-aria-label="主导航"
+        >
           <button
             type="button"
             class="nav-btn is-on"
             data-view="studio"
             id="nav-studio"
           >
-            <span>收听</span>
+            <span><span data-i18n="收听">Listen</span></span>
           </button>
           <button
             type="button"
@@ -59,22 +72,29 @@
             data-view="settings"
             id="nav-settings"
           >
-            <span>设置</span>
+            <span><span data-i18n="设置">Settings</span></span>
           </button>
         </nav>
 
         <div class="rack-section">
           <div class="rack-head">
-            <span class="rack-title">节目</span>
+            <span class="rack-title"
+              ><span data-i18n="节目">Channels</span></span
+            >
           </div>
           <button type="button" class="new-channel" id="new-channel">
-            ＋ 新建频道
+            <span data-i18n="＋ 新建频道">＋ New channel</span>
           </button>
           <ul id="show-list"></ul>
         </div>
 
         <footer class="dock-foot">
-          <p>英语 · 日语<br />一点日常，一点意外。</p>
+          <p>
+            <span data-i18n="英语 · 日语">English · Japanese</span><br /><span
+              data-i18n="一点日常，一点意外。"
+              >Everyday life. A little unexpected.</span
+            >
+          </p>
         </footer>
       </aside>
 
@@ -84,15 +104,19 @@
         <section id="settings-view" hidden>
           <header class="desk-head">
             <div class="desk-title-group">
-              <p class="station-tag">自己的 Key，自己的电台</p>
-              <h1>设置</h1>
+              <p class="station-tag">
+                <span data-i18n="自己的 Key，自己的电台"
+                  >Your key. Your radio.</span
+                >
+              </p>
+              <h1><span data-i18n="设置">Settings</span></h1>
             </div>
             <div class="desk-actions">
               <button type="button" class="quiet" id="export-backup">
-                导出备份
+                <span data-i18n="导出备份">Export backup</span>
               </button>
               <button type="button" class="quiet" id="import-backup">
-                导入备份
+                <span data-i18n="导入备份">Import backup</span>
               </button>
               <input
                 type="file"
@@ -101,28 +125,56 @@
                 hidden
               />
               <button type="button" class="quiet" id="clear-preview-cache">
-                清理试听缓存
+                <span data-i18n="清理试听缓存">Clear preview cache</span>
               </button>
               <button type="button" class="quiet" id="restore-settings">
-                恢复模型默认
+                <span data-i18n="恢复模型默认">Restore default models</span>
               </button>
               <button type="button" class="primary" id="save-settings">
-                保存模型设置
+                <span data-i18n="保存模型设置">Save model settings</span>
               </button>
             </div>
           </header>
+          <section
+            class="language-settings spec-card"
+            aria-labelledby="ui-language-label"
+          >
+            <label id="ui-language-label" for="ui-language" data-i18n="界面语言"
+              >Interface language</label
+            >
+            <select id="ui-language">
+              <option value="en" lang="en">English</option>
+              <option value="ja" lang="ja">日本語</option>
+              <option value="zh-CN" lang="zh-CN">中文</option>
+            </select>
+            <p
+              class="hint"
+              data-i18n="界面语言与收听语言分别设置。切换不会清除 Key、停止播放或更改已有节目。"
+            >
+              Interface and listening languages are separate. Switching keeps
+              your key, playback and saved episodes.
+            </p>
+          </section>
           <article class="spec-card key-card">
             <header class="spec-head">
               <span class="spec-index">01</span>
               <div>
-                <h2>Google AI Studio API Key</h2>
+                <h2 data-i18n="Google AI Studio API Key">
+                  Google AI Studio API Key
+                </h2>
                 <p class="spec-sub">
-                  每位测试者使用自己的 Key 和额度。本站不会提供或收集共享 Key。
+                  <span
+                    data-i18n="每位测试者使用自己的 Key 和额度。本站不会提供或收集共享 Key。"
+                    >Each visitor uses their own key and quota. This site does
+                    not provide or collect a shared key.</span
+                  >
                 </p>
               </div>
             </header>
             <div class="spec-body">
-              <label for="api-key">你的 API Key</label>
+              <label for="api-key"
+                ><span data-i18n="你的 API Key">Your API key</span></label
+              >
               <input
                 id="api-key"
                 class="mono-input"
@@ -130,57 +182,75 @@
                 autocomplete="off"
                 spellcheck="false"
                 autocapitalize="off"
-                placeholder="从 Google AI Studio 复制，仅本页内存中使用"
+                placeholder="Copy from Google AI Studio · memory only"
+                data-i18n-placeholder="从 Google AI Studio 复制，仅本页内存中使用"
                 aria-describedby="auth-note"
               />
               <div class="key-actions">
                 <button type="button" class="primary" id="enable-api-key">
-                  在本页启用 Key</button
+                  <span data-i18n="在本页启用 Key"
+                    >Enable key for this page</span
+                  ></button
                 ><button type="button" class="quiet" id="test-api-key">
-                  检查 Key</button
+                  <span data-i18n="检查 Key">Check key</span></button
                 ><button type="button" class="quiet" id="clear-api-key">
-                  清除本页 Key</button
+                  <span data-i18n="清除本页 Key">Clear page key</span></button
                 ><span id="key-state" class="hint" role="status"></span>
               </div>
               <p class="auth-note" id="auth-note"></p>
               <p class="hint">
-                Key 不写入浏览器存储、备份、地址栏或仓库。只通过 HTTPS
-                请求头发给 Google；不要在不信任的网页或浏览器扩展环境中使用
-                Key。刷新、关闭或离开页面后会清除。
+                <span
+                  data-i18n="Key 不写入浏览器存储、备份、地址栏或仓库。只通过 HTTPS 请求头发给 Google；不要在不信任的网页或浏览器扩展环境中使用 Key。刷新、关闭或离开页面后会清除。"
+                  >Keys never enter browser storage, backups, URLs or the
+                  repository. They are sent only to Google in HTTPS headers. Use
+                  a trusted page and browser environment. Refreshing, closing or
+                  leaving clears the page key.</span
+                >
               </p>
               <p class="hint">
                 <a
                   href="https://aistudio.google.com/apikey"
                   target="_blank"
                   rel="noopener noreferrer"
-                  >获取 API Key</a
+                  ><span data-i18n="获取 API Key">Get an API key</span></a
                 >
                 ·
                 <a
                   href="https://ai.google.dev/gemini-api/docs/api-key"
                   target="_blank"
                   rel="noopener noreferrer"
-                  >保护 Key</a
+                  ><span data-i18n="保护 Key">Protect your key</span></a
                 >
                 ·
                 <a
                   href="https://ai.google.dev/gemini-api/docs/pricing"
                   target="_blank"
                   rel="noopener noreferrer"
-                  >费用与额度</a
+                  ><span data-i18n="费用与额度">Pricing &amp; quotas</span></a
                 >
               </p>
               <p class="hint">
-                “检查
-                Key”只读取所选文本模型的信息，不生成内容。制作、首次试听和底乐生成可能计费；清除
-                Key 后，已发出的任务仍使用其开始时的 Key 直至完成或失败。
+                <span
+                  data-i18n="“检查 Key”只读取所选文本模型的信息，不生成内容。制作、首次试听和底乐生成可能计费；清除 Key 后，已发出的任务仍使用其开始时的 Key 直至完成或失败。"
+                  >Check key only reads metadata for your text model; it does
+                  not generate content. Production, first previews and music
+                  generation may incur charges. After clearing the key,
+                  submitted tasks keep their starting key until they finish or
+                  fail.</span
+                >
               </p>
             </div>
           </article>
           <div class="auth-banner">
             <p class="hint" id="settings-effect"></p>
             <p class="hint">
-              频道、台本、成片和底乐只保存在当前浏览器。清除站点数据会移除这些内容，请及时导出备份。制作时请保持本页打开，切换应用内页面不影响制作；刷新或关闭网页会中断制作。
+              <span
+                data-i18n="频道、台本、成片和底乐只保存在当前浏览器。清除站点数据会移除这些内容，请及时导出备份。制作时请保持本页打开，切换应用内页面不影响制作；刷新或关闭网页会中断制作。"
+                >Channels, scripts, audio and music are saved only in this
+                browser. Clearing site data removes them, so export backups.
+                Keep this webpage open during production; switching app views is
+                fine, but refreshing or closing interrupts it.</span
+              >
             </p>
           </div>
           <div class="settings-rack">
@@ -188,13 +258,19 @@
               <header class="spec-head">
                 <span class="spec-index">02</span>
                 <div>
-                  <h2>节目编排</h2>
-                  <p class="spec-sub">理解愿望、按需搜索、创作和审稿。</p>
+                  <h2><span data-i18n="节目编排">Editorial planning</span></h2>
+                  <p class="spec-sub">
+                    <span data-i18n="理解愿望、按需搜索、创作和审稿。"
+                      >Understands your wish, searches when needed, writes and
+                      reviews.</span
+                    >
+                  </p>
                 </div>
               </header>
               <div class="spec-body">
                 <label
-                  >文本模型 ID<input
+                  ><span data-i18n="文本模型 ID">Text model ID</span
+                  ><input
                     id="set-llm"
                     spellcheck="false"
                     autocomplete="off"
@@ -205,7 +281,9 @@
                     href="https://ai.google.dev/gemini-api/docs/models"
                     target="_blank"
                     rel="noopener noreferrer"
-                    >Google 模型目录</a
+                    ><span data-i18n="Google 模型目录"
+                      >Google model catalog</span
+                    ></a
                   >
                 </p>
               </div>
@@ -214,13 +292,19 @@
               <header class="spec-head">
                 <span class="spec-index">03</span>
                 <div>
-                  <h2>双人语音</h2>
-                  <p class="spec-sub">两位主持的自然对谈，声线在频道内选择。</p>
+                  <h2><span data-i18n="双人语音">Two-host speech</span></h2>
+                  <p class="spec-sub">
+                    <span data-i18n="两位主持的自然对谈，声线在频道内选择。"
+                      >Natural conversation between two hosts. Choose voices in
+                      your channel.</span
+                    >
+                  </p>
                 </div>
               </header>
               <div class="spec-body">
                 <label
-                  >TTS 模型 ID<input
+                  ><span data-i18n="TTS 模型 ID">TTS model ID</span
+                  ><input
                     id="set-tts"
                     spellcheck="false"
                     autocomplete="off"
@@ -231,7 +315,9 @@
                     href="https://ai.google.dev/gemini-api/docs/speech-generation"
                     target="_blank"
                     rel="noopener noreferrer"
-                    >语音生成文档</a
+                    ><span data-i18n="语音生成文档"
+                      >Speech generation docs</span
+                    ></a
                   >
                 </p>
               </div>
@@ -240,54 +326,74 @@
               <header class="spec-head">
                 <span class="spec-index">04</span>
                 <div>
-                  <h2>背景音乐</h2>
+                  <h2><span data-i18n="背景音乐">Background music</span></h2>
                   <p class="spec-sub">
-                    默认 Lyria 3 Clip，生成短器乐并在本机循环混音。
+                    <span
+                      data-i18n="默认 Lyria 3 Clip，生成短器乐并在本机循环混音。"
+                      >Lyria 3 Clip makes short instrumental music, looped and
+                      mixed locally.</span
+                    >
                   </p>
                 </div>
               </header>
               <div class="spec-body">
                 <label
-                  >音乐模型 ID<input
+                  ><span data-i18n="音乐模型 ID">Music model ID</span
+                  ><input
                     id="set-lyria"
                     spellcheck="false"
                     autocomplete="off"
                     placeholder="lyria-3-clip-preview"
                 /></label>
                 <p class="hint">
-                  AI Studio 版本使用 Gemini API 的 Interactions 音乐接口；旧
-                  Vertex Lyria 2 不适用于此处。无底乐时可在频道选择“无底乐”。
+                  <span
+                    data-i18n="AI Studio 版本使用 Gemini API 的 Interactions 音乐接口；旧 Vertex Lyria 2 不适用于此处。无底乐时可在频道选择“无底乐”。"
+                    >AI Studio uses the Gemini Interactions music API. Legacy
+                    Vertex Lyria 2 is not supported here. Choose No background
+                    music in your channel to skip music.</span
+                  >
                 </p>
                 <p class="hint">
                   <a
                     href="https://ai.google.dev/gemini-api/docs/music-generation"
                     target="_blank"
                     rel="noopener noreferrer"
-                    >音乐生成文档</a
+                    ><span data-i18n="音乐生成文档"
+                      >Music generation docs</span
+                    ></a
                   >
                 </p>
               </div>
             </article>
           </div>
         </section>
-        <section id="player" class="player" aria-label="播放器" hidden>
+        <section
+          id="player"
+          class="player"
+          aria-label="Player"
+          data-i18n-aria-label="播放器"
+          hidden
+        >
           <div class="player-top">
-            <strong id="player-title">播放器</strong
+            <strong id="player-title"
+              ><span data-i18n="播放器">Player</span></strong
             ><button type="button" class="linkish" id="stop-player">
-              停止播放
+              <span data-i18n="停止播放">Stop playback</span>
             </button>
           </div>
           <audio id="shared-audio" controls preload="none"></audio>
           <div class="player-options">
             <label class="mode-control"
-              >播放模式
+              ><span data-i18n="播放模式">Playback mode</span>
               <select id="playback-mode" data-playback-mode>
-                <option value="single">单曲循环</option>
-                <option value="channel" selected>频道内连播</option>
+                <option value="single" data-i18n="单曲循环">Repeat one</option>
+                <option value="channel" selected data-i18n="频道内连播">
+                  Play channel
+                </option>
               </select>
             </label>
             <label class="speed-control"
-              >播放速度
+              ><span data-i18n="播放速度">Playback speed</span>
               <select id="playback-speed">
                 <option value="0.75">0.75×</option>
                 <option value="0.9">0.9×</option>
@@ -301,13 +407,17 @@
         <footer id="statusbar" class="statusbar" data-tone="info">
           <div class="status-main">
             <p id="status-text" role="status" aria-live="polite">
-              选择语言，说说想听什么，就能开始。
+              <span data-i18n="选择语言，说说想听什么，就能开始。"
+                >Choose a language and tell us what you'd like to hear.</span
+              >
             </p>
           </div>
-          <button type="button" id="status-dismiss" hidden>知道了</button>
+          <button type="button" id="status-dismiss" hidden>
+            <span data-i18n="知道了">Dismiss</span>
+          </button>
         </footer>
       </main>
     </div>
-    <script type="module" src="./app-entry.mjs?v=2.0.0"></script>
+    <script type="module" src="./app-entry.mjs?v=2.1.0"></script>
   </body>
 </html>

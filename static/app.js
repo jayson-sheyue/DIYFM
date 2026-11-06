@@ -1,4 +1,16 @@
 "use strict";
+const i18n = globalThis.DIYFM_I18N;
+const tr = (key, values) => (i18n ? i18n.t(key, values) : key);
+const trText = (parts, ...values) =>
+  i18n
+    ? i18n.msg(parts, ...values)
+    : parts.reduce((s, p, i) => s + p + (values[i] ?? ""), "");
+const trHTML = (parts, ...values) =>
+  i18n
+    ? i18n.html(parts, ...values)
+    : parts.reduce((s, p, i) => s + p + (values[i] ?? ""), "");
+const localizedLabels = (labels) =>
+  new Proxy(labels, { get: (target, key) => tr(target[key]) });
 const runtime = globalThis.DIYFM;
 const fmFetch = (path, config) =>
   runtime ? runtime.fetch(path, config) : fetch(path, config);
@@ -11,7 +23,7 @@ const escapeHtml = (v) =>
         c
       ],
   );
-const PHASE = {
+const PHASE = localizedLabels({
   plan: "正在理解愿望、策划来信",
   research: "正在搜索和核对背景",
   script: "正在写双人台本",
@@ -20,9 +32,13 @@ const PHASE = {
   music: "正在准备底乐",
   mix: "正在混音",
   interrupted: "制作已中断",
-};
-const LANG = { en: "英语", ja: "日语" };
-const LEVEL = { beginner: "入门", basic: "基础", advanced: "进阶" };
+});
+const LANG = localizedLabels({ en: "英语", ja: "日语" });
+const LEVEL = localizedLabels({
+  beginner: "入门",
+  basic: "基础",
+  advanced: "进阶",
+});
 const TOPICS = [
   ["生活趣事", "想听日常生活里有点离谱的小事，轻松好笑，但不要幼稚。"],
   ["恋爱与友情", "想听朋友相处和感情里的小误会，温暖一点，不要说教。"],
@@ -90,8 +106,8 @@ state.tasks = state.tasks.map((t) =>
         status: "unknown",
         error:
           t.kind === "voice"
-            ? "页面曾刷新，试听等待已结束。再次试听会优先使用本浏览器缓存。"
-            : "页面曾刷新，请重新确认下载结果，已有作品仍保留。",
+            ? tr("页面曾刷新，试听等待已结束。再次试听会优先使用本浏览器缓存。")
+            : tr("页面曾刷新，请重新确认下载结果，已有作品仍保留。"),
       }
     : t,
 );
@@ -106,12 +122,12 @@ const currentShow = () => state.shows.find((s) => s.id === state.current);
 const generating = (s) =>
   (s?.episodes || []).find((e) => e.status === "generating");
 const durationLabel = (n) =>
-  `${Math.floor(n / 60)}分${String(Math.round(n) % 60).padStart(2, "0")}秒`;
+  trText`${Math.floor(n / 60)}分${String(Math.round(n) % 60).padStart(2, "0")}秒`;
 const formatDate = (s) => {
   const d = new Date(s);
   return Number.isNaN(d.getTime())
     ? ""
-    : d.toLocaleString("zh-CN", {
+    : d.toLocaleString(i18n?.locale() || "en", {
         month: "2-digit",
         day: "2-digit",
         hour: "2-digit",
@@ -122,7 +138,7 @@ const options = (items, selected) =>
   items
     .map(
       (i) =>
-        `<option value="${escapeHtml(i.id)}" ${i.id === selected ? "selected" : ""}>${escapeHtml(i.label)}</option>`,
+        `<option value="${escapeHtml(i.id)}" ${i.id === selected ? "selected" : ""}>${escapeHtml(tr(i.label))}</option>`,
     )
     .join("");
 function uid() {
@@ -137,7 +153,7 @@ async function api(path, config = {}) {
     const r = await fmFetch(path, { ...config, signal: controller.signal });
     const body = await r.json();
     if (!r.ok) {
-      const e = new Error(body.message || `请求失败（${r.status}）`);
+      const e = new Error(body.message || trText`请求失败（${r.status}）`);
       e.status = r.status;
       e.show = body.show;
       throw e;
@@ -145,7 +161,9 @@ async function api(path, config = {}) {
     return body;
   } catch (e) {
     if (e.name === "AbortError")
-      throw new Error("连接等待超时。输入已保留，可在消息中查看任务后重试。");
+      throw new Error(
+        tr("连接等待超时。输入已保留，可在消息中查看任务后重试。"),
+      );
     throw e;
   } finally {
     clearTimeout(timeout);
@@ -190,6 +208,8 @@ function captureDraft() {
   if (!$("wish-form")) return;
   writeLocal("draft:" + draftKey(), {
     ...formValues(),
+    wish: $("wish")?.value || "",
+    ...($("channel-title") ? { title: $("channel-title").value } : {}),
     episode_wish: $("episode-wish")?.value || "",
   });
 }
@@ -238,7 +258,7 @@ async function playSource(source, title, token, episodeId = null) {
   syncPlaybackMode();
   playback.waiting = false;
   audio.hidden = false;
-  $("stop-player").textContent = "停止播放";
+  $("stop-player").textContent = tr("停止播放");
   $("player").hidden = false;
   $("player-title").textContent = title;
   try {
@@ -246,14 +266,14 @@ async function playSource(source, title, token, episodeId = null) {
     if (token === playback.token) updatePlayButtons();
   } catch (e) {
     if (token === playback.token)
-      notice("音频已就绪，但浏览器没有播放。可在下方播放器重试。");
+      notice(tr("音频已就绪，但浏览器没有播放。可在下方播放器重试。"));
   }
 }
 function playbackModeOptions() {
   return options(
     [
-      { id: "single", label: "单曲循环" },
-      { id: "channel", label: "频道内连播" },
+      { id: "single", label: tr("单曲循环") },
+      { id: "channel", label: tr("频道内连播") },
     ],
     state.playbackMode,
   );
@@ -271,8 +291,8 @@ function syncPlaybackMode() {
     select.onchange = () => setPlaybackMode(select.value);
   });
   $("playback-mode").title = playback.episodeId
-    ? "频道内按来信列表顺序连播，最后一集回到第一集"
-    : "播放模式仅用于已完成的来信，试听只播放一次";
+    ? tr("频道内按来信列表顺序连播，最后一集回到第一集")
+    : tr("播放模式仅用于已完成的来信，试听只播放一次");
 }
 function reconcilePlayback() {
   if (
@@ -313,7 +333,9 @@ async function advanceEpisode(token, episodeId) {
 function updatePlayButtons() {
   document.querySelectorAll("[data-play]").forEach((b) => {
     b.textContent =
-      b.dataset.play === playback.episodeId && !audio.paused ? "暂停" : "播放";
+      b.dataset.play === playback.episodeId && !audio.paused
+        ? tr("暂停")
+        : tr("播放");
   });
 }
 $("stop-player").onclick = () => {
@@ -321,7 +343,7 @@ $("stop-player").onclick = () => {
   stopPlayback();
   if (waiting)
     notice(
-      "已停止等待。已发出的 Google 请求仍可能继续，结果可在消息中查看。",
+      tr("已停止等待。已发出的 Google 请求仍可能继续，结果可在消息中查看。"),
       "info",
     );
 };
@@ -334,7 +356,7 @@ audio.addEventListener("play", updatePlayButtons);
 audio.addEventListener("pause", updatePlayButtons);
 audio.addEventListener("error", () => {
   if (audio.hasAttribute("src"))
-    notice("音频暂时无法播放，请检查文件或网络后重试。");
+    notice(tr("音频暂时无法播放，请检查文件或网络后重试。"));
 });
 function openShow(id, { saveDraft = true } = {}) {
   if (saveDraft) captureDraft();
@@ -372,10 +394,10 @@ function renderSidebar() {
     ? state.shows
         .map(
           (s) =>
-            `<li><button type="button" class="${s.id === state.current ? "active" : ""}" data-channel="${escapeHtml(s.id)}"><span class="station-monogram" aria-hidden="true">${s.language === "ja" ? "JP" : "EN"}</span><span class="station-caption"><strong>${escapeHtml(s.title)}</strong><small>${LANG[s.language] || "英语"} · ${generating(s) ? "制作中" : `${(s.episodes || []).filter((e) => e.status === "ready").length} 集可听`}</small></span></button></li>`,
+            `<li><button type="button" class="${s.id === state.current ? "active" : ""}" data-channel="${escapeHtml(s.id)}"><span class="station-monogram" aria-hidden="true">${s.language === "ja" ? "JP" : "EN"}</span><span class="station-caption"><strong>${escapeHtml(s.title)}</strong><small>${LANG[s.language] || tr("英语")} · ${generating(s) ? tr("制作中") : trText`${(s.episodes || []).filter((e) => e.status === "ready").length} 集可听`}</small></span></button></li>`,
         )
         .join("")
-    : '<li class="rack-empty">你的频道会保存在这里。</li>';
+    : trHTML(['<li class="rack-empty">你的频道会保存在这里。</li>']);
   document
     .querySelectorAll("[data-channel]")
     .forEach((b) => (b.onclick = () => openShow(b.dataset.channel)));
@@ -385,31 +407,153 @@ function renderStudio() {
     d = loadDraft(show),
     fresh = !show;
   $("studio").innerHTML = `
-        <header class="radio-heading"><div><p class="eyebrow">${fresh ? "LETTERS, JUST FOR YOUR EARS" : "YOUR OWN FREQUENCY"}</p>
-        ${fresh ? "<h1>听一封来信，<br>走进另一种语言。</h1>" : `<h1>${escapeHtml(show.title)}</h1>`}
-        <p class="intro">${fresh ? "两位主持，一封虚构来信。让日常里的小意外，成为今天想听的故事。" : "频道记住你的口味，每一集都是新的来信。"}</p></div>
+        <header class="radio-heading"><div><p class="eyebrow">${fresh ? tr("LETTERS, JUST FOR YOUR EARS") : tr("YOUR OWN FREQUENCY")}</p>
+        ${fresh ? trHTML(["<h1>听一封来信，<br>走进另一种语言。</h1>"]) : `<h1>${escapeHtml(show.title)}</h1>`}
+        <p class="intro">${fresh ? tr("两位主持，一封虚构来信。让日常里的小意外，成为今天想听的故事。") : tr("频道记住你的口味，每一集都是新的来信。")}</p></div>
         <img class="station-art" src="./letter-radio.svg" alt="" width="260" height="188"></header>
-        ${fresh ? "" : `<div class="channel-toolbar"><nav class="tabs" aria-label="频道页面"><button type="button" data-tab="listen" class="${state.tab === "listen" ? "is-on" : ""}">收听与偏好</button><button type="button" data-tab="voice" class="${state.tab === "voice" ? "is-on" : ""}">声音设置</button></nav><button type="button" class="delete-control" id="delete-channel">${icon("trash")}删除频道</button></div>`}
+        ${
+          fresh
+            ? ""
+            : trHTML`<div class="channel-toolbar">
+                <nav class="tabs" aria-label="频道页面">
+                  <button
+                    type="button"
+                    data-tab="listen"
+                    class="${state.tab === "listen" ? "is-on" : ""}"
+                  >
+                    收听与偏好</button
+                  ><button
+                    type="button"
+                    data-tab="voice"
+                    class="${state.tab === "voice" ? "is-on" : ""}"
+                  >
+                    声音设置
+                  </button>
+                </nav>
+                <button
+                  type="button"
+                  class="delete-control"
+                  id="delete-channel"
+                >
+                  ${icon("trash")}删除频道
+                </button>
+              </div>`
+        }
         <div id="channel-body">${
           state.tab === "voice" && show
             ? ""
-            : `
-        <form id="wish-form" class="wish-card" data-revision="${d.revision}">
-            <div class="wish-top"><label for="language">想听什么语言？</label><select id="language">${options(state.presets.languages, d.language)}</select></div>
-            <label for="wish" class="wish-label">${fresh ? "想听点什么？" : "这个频道，想听点什么？"}</label>
-            <textarea id="wish" rows="3" maxlength="1200" placeholder="比如：想听日本职场里的尴尬小事，轻松好笑一点，日语别太难。">${escapeHtml(d.wish)}</textarea>
-            <div class="topic-chips" aria-label="选题灵感">${TOPICS.map(([label], i) => `<button type="button" class="topic-chip" data-topic="${i}">${icon(["letter", "heart", "case", "spark"][i])}${label}</button>`).join("")}</div>
-            <div class="listening-options"><label for="difficulty">收听难度 <select id="difficulty">${options(state.presets.difficulties, d.difficulty)}</select></label>
-            <label for="length">大约听多久 <select id="length">${options(state.presets.lengths, d.length)}</select></label></div>
-            <p class="understanding" id="understanding"></p>
-            ${fresh ? `<details class="first-sound" id="first-sound"><summary>声音与底乐 <span>首次制作前也可以选择、试听</span></summary>${voiceFields(d)}</details>` : ""}
-            ${fresh ? "" : `<label for="episode-wish" class="episode-wish-label">这期换个口味 <span>可选，只影响这一集</span></label><input id="episode-wish" maxlength="600" value="${escapeHtml(d.episode_wish || "")}" placeholder="比如：今天温暖一点，不聊工作">`}
-            <div class="wish-actions"><p class="hint">${fresh ? "没有想法也没关系，可以直接开始。" : "偏好会保存，已生成的节目会保存在本浏览器。"}</p>
-            <div>${fresh ? "" : '<button class="quiet" type="button" id="save-channel">保存偏好</button>'}<button class="primary" id="make" type="submit">${fresh ? "开始收听" : "制作新一期"}</button></div></div>
-            ${fresh ? "" : `<details class="channel-management"><summary>修改频道名称</summary><label>频道名称<input id="channel-title" maxlength="80" value="${escapeHtml(d.title)}"></label></details>`}
-        </form>
-        ${fresh ? `<div class="quiet-notes"><span>${icon("letter")}原创虚构来信</span><span>${icon("headphones")}按难度编排</span><span>${icon("spark")}自动保存 · 可下载</span></div>` : `<section class="episode-section"><div class="section-heading"><h2>频道里的来信</h2><label class="mode-control">播放模式<select id="channel-playback-mode" data-playback-mode title="频道内按来信列表顺序连播，最后一集回到第一集">${playbackModeOptions()}</select></label></div><div id="episode-mount"></div></section>`}
-        `
+            : trHTML`
+                <form
+                  id="wish-form"
+                  class="wish-card"
+                  data-revision="${d.revision}"
+                >
+                  <div class="wish-top">
+                    <label for="language">想听什么语言？</label
+                    ><select id="language">
+                      ${options(state.presets.languages, d.language)}
+                    </select>
+                  </div>
+                  <label for="wish" class="wish-label"
+                    >${fresh
+                      ? tr("想听点什么？")
+                      : tr("这个频道，想听点什么？")}</label
+                  >
+                  <textarea
+                    id="wish"
+                    rows="3"
+                    maxlength="1200"
+                    placeholder="比如：想听日本职场里的尴尬小事，轻松好笑一点，日语别太难。"
+                  ></textarea>
+                  <div class="topic-chips" aria-label="选题灵感">
+                    ${TOPICS.map(
+                      ([label], i) =>
+                        `<button type="button" class="topic-chip" data-topic="${i}">${icon(["letter", "heart", "case", "spark"][i])}${escapeHtml(tr(label))}</button>`,
+                    ).join("")}
+                  </div>
+                  <div class="listening-options">
+                    <label for="difficulty"
+                      >收听难度
+                      <select id="difficulty">
+                        ${options(state.presets.difficulties, d.difficulty)}
+                      </select></label
+                    >
+                    <label for="length"
+                      >大约听多久
+                      <select id="length">
+                        ${options(state.presets.lengths, d.length)}
+                      </select></label
+                    >
+                  </div>
+                  <p class="understanding" id="understanding"></p>
+                  ${fresh
+                    ? trHTML`<details class="first-sound" id="first-sound">
+                        <summary>
+                          声音与底乐 <span>首次制作前也可以选择、试听</span>
+                        </summary>
+                        ${voiceFields(d)}
+                      </details>`
+                    : ""}
+                  ${fresh
+                    ? ""
+                    : trHTML`<label for="episode-wish" class="episode-wish-label"
+                          >这期换个口味 <span>可选，只影响这一集</span></label
+                        ><input
+                          id="episode-wish"
+                          maxlength="600"
+                          value="${escapeHtml(d.episode_wish || "")}"
+                          placeholder="比如：今天温暖一点，不聊工作"
+                        />`}
+                  <div class="wish-actions">
+                    <p class="hint">
+                      ${fresh
+                        ? tr("没有想法也没关系，可以直接开始。")
+                        : tr("偏好会保存，已生成的节目会保存在本浏览器。")}
+                    </p>
+                    <div>
+                      ${fresh
+                        ? ""
+                        : trHTML([
+                            '<button class="quiet" type="button" id="save-channel">保存偏好</button>',
+                          ])}<button class="primary" id="make" type="submit">
+                        ${fresh ? tr("开始收听") : tr("制作新一期")}
+                      </button>
+                    </div>
+                  </div>
+                  ${fresh
+                    ? ""
+                    : trHTML`<details class="channel-management">
+                        <summary>修改频道名称</summary>
+                        <label
+                          >频道名称<input
+                            id="channel-title"
+                            maxlength="80"
+                            value="${escapeHtml(d.title)}"
+                        /></label>
+                      </details>`}
+                </form>
+                ${fresh
+                  ? trHTML`<div class="quiet-notes">
+                      <span>${icon("letter")}原创虚构来信</span
+                      ><span>${icon("headphones")}按难度编排</span
+                      ><span>${icon("spark")}自动保存 · 可下载</span>
+                    </div>`
+                  : trHTML`<section class="episode-section">
+                      <div class="section-heading">
+                        <h2>频道里的来信</h2>
+                        <label class="mode-control"
+                          >播放模式<select
+                            id="channel-playback-mode"
+                            data-playback-mode
+                            title="频道内按来信列表顺序连播，最后一集回到第一集"
+                          >
+                            ${playbackModeOptions()}
+                          </select></label
+                        >
+                      </div>
+                      <div id="episode-mount"></div>
+                    </section>`}
+              `
         }</div>`;
   document.querySelectorAll("[data-tab]").forEach(
     (b) =>
@@ -426,6 +570,7 @@ function renderStudio() {
     renderStatus();
     return;
   }
+  $("wish").value = d.wish;
   $("wish-form").onsubmit = (e) => {
     e.preventDefault();
     makeEpisode();
@@ -441,7 +586,7 @@ function renderStudio() {
   document.querySelectorAll("[data-topic]").forEach(
     (b) =>
       (b.onclick = () => {
-        $("wish").value = TOPICS[Number(b.dataset.topic)][1];
+        $("wish").value = tr(TOPICS[Number(b.dataset.topic)][1]);
         captureDraft();
         renderUnderstanding();
         $("wish").focus();
@@ -460,10 +605,10 @@ function renderUnderstanding() {
   const f = formValues();
   $("wish").placeholder =
     f.language === "ja"
-      ? "比如：想听日本职场里的尴尬小事，轻松好笑一点，日语别太难。"
-      : "比如：想听室友之间的生活误会，轻松好笑一点，英语别太难。";
+      ? tr("比如：想听日本职场里的尴尬小事，轻松好笑一点，日语别太难。")
+      : tr("比如：想听室友之间的生活误会，轻松好笑一点，英语别太难。");
   $("understanding").textContent =
-    `${LANG[f.language]} · ${LEVEL[f.difficulty]} · 虚构来信电台。制作时会根据你的愿望编排故事。`;
+    trText`${LANG[f.language]} · ${LEVEL[f.difficulty]} · 虚构来信电台。制作时会根据你的愿望编排故事。`;
 }
 function renderStatus() {
   const job = generating(currentShow());
@@ -471,19 +616,19 @@ function renderStatus() {
   if (!msg)
     msg = job
       ? {
-          message: `${PHASE[job.phase] || "正在制作"}。可以在应用内换页，进度与结果都在「消息」中。请保持此网页打开。`,
+          message: trText`${PHASE[job.phase] || tr("正在制作")}。可以在应用内换页，进度与结果都在「消息」中。请保持此网页打开。`,
           tone: "busy",
         }
       : {
           message:
             state.view === "settings"
-              ? "配置保存在本浏览器，新任务使用新配置。"
+              ? tr("配置保存在本浏览器，新任务使用新配置。")
               : currentShow()
-                ? "想听的时候，制作新一期。已有节目可以反复播放。"
-                : "选择语言，说说想听什么，就能开始。",
+                ? tr("想听的时候，制作新一期。已有节目可以反复播放。")
+                : tr("选择语言，说说想听什么，就能开始。"),
           tone: "info",
         };
-  $("status-text").textContent = msg.message;
+  $("status-text").textContent = tr(msg.message);
   $("statusbar").dataset.tone = msg.tone;
   $("status-dismiss").hidden = msg.tone !== "error";
   const make = $("make");
@@ -495,12 +640,12 @@ function renderStatus() {
       !!job ||
       !!state.conflict;
     make.textContent = state.submitting
-      ? "正在开始…"
+      ? tr("正在开始…")
       : job
-        ? "正在制作…"
+        ? tr("正在制作…")
         : currentShow()
-          ? "制作新一期"
-          : "开始收听";
+          ? tr("制作新一期")
+          : tr("开始收听");
   }
   if ($("save-channel"))
     $("save-channel").disabled =
@@ -509,8 +654,8 @@ function renderStatus() {
     $("delete-channel").disabled =
       state.deleting.size > 0 || state.saving || state.submitting || !!job;
     $("delete-channel").title = job
-      ? "制作完成后可以删除频道"
-      : "删除频道及其全部来信和音频";
+      ? tr("制作完成后可以删除频道")
+      : tr("删除频道及其全部来信和音频");
   }
   renderInbox();
 }
@@ -519,7 +664,14 @@ function renderConflict() {
     bar = $("conflict-bar");
   bar.hidden = !c;
   if (!c) return;
-  bar.innerHTML = `<p>${escapeHtml(c.message)} 当前输入仍保留。</p><div class="fold-actions"><button type="button" class="quiet" id="reload-channel">重新载入已保存版本</button><button type="button" class="quiet" id="overwrite-channel">用当前输入覆盖</button></div>`;
+  bar.innerHTML = trHTML`<p>${escapeHtml(tr(c.message))} 当前输入仍保留。</p>
+    <div class="fold-actions">
+      <button type="button" class="quiet" id="reload-channel">
+        重新载入已保存版本</button
+      ><button type="button" class="quiet" id="overwrite-channel">
+        用当前输入覆盖
+      </button>
+    </div>`;
   $("reload-channel").onclick = () => {
     writeLocal("draft:" + state.current, null);
     replaceShow(c.show);
@@ -552,7 +704,7 @@ async function saveChannel(overwrite = false, quiet = false) {
     if (state.current === id) {
       const title = document.querySelector(".radio-heading h1");
       if (title) title.textContent = saved.title;
-      if (!quiet) notice("频道偏好已保存。", "ok");
+      if (!quiet) notice(tr("频道偏好已保存。"), "ok");
     }
     renderConflict();
     return true;
@@ -571,7 +723,7 @@ async function saveChannel(overwrite = false, quiet = false) {
 async function makeEpisode(retryEpisodeId = "", showId = state.current) {
   if (runtime && !runtime.hasKey()) {
     setView("settings");
-    notice("请先填写自己的 AI Studio API Key。收听愿望已保留。", "info");
+    notice(tr("请先填写自己的 AI Studio API Key。收听愿望已保留。"), "info");
     return;
   }
   if (
@@ -628,7 +780,7 @@ async function makeEpisode(retryEpisodeId = "", showId = state.current) {
       captureDraft();
       renderEpisodes();
       if (data.episode.status === "failed")
-        notice(data.episode.error || "上次请求已结束，可再次制作。");
+        notice(data.episode.error || tr("上次请求已结束，可再次制作。"));
     }
   } catch (e) {
     if (e.status && e.status < 500) writeLocal("pending:" + id, null);
@@ -638,7 +790,7 @@ async function makeEpisode(retryEpisodeId = "", showId = state.current) {
     }
     notice(
       e.message +
-        (e.status ? "" : " 再次点击会复用同一个请求编号，避免重复制作。"),
+        (e.status ? "" : tr(" 再次点击会复用同一个请求编号，避免重复制作。")),
     );
   } finally {
     state.submitting = false;
@@ -675,10 +827,11 @@ function forgetLibraryRecords(showId, episodeIds, wholeChannel = false) {
 async function deleteChannel() {
   const s = currentShow();
   if (!s || state.deleting.size || state.submitting || state.saving) return;
-  if (generating(s)) return notice("请等这个频道制作完成后再删除。", "info");
+  if (generating(s))
+    return notice(tr("请等这个频道制作完成后再删除。"), "info");
   if (
     !confirm(
-      `删除「${s.title}」频道及其全部来信、台本和音频？此操作无法撤销，可先在设置导出备份。`,
+      trText`删除「${s.title}」频道及其全部来信、台本和音频？此操作无法撤销，可先在设置导出备份。`,
     )
   )
     return;
@@ -697,7 +850,7 @@ async function deleteChannel() {
     );
     if (state.current === s.id) openShow(null, { saveDraft: false });
     else renderSidebar();
-    notice("频道与音频已删除。", "ok");
+    notice(tr("频道与音频已删除。"), "ok");
   } catch (e) {
     notice(e.message);
   } finally {
@@ -710,10 +863,10 @@ async function deleteEpisode(id, showId = state.current) {
     ep = s?.episodes?.find((e) => e.id === id);
   if (!ep || state.deleting.size || state.submitting || state.saving) return;
   if (generating(s))
-    return notice("请等这个频道制作完成后再删除来信。", "info");
+    return notice(tr("请等这个频道制作完成后再删除来信。"), "info");
   if (
     !confirm(
-      `删除「${ep.title}」这一集及其台本和音频？频道偏好和其他来信会保留，此操作无法撤销。`,
+      trText`删除「${ep.title}」这一集及其台本和音频？频道偏好和其他来信会保留，此操作无法撤销。`,
     )
   )
     return;
@@ -738,7 +891,7 @@ async function deleteEpisode(id, showId = state.current) {
       $("wish-form").dataset.revision = show.revision;
     replaceShow(show);
     forgetLibraryRecords(showId, [id]);
-    notice("这封来信与音频已删除，频道偏好已保留。", "ok");
+    notice(tr("这封来信与音频已删除，频道偏好已保留。"), "ok");
   } catch (e) {
     notice(e.message);
   } finally {
@@ -746,6 +899,9 @@ async function deleteEpisode(id, showId = state.current) {
     renderEpisodes();
     renderStatus();
   }
+}
+function episodeTitle(ep) {
+  return ep.status !== "ready" && !ep.has_script ? tr(ep.title) : ep.title;
 }
 function renderEpisodes() {
   const mount = $("episode-mount"),
@@ -755,20 +911,35 @@ function renderEpisodes() {
     (ep) => ep.status === "ready" || ep.status === "generating",
   );
   if (!eps.length) {
-    mount.innerHTML =
-      '<div class="empty-episodes"><span aria-hidden="true">✉</span><p>还没有可播放的来信。</p><small>制作完成后保存在这里，进度与未完成记录可在「消息」中查看。</small></div>';
+    mount.innerHTML = trHTML([
+      '<div class="empty-episodes"><span aria-hidden="true">✉</span><p>还没有可播放的来信。</p><small>制作完成后保存在这里，进度与未完成记录可在「消息」中查看。</small></div>',
+    ]);
     return;
   }
   mount.innerHTML = eps
     .map(
       (ep) => `<article class="letter-episode ${ep.status}">
-        <div class="episode-heading"><span class="episode-type">${icon("letter")}${ep.status === "ready" ? "一封虚构来信" : "本期正在制作"}</span><div class="episode-tools"><time>${escapeHtml(formatDate(ep.created_at))}</time>${ep.status === "ready" ? `<button type="button" class="delete-control" data-delete-episode="${escapeHtml(ep.id)}" aria-label="删除这一集：${escapeHtml(ep.title)}" ${state.deleting.size || generating(show) ? "disabled" : ""}>${icon("trash")}${state.deleting.has(ep.id) ? "删除中…" : "删除本集"}</button>` : ""}</div></div>
-        <h3>${escapeHtml(ep.title)}</h3>
+        <div class="episode-heading"><span class="episode-type">${icon("letter")}${ep.status === "ready" ? tr("一封虚构来信") : tr("本期正在制作")}</span><div class="episode-tools"><time>${escapeHtml(formatDate(ep.created_at))}</time>${ep.status === "ready" ? trHTML`<button type="button" class="delete-control" data-delete-episode="${escapeHtml(ep.id)}" aria-label="删除这一集：${escapeHtml(episodeTitle(ep))}" ${state.deleting.size || generating(show) ? "disabled" : ""}>${icon("trash")}${state.deleting.has(ep.id) ? tr("删除中…") : tr("删除本集")}</button>` : ""}</div></div>
+        <h3>${escapeHtml(episodeTitle(ep))}</h3>
         ${ep.interpretation ? `<p class="episode-description">${escapeHtml(ep.interpretation)}</p>` : ""}
-        ${ep.input?.episode_wish ? `<p class="hint">这期的口味：${escapeHtml(ep.input.episode_wish)}</p>` : ""}
-        ${ep.status === "generating" ? `<p class="job-stage" role="status"><span class="spinner"></span>${escapeHtml(PHASE[ep.phase] || "正在制作")}。应用内换页不会取消，请保持此网页打开。</p>` : ""}
-        ${ep.status === "ready" ? `<div class="episode-actions"><button type="button" class="primary" data-play="${escapeHtml(ep.id)}">播放</button><button type="button" class="quiet" data-download="${escapeHtml(ep.id)}">下载 MP3</button><span class="hint">${ep.duration_seconds ? `${durationLabel(ep.duration_seconds)} · ` : ""}${LANG[ep.language] || "历史成片"}${ep.music_source === "skipped" ? " · 无底乐" : ""}</span></div>` : ""}
-        ${ep.has_script ? `<details class="transcript" data-transcript="${escapeHtml(ep.id)}" ${state.opened.has(ep.id) ? "open" : ""}><summary>台本与本期信息</summary><div class="transcript-body" id="transcript-${escapeHtml(ep.id)}"></div></details>` : ""}
+        ${ep.input?.episode_wish ? trHTML`<p class="hint">这期的口味：${escapeHtml(ep.input.episode_wish)}</p>` : ""}
+        ${ep.status === "generating" ? trHTML`<p class="job-stage" role="status"><span class="spinner"></span>${escapeHtml(PHASE[ep.phase] || tr("正在制作"))}。应用内换页不会取消，请保持此网页打开。</p>` : ""}
+        ${ep.status === "ready" ? trHTML`<div class="episode-actions"><button type="button" class="primary" data-play="${escapeHtml(ep.id)}">播放</button><button type="button" class="quiet" data-download="${escapeHtml(ep.id)}">下载 MP3</button><span class="hint">${ep.duration_seconds ? `${durationLabel(ep.duration_seconds)} · ` : ""}${LANG[ep.language] || tr("历史成片")}${ep.music_source === "skipped" ? tr(" · 无底乐") : ""}</span></div>` : ""}
+        ${
+          ep.has_script
+            ? trHTML`<details
+                class="transcript"
+                data-transcript="${escapeHtml(ep.id)}"
+                ${state.opened.has(ep.id) ? "open" : ""}
+              >
+                <summary>台本与本期信息</summary>
+                <div
+                  class="transcript-body"
+                  id="transcript-${escapeHtml(ep.id)}"
+                ></div>
+              </details>`
+            : ""
+        }
         </article>`,
     )
     .join("");
@@ -780,7 +951,7 @@ function renderEpisodes() {
           if (audio.paused)
             audio
               .play()
-              .catch(() => notice("浏览器未能播放，可在播放器重试。"));
+              .catch(() => notice(tr("浏览器未能播放，可在播放器重试。")));
           else audio.pause();
           return;
         }
@@ -810,29 +981,43 @@ async function loadTranscript(id) {
   if (!target) return;
   try {
     if (!state.transcripts.has(id)) {
-      target.textContent = "正在读取已保存的台本…";
+      target.textContent = tr("正在读取已保存的台本…");
       state.transcripts.set(id, api(`/api/episodes/${id}/transcript`));
     }
     const data = await state.transcripts.get(id);
     if (!$("transcript-" + id)) return;
     const body = $("transcript-" + id);
-    body.innerHTML = `<p class="hint">重点表达是播出记录，不代表已经掌握。</p><p class="expression-list">${(data.expressions || []).map((e) => `<span>${escapeHtml(e)}</span>`).join("")}</p><pre>${escapeHtml(data.script)}</pre>
-        ${
-          (data.sources || []).length
-            ? `<h4>本期参考资料</h4><p class="hint">用于核对背景，来信情节为原创虚构。</p><ul>${data.sources
+    body.innerHTML = trHTML`<p class="hint">
+        重点表达是播出记录，不代表已经掌握。
+      </p>
+      <p class="expression-list">
+        ${(data.expressions || [])
+          .map((e) => `<span>${escapeHtml(e)}</span>`)
+          .join("")}
+      </p>
+      <pre>${escapeHtml(data.script)}</pre>
+      ${(data.sources || []).length
+        ? trHTML`<h4>本期参考资料</h4>
+            <p class="hint">用于核对背景，来信情节为原创虚构。</p>
+            <ul>
+              ${data.sources
                 .filter((s) => /^https:\/\//.test(s.url))
                 .map(
                   (s) =>
                     `<li><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.title)}</a></li>`,
                 )
-                .join("")}</ul>`
-            : '<p class="hint">本期为原创情境，没有使用外部搜索来源。</p>'
-        }
-        <p class="hint">频道愿望：${escapeHtml(data.input?.wish || "自由选题")}<br>当期愿望：${escapeHtml(data.input?.episode_wish || "沿用频道口味")}</p>`;
+                .join("")}
+            </ul>`
+        : trHTML(['<p class="hint">本期为原创情境，没有使用外部搜索来源。</p>'])}
+      <p class="hint">
+        频道愿望：${escapeHtml(data.input?.wish || tr("自由选题"))}<br />当期愿望：${escapeHtml(
+          data.input?.episode_wish || tr("沿用频道口味"),
+        )}
+      </p>`;
     const html = data.research?.search_suggestions;
     if (html) {
       const frame = document.createElement("iframe");
-      frame.title = "Google 搜索建议";
+      frame.title = tr("Google 搜索建议");
       frame.className = "search-suggestions";
       frame.setAttribute(
         "sandbox",
@@ -846,7 +1031,8 @@ async function loadTranscript(id) {
     }
   } catch (e) {
     state.transcripts.delete(id);
-    if ($("transcript-" + id)) $("transcript-" + id).textContent = e.message;
+    if ($("transcript-" + id))
+      $("transcript-" + id).textContent = tr(e.message);
   }
 }
 async function downloadMp3(id, button) {
@@ -859,10 +1045,10 @@ async function downloadMp3(id, button) {
     episodeId: id,
   });
   button.disabled = true;
-  button.textContent = "正在准备…";
+  button.textContent = tr("正在准备…");
   try {
     const r = await fmFetch(`/api/episodes/${id}/download`);
-    if (!r.ok) throw new Error((await r.json()).message || "下载失败");
+    if (!r.ok) throw new Error((await r.json()).message || tr("下载失败"));
     const blob = await r.blob(),
       url = URL.createObjectURL(blob),
       a = document.createElement("a");
@@ -877,7 +1063,7 @@ async function downloadMp3(id, button) {
     notice(e.message);
   } finally {
     button.disabled = false;
-    button.textContent = "下载 MP3";
+    button.textContent = tr("下载 MP3");
     persistTasks();
   }
 }
@@ -898,17 +1084,57 @@ function persistTasks() {
   renderInbox();
 }
 function voiceFields(show) {
-  return `    <div class="voice-row"><label>主持一<select id="host">${options(state.presets.voices, show.host_voice)}</select></label><button type="button" class="quiet" data-preview="host">试听</button><button type="button" class="linkish" data-force="host">重新生成试听</button></div>
-    <div class="voice-row"><label>主持二<select id="guest">${options(state.presets.voices, show.guest_voice)}</select></label><button type="button" class="quiet" data-preview="guest">试听</button><button type="button" class="linkish" data-force="guest">重新生成试听</button></div>
-    <div class="voice-row"><label>背景音乐<select id="music">${options(state.presets.music, show.music_style)}</select></label><button type="button" class="quiet" id="preview-music">试听</button><button type="button" class="linkish" id="regenerate-music">重新生成底乐</button></div>
-    <p class="hint">相同模型、声线和语言会复用 7 天内的试听。重新生成会再次请求服务；失败时旧试听仍保留。</p>`;
+  return trHTML` <div class="voice-row">
+      <label
+        >主持一<select id="host">
+          ${options(state.presets.voices, show.host_voice)}
+        </select></label
+      ><button type="button" class="quiet" data-preview="host">试听</button
+      ><button type="button" class="linkish" data-force="host">
+        重新生成试听
+      </button>
+    </div>
+    <div class="voice-row">
+      <label
+        >主持二<select id="guest">
+          ${options(state.presets.voices, show.guest_voice)}
+        </select></label
+      ><button type="button" class="quiet" data-preview="guest">试听</button
+      ><button type="button" class="linkish" data-force="guest">
+        重新生成试听
+      </button>
+    </div>
+    <div class="voice-row">
+      <label
+        >背景音乐<select id="music">
+          ${options(state.presets.music, show.music_style)}
+        </select></label
+      ><button type="button" class="quiet" id="preview-music">试听</button
+      ><button type="button" class="linkish" id="regenerate-music">
+        重新生成底乐
+      </button>
+    </div>
+    <p class="hint">
+      相同模型、声线和语言会复用 7
+      天内的试听。重新生成会再次请求服务；失败时旧试听仍保留。
+    </p>`;
 }
 function renderVoice(show) {
-  $("channel-body").innerHTML =
-    `<section class="wish-card voice-card"><h2>给频道选一种声音</h2><p class="intro">试听使用频道的${LANG[show.language]}，切页会停止播放，已发出的生成仍会继续。修改只影响后续制作，正在制作的一集使用开始时的选择。</p>${voiceFields(show)}</section>`;
+  $("channel-body").innerHTML = trHTML`<section class="wish-card voice-card">
+    <h2>给频道选一种声音</h2>
+    <p class="intro">
+      试听使用频道的${LANG[
+        show.language
+      ]}，切页会停止播放，已发出的生成仍会继续。修改只影响后续制作，正在制作的一集使用开始时的选择。
+    </p>
+    ${voiceFields(show)}
+  </section>`;
   bindVoiceControls(show);
 }
 function bindVoiceControls(show) {
+  document
+    .querySelectorAll(".voice-row select")
+    .forEach((el) => (el.disabled = state.saving));
   for (const [id, field] of [
     ["host", "host_voice"],
     ["guest", "guest_voice"],
@@ -974,8 +1200,8 @@ async function previewVoice(role, force) {
   playback.waiting = true;
   $("player").hidden = false;
   audio.hidden = true;
-  $("stop-player").textContent = "停止等待";
-  $("player-title").textContent = "正在准备声线试听…";
+  $("stop-player").textContent = tr("停止等待");
+  $("player-title").textContent = tr("正在准备声线试听…");
   try {
     let result = voiceCache.get(key);
     if (result && Date.now() - Date.parse(result.created) > 7 * 86400000)
@@ -987,7 +1213,7 @@ async function previewVoice(role, force) {
         voiceEpoch.set(key, epoch);
         const task = addTask({
           kind: "voice",
-          title: `${LANG[language]} · ${role === "host" ? "主持一" : "主持二"}试听`,
+          title: trText`${LANG[language]} · ${role === "host" ? tr("主持一") : tr("主持二")}试听`,
           showId: show.id,
         });
         job = (async () => {
@@ -996,7 +1222,8 @@ async function previewVoice(role, force) {
               "/api/voices/preview",
               jsonRequest("POST", { role, voice, language, force }),
             );
-            if (!r.ok) throw new Error((await r.json()).message || "试听失败");
+            if (!r.ok)
+              throw new Error((await r.json()).message || tr("试听失败"));
             const item = {
               blob: await r.blob(),
               created:
@@ -1027,13 +1254,13 @@ async function previewVoice(role, force) {
           })
           .catch(() => {});
       }
-      notice("正在准备试听，进度可以在消息中查看。", "busy");
+      notice(tr("正在准备试听，进度可以在消息中查看。"), "busy");
       result = await job;
     }
     if (token !== playback.token) return;
     state.notice = null;
     renderStatus();
-    await playSource(result.blob, `${LANG[language]} · 声线试听`, token);
+    await playSource(result.blob, trText`${LANG[language]} · 声线试听`, token);
   } catch (e) {
     if (token === playback.token) {
       stopPlayback();
@@ -1050,12 +1277,12 @@ async function previewMusic() {
       const r = await fmFetch(`/media/bgm/${encodeURIComponent(style)}.wav`);
       if (!r.ok)
         throw new Error(
-          (await r.json()).message || "底乐还没有生成，请先生成底乐。",
+          (await r.json()).message || tr("底乐还没有生成，请先生成底乐。"),
         );
       blob = await r.blob();
       bgmCache.set(style, blob);
     }
-    await playSource(blob, "底乐试听", token);
+    await playSource(blob, tr("底乐试听"), token);
   } catch (e) {
     if (token === playback.token) notice(e.message);
   }
@@ -1067,12 +1294,12 @@ async function regenerateMusic() {
       (t) => t.kind === "bgm" && t.style === style && t.status === "generating",
     )
   ) {
-    notice("这条底乐正在生成，可在消息中查看。", "busy");
+    notice(tr("这条底乐正在生成，可在消息中查看。"), "busy");
     return;
   }
   const task = addTask({
     kind: "bgm",
-    title: "重新生成底乐",
+    title: tr("重新生成底乐"),
     style,
     showId: state.current,
   });
@@ -1080,7 +1307,7 @@ async function regenerateMusic() {
     await api(`/api/bgm/${encodeURIComponent(style)}/regenerate`, {
       method: "POST",
     });
-    notice("底乐正在生成，完成后可再次试听。", "busy");
+    notice(tr("底乐正在生成，完成后可再次试听。"), "busy");
   } catch (e) {
     task.status = "failed";
     task.error = e.message;
@@ -1117,11 +1344,42 @@ function renderInbox() {
     ? rows
         .map(
           (r) =>
-            `<li><button type="button" data-task="${escapeHtml(r.id)}" ${r.kind === "episode" && r.status === "failed" ? `aria-expanded="${state.inboxTask === r.id}"` : ""}><strong>${escapeHtml(r.channelTitle || r.title)}</strong><small>${escapeHtml(r.kind === "episode" ? r.title : "")} · ${escapeHtml(r.status === "generating" ? PHASE[r.phase] || "正在处理" : r.status === "ready" ? (r.kind === "episode" ? "可播放" : ["download", "backup"].includes(r.kind) ? "已准备并请求下载" : "已完成，可再次试听") : "未完成，点击查看")}</small><small>${escapeHtml(formatDate(r.created_at))}</small></button>
-            ${state.inboxTask === r.id && r.status !== "ready" && r.status !== "generating" ? `<div class="inbox-failure"><p class="inbox-error">${escapeHtml(r.error || "制作未完成，请重试。")}</p>${r.kind === "episode" ? `<p class="hint">愿望与已完成阶段保留。重试沿用本期原输入，使用当前模型配置。</p><button type="button" class="quiet" data-retry-task="${escapeHtml(r.id)}" ${state.submitting || generating(state.shows.find((s) => s.id === r.showId)) ? "disabled" : ""}>重试本期</button><button type="button" class="linkish" data-task-channel="${escapeHtml(r.showId)}">查看频道</button>` : ""}</div>` : ""}</li>`,
+            `<li><button type="button" data-task="${escapeHtml(r.id)}" ${r.kind === "episode" && r.status === "failed" ? `aria-expanded="${state.inboxTask === r.id}"` : ""}><strong>${escapeHtml(r.channelTitle || tr(r.title))}</strong><small>${escapeHtml(r.kind === "episode" ? episodeTitle(r) : "")} · ${escapeHtml(r.status === "generating" ? PHASE[r.phase] || tr("正在处理") : r.status === "ready" ? (r.kind === "episode" ? tr("可播放") : ["download", "backup"].includes(r.kind) ? tr("已准备并请求下载") : tr("已完成，可再次试听")) : tr("未完成，点击查看"))}</small><small>${escapeHtml(formatDate(r.created_at))}</small></button>
+            ${
+              state.inboxTask === r.id &&
+              r.status !== "ready" &&
+              r.status !== "generating"
+                ? `<div class="inbox-failure"><p class="inbox-error">${escapeHtml(tr(r.error) || tr("制作未完成，请重试。"))}</p>${
+                    r.kind === "episode"
+                      ? trHTML`<p class="hint">
+                            愿望与已完成阶段保留。重试沿用本期原输入，使用当前模型配置。
+                          </p>
+                          <button
+                            type="button"
+                            class="quiet"
+                            data-retry-task="${escapeHtml(r.id)}"
+                            ${state.submitting ||
+                            generating(
+                              state.shows.find((s) => s.id === r.showId),
+                            )
+                              ? "disabled"
+                              : ""}
+                          >
+                            重试本期</button
+                          ><button
+                            type="button"
+                            class="linkish"
+                            data-task-channel="${escapeHtml(r.showId)}"
+                          >
+                            查看频道
+                          </button>`
+                      : ""
+                  }</div>`
+                : ""
+            }</li>`,
         )
         .join("")
-    : '<li class="hint">开始制作后，进度和结果会出现在这里。</li>';
+    : trHTML(['<li class="hint">开始制作后，进度和结果会出现在这里。</li>']);
   if (state.inboxMarkup !== inboxHtml) {
     $("inbox-list").innerHTML = inboxHtml;
     state.inboxMarkup = inboxHtml;
@@ -1188,6 +1446,39 @@ document.addEventListener("keydown", (e) => {
     $("inbox-btn").focus();
   }
 });
+function setInterfaceLanguage(language) {
+  if (!i18n || !["en", "ja", "zh-CN"].includes(language)) return;
+  captureDraft();
+  const firstSoundOpen = $("first-sound")?.open;
+  const managementOpen = document.querySelector?.(".channel-management")?.open;
+  i18n.setLocale(language);
+  i18n.apply(document);
+  renderSidebar();
+  if (state.presets) {
+    renderStudio();
+    if ($("first-sound")) $("first-sound").open = !!firstSoundOpen;
+    const management = document.querySelector?.(".channel-management");
+    if (management) management.open = !!managementOpen;
+  }
+  // Repaint labels only; do not save/reload settings, change the media source, or reset the Key.
+  if (state.settings) {
+    $("auth-note").textContent = tr(state.settings.auth_note);
+    $("settings-effect").textContent = [
+      tr(state.settings.effect),
+      tr(state.settings.priority),
+    ].join(" ");
+    $("key-state").textContent = tr(
+      state.settings.has_key ? "本页 Key 已启用" : "尚未填写 Key",
+    );
+  }
+  $("playback-mode").innerHTML = playbackModeOptions();
+  syncPlaybackMode();
+  $("stop-player").textContent = tr(playback.waiting ? "停止等待" : "停止播放");
+  if (!playback.episodeId)
+    $("player-title").textContent = tr($("player-title").textContent);
+  renderStatus();
+}
+$("ui-language").onchange = () => setInterfaceLanguage($("ui-language").value);
 $("new-channel").onclick = () => openShow(null);
 $("nav-studio").onclick = () => {
   setView("studio");
@@ -1207,11 +1498,13 @@ function paintSettings(data) {
   state.settings = data;
   for (const [id, key] of Object.entries(settingsFields))
     $(id).value = data.settings[key] || "";
-  $("auth-note").textContent = data.auth_note;
-  $("settings-effect").textContent = [data.effect, data.priority].join(" ");
+  $("auth-note").textContent = tr(data.auth_note);
+  $("settings-effect").textContent = [tr(data.effect), tr(data.priority)].join(
+    " ",
+  );
   $("key-state").textContent = data.has_key
-    ? "本页 Key 已启用"
-    : "尚未填写 Key";
+    ? tr("本页 Key 已启用")
+    : tr("尚未填写 Key");
   $("clear-api-key").disabled = !data.has_key;
 }
 async function loadSettings() {
@@ -1228,7 +1521,7 @@ $("enable-api-key").onclick = async () => {
     paintSettings(await runtime.setKey($("api-key").value));
     voiceCache.clear();
     notice(
-      "Key 已在本页启用。可以回到收听开始制作；刷新后需要重新填写。",
+      tr("Key 已在本页启用。可以回到收听开始制作；刷新后需要重新填写。"),
       "ok",
     );
   } catch (e) {
@@ -1243,7 +1536,7 @@ $("clear-api-key").onclick = async () => {
   paintSettings(await runtime.clearKey());
   voiceCache.clear();
   notice(
-    "本页 Key 已清除。已提交的任务仍可能继续，后续新请求需要重新填写 Key。",
+    tr("本页 Key 已清除。已提交的任务仍可能继续，后续新请求需要重新填写 Key。"),
     "info",
   );
 };
@@ -1271,11 +1564,11 @@ $("backup-file").onchange = async () => {
     renderSidebar();
     renderEpisodes();
     notice(
-      `已导入 ${result.channels} 个频道、${result.episodes} 条记录。已有频道和模型设置保留。`,
+      trText`已导入 ${result.channels} 个频道、${result.episodes} 条记录。已有频道和模型设置保留。`,
       "ok",
     );
   } catch (e) {
-    notice(e.message || "备份无法读取，已有频道仍保留。");
+    notice(e.message || tr("备份无法读取，已有频道仍保留。"));
   } finally {
     button.disabled = false;
     $("backup-file").value = "";
@@ -1302,7 +1595,7 @@ $("save-settings").onclick = async () => {
     paintSettings(data);
     voiceCache.clear();
     bgmCache.clear();
-    notice("设置已保存，新制作与试听会使用新配置。", "ok");
+    notice(tr("设置已保存，新制作与试听会使用新配置。"), "ok");
   } catch (e) {
     notice(e.message);
   } finally {
@@ -1316,7 +1609,7 @@ $("restore-settings").onclick = async () => {
     paintSettings(data);
     voiceCache.clear();
     bgmCache.clear();
-    notice("已恢复模型默认值，当前页的 Key 不变。", "ok");
+    notice(tr("已恢复模型默认值，当前页的 Key 不变。"), "ok");
   } catch (e) {
     notice(e.message);
   }
@@ -1331,12 +1624,12 @@ $("clear-preview-cache").onclick = async () => {
   }
 };
 $("export-backup").onclick = async () => {
-  const task = addTask({ kind: "backup", title: "导出电台备份" });
+  const task = addTask({ kind: "backup", title: tr("导出电台备份") });
   const b = $("export-backup");
   b.disabled = true;
   try {
     const r = await fmFetch("/api/backup");
-    if (!r.ok) throw new Error("备份导出失败，请重试。");
+    if (!r.ok) throw new Error(tr("备份导出失败，请重试。"));
     const blob = await r.blob(),
       url = URL.createObjectURL(blob),
       a = document.createElement("a");
@@ -1344,7 +1637,7 @@ $("export-backup").onclick = async () => {
     a.download = "diyfm-backup.zip";
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
-    notice("备份已下载，包含频道、台本、设置与音频。", "ok");
+    notice(tr("备份已下载，包含频道、台本、设置与音频。"), "ok");
     task.status = "ready";
   } catch (e) {
     task.status = "failed";
@@ -1363,8 +1656,8 @@ async function poll() {
     const data = await api("/api/shows");
     if (version !== state.libraryVersion) return;
     if (
-      state.notice?.message ===
-      "暂时无法更新任务状态。输入与已有节目已保留，正在尝试重新连接。"
+      tr(state.notice?.message) ===
+      tr("暂时无法更新任务状态。输入与已有节目已保留，正在尝试重新连接。")
     )
       state.notice = null;
     const before = JSON.stringify(
@@ -1400,7 +1693,7 @@ async function poll() {
             bgmCache.delete(t.style);
           } else if (!job) {
             t.status = "unknown";
-            t.error = "服务已重启，底乐任务状态未知。可再次试听本地结果。";
+            t.error = tr("服务已重启，底乐任务状态未知。可再次试听本地结果。");
           }
         });
       persistTasks();
@@ -1410,7 +1703,7 @@ async function poll() {
   } catch (e) {
     if (!state.notice)
       notice(
-        "暂时无法更新任务状态。输入与已有节目已保留，正在尝试重新连接。",
+        tr("暂时无法更新任务状态。输入与已有节目已保留，正在尝试重新连接。"),
         "warn",
       );
   } finally {

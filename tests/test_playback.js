@@ -3,7 +3,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const vm = require("node:vm");
 const fs = require("node:fs");
-function setup(initialStorage = {}) {
+function setup(initialStorage = {}, translation, backend) {
   const elements = new Map(),
     storage = new Map(Object.entries(initialStorage));
   const element = (id) => {
@@ -42,7 +42,10 @@ function setup(initialStorage = {}) {
     return elements.get(id);
   };
   const ctx = {
+    DIYFM_I18N: translation,
+    DIYFM: backend,
     document: {
+      documentElement: { lang: "en" },
       getElementById: element,
       querySelectorAll: () => [],
       addEventListener() {},
@@ -457,4 +460,55 @@ test("playback mode is restored after reload with a safe default for invalid sav
     setup({ "diyfm:playback-mode": '"unexpected"' }).run("state.playbackMode"),
     "channel",
   );
+});
+test("changing interface language preserves playback, Key, job state, drafts and unsaved models", async () => {
+  const { createI18n } = await import("../static/i18n.mjs");
+  const { newVault, DEFAULT_MODELS } = await import("../static/gemini.mjs");
+  const { PRESETS } = await import("../static/presets.mjs");
+  const vault = newVault();
+  vault.set("AQ." + "synthetic-test-only-key".repeat(3));
+  let cleared = 0;
+  const ui = createI18n();
+  const { ctx, run, elements } = setup({}, ui, {
+    fetch: () => new Promise(() => {}),
+    clearKey: () => {
+      cleared++;
+      vault.clear();
+    },
+  });
+  ctx.testPresets = PRESETS;
+  run(`state.presets=testPresets; state.shows[0].title='保留原文'; state.shows[0].language='ja'; state.settingsDirty=true; state.submitting=true;
+    $('language').value='ja'; $('wish').value='  My wish 原文を保つ  '; $('episode-wish').value='今回だけ'; $('channel-title').value='保留原文'; $('difficulty').value='basic'; $('length').value='SHORT'; $('set-llm').value='gemini-unsaved'; $('host').value='Kore'; $('guest').value='Puck'; $('music').value='none';
+    audio.src='blob:saved'; audio.currentTime=9; audio.playbackRate=1.25; audio.paused=false; playback.episodeId='episode'; playback.token=7;`);
+  const beforeKey = vault.snapshot(DEFAULT_MODELS).key;
+  run("setInterfaceLanguage('ja')");
+  assert.equal(ctx.document.documentElement.lang, "ja");
+  assert.equal(run("audio.src"), "blob:saved");
+  assert.equal(run("audio.currentTime"), 9);
+  assert.equal(run("audio.playbackRate"), 1.25);
+  assert.equal(run("audio.paused"), false);
+  assert.equal(run("playback.token"), 7);
+  assert.equal(run("state.submitting"), true);
+  assert.equal(run("state.settingsDirty"), true);
+  assert.equal(elements.get("set-llm").value, "gemini-unsaved");
+  assert.equal(elements.get("language").value, "ja");
+  assert.equal(run("readLocal('draft:channel',{}).wish"), "  My wish 原文を保つ  ");
+  assert.equal(elements.get("wish").value, "  My wish 原文を保つ  ");
+  assert.equal(run("readLocal('draft:channel',{}).episode_wish"), "今回だけ");
+  assert.equal(run("state.shows[0].title"), "保留原文");
+  assert.equal(cleared, 0);
+  assert.equal(vault.snapshot(DEFAULT_MODELS).key, beforeKey);
+});
+test("localized transcript rendering preserves escaped original script and input", async () => {
+  const {createI18n}=await import('../static/i18n.mjs');
+  const ui=createI18n(); ui.setLocale('ja');
+  const {ctx,run,elements}=setup({},ui);
+  ctx.transcriptFixture={script:'Host: <script>alert(1)</script>\nGuest: 日本語。',expressions:['<em>'],sources:[],input:{wish:'原文 <b>keep</b>'}};
+  run("state.transcripts.set('original',Promise.resolve(transcriptFixture))");
+  await run("loadTranscript('original')");
+  const markup=elements.get('transcript-original').innerHTML;
+  assert.match(markup,/Host: &lt;script&gt;alert\(1\)&lt;\/script&gt;\nGuest: 日本語。/);
+  assert.match(markup,/原文 &lt;b&gt;keep&lt;\/b&gt;/);
+  assert.match(markup,/習得を示すものではありません/);
+  assert.doesNotMatch(markup,/<script>|<b>keep/);
 });
