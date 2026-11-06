@@ -444,6 +444,7 @@ export function createBrowserAPI({
               (id) =>
                 k === `audio:${id}` ||
                 k === `mp3:${id}` ||
+                k === `mp3-meta:${id}` ||
                 k.startsWith(`voice:${id}:`),
             ),
           )
@@ -506,23 +507,46 @@ export function createBrowserAPI({
     }
   }
   async function download(id) {
-    if (downloads.has(id)) return downloads.get(id);
-    const job = (async () => {
-      await findEpisode(id);
-      let blob = await library.get("mp3:" + id);
-      if (!blob) {
+    let job = downloads.get(id);
+    if (!job) {
+      job = (async () => {
+        await findEpisode(id);
         const wav = await library.get("audio:" + id);
         if (!wav) throw error("成片音频不存在。", 404);
-        blob = await mp3(await blobPCM(wav));
-        await library.write([["mp3:" + id, blob]]);
-      }
-      return new Response(blob, { headers: { "Content-Type": "audio/mpeg" } });
-    })();
-    downloads.set(id, job);
+        // MP3s are derivatives of the finished master, which already includes its BGM.
+        // Never trust an imported/legacy cache or a cache from a different master.
+        const digest = await crypto.subtle.digest(
+          "SHA-256",
+          await wav.arrayBuffer(),
+        );
+        const sourceHash = Array.from(new Uint8Array(digest), (b) =>
+          b.toString(16).padStart(2, "0"),
+        ).join("");
+        const encoder = "lamejs-1.2.1-mono-24000-128-v1";
+        const cached = await library.get("mp3-meta:" + id);
+        let blob = await library.get("mp3:" + id);
+        if (
+          !blob ||
+          cached?.source_hash !== sourceHash ||
+          cached?.encoder !== encoder
+        ) {
+          blob = await mp3(await blobPCM(wav));
+          await library.write([
+            ["mp3:" + id, blob],
+            ["mp3-meta:" + id, { source_hash: sourceHash, encoder }],
+          ]);
+        }
+        return blob;
+      })();
+      downloads.set(id, job);
+    }
     try {
-      return await job;
+      // Each caller owns its Response body, while concurrent requests share the encoding work.
+      return new Response(await job, {
+        headers: { "Content-Type": "audio/mpeg" },
+      });
     } finally {
-      downloads.delete(id);
+      if (downloads.get(id) === job) downloads.delete(id);
     }
   }
   async function backup() {

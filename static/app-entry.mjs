@@ -1,5 +1,5 @@
 import { i18n } from "./i18n.mjs";
-import { createBrowserAPI } from "./browser-api.mjs?v=2.1.0";
+import { createBrowserAPI } from "./browser-api.mjs?v=2.1.1";
 window.DIYFM_I18N = i18n;
 i18n.apply(document);
 const legacy =

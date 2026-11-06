@@ -520,3 +520,125 @@ test("episode metadata language is captured separately from the listening langua
   assert.match(prompt, /"language":"日语"/);
   assert.doesNotMatch(prompt, /中文搭桥/);
 });
+const tonePCM = (frequency, seconds, amplitude) =>
+  Float32Array.from(
+    { length: RATE * seconds },
+    (_, i) => amplitude * Math.sin((2 * Math.PI * frequency * i) / RATE),
+  );
+const tonePart = async (pcm) => ({
+  mime: "audio/wav",
+  data: Buffer.from(await wavBlob(pcm).arrayBuffer()).toString("base64"),
+});
+const toneAmplitude = (pcm, frequency) => {
+  let re = 0,
+    im = 0;
+  const start = RATE,
+    end = Math.min(pcm.length, RATE * 2);
+  for (let i = start; i < end; i++) {
+    const phase = (2 * Math.PI * frequency * i) / RATE;
+    re += pcm[i] * Math.cos(phase);
+    im += pcm[i] * Math.sin(phase);
+  }
+  return (2 * Math.hypot(re, im)) / (end - start);
+};
+test("MP3 export encodes the mixed master, replaces unverified cache and follows audio changes", async () => {
+  let encoded,
+    calls = 0;
+  const { api, library, show } = await fixture({
+    synthesize: async () => [await tonePart(tonePCM(880, 3, 0.25))],
+    makeMusic: async () => tonePart(tonePCM(220, 1, 0.25)),
+    mp3: async (pcm) => {
+      encoded = pcm.slice();
+      calls++;
+      return new Blob(["encoded-mixed-" + calls], { type: "audio/mpeg" });
+    },
+  });
+  await call(api, `/api/shows/${show.id}`, "PATCH", {
+    music_style: "focus_lofi",
+    revision: 0,
+  });
+  await call(api, `/api/shows/${show.id}/episodes`, "POST", {
+    request_id: "mixed-mp3-regression",
+  });
+  const { ep } = await finished(api, show.id);
+  assert.equal(ep.music_source, "library");
+  await library.write([
+    ["mp3:" + ep.id, new Blob(["legacy-voice-only-cache"])],
+  ]);
+  await api.clearKey();
+  const first = await api.fetch(`/api/episodes/${ep.id}/download`);
+  assert.equal(await first.text(), "encoded-mixed-1");
+  assert.ok(
+    toneAmplitude(encoded, 220) > 0.01,
+    "BGM must reach the MP3 encoder",
+  );
+  assert.ok(
+    toneAmplitude(encoded, 880) > 0.2,
+    "voice must reach the MP3 encoder",
+  );
+  const second = await api.fetch(`/api/episodes/${ep.id}/download`);
+  assert.equal(await second.text(), "encoded-mixed-1");
+  assert.equal(calls, 1, "unchanged audio must reuse its verified MP3");
+  await library.write([["audio:" + ep.id, wavBlob(tonePCM(440, 3, 0.25))]]);
+  const replaced = await api.fetch(`/api/episodes/${ep.id}/download`);
+  assert.equal(await replaced.text(), "encoded-mixed-2");
+  assert.ok(toneAmplitude(encoded, 440) > 0.2);
+  assert.equal(calls, 2, "a changed master must invalidate the old MP3");
+});
+test("concurrent MP3 downloads share encoding but provide independently readable responses", async () => {
+  let calls = 0,
+    release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const { api, library, show } = await fixture({
+    mp3: async () => {
+      calls++;
+      await gate;
+      return new Blob(["mixed-download"]);
+    },
+  });
+  await call(api, `/api/shows/${show.id}/episodes`, "POST", {
+    request_id: "parallel-export",
+  });
+  const { ep } = await finished(api, show.id);
+  const one = api.fetch(`/api/episodes/${ep.id}/download`),
+    two = api.fetch(`/api/episodes/${ep.id}/download`);
+  release();
+  const [a, b] = await Promise.all([one, two]);
+  assert.equal(await a.text(), "mixed-download");
+  assert.equal(await b.text(), "mixed-download");
+  assert.equal(calls, 1);
+  assert.ok(await library.get("mp3-meta:" + ep.id));
+  await call(api, `/api/shows/${show.id}/episodes/${ep.id}`, "DELETE");
+  assert.equal(await library.get("mp3-meta:" + ep.id), undefined);
+});
+test("failed MP3 replacement preserves old files but never serves an invalidated cache as success", async () => {
+  let fail = false;
+  const { api, library, show } = await fixture({
+    mp3: async () => {
+      if (fail) throw Error("controlled encode failure");
+      return new Blob(["good-export"]);
+    },
+  });
+  await call(api, `/api/shows/${show.id}/episodes`, "POST", {
+    request_id: "failed-export",
+  });
+  const { ep } = await finished(api, show.id);
+  assert.equal(
+    await (await api.fetch(`/api/episodes/${ep.id}/download`)).text(),
+    "good-export",
+  );
+  const old = await library.get("mp3:" + ep.id),
+    meta = await library.get("mp3-meta:" + ep.id);
+  await library.write([["audio:" + ep.id, wavBlob(tonePCM(440, 3, 0.25))]]);
+  fail = true;
+  const failure = await api.fetch(`/api/episodes/${ep.id}/download`);
+  assert.equal(failure.ok, false);
+  assert.equal(
+    await (await library.get("mp3:" + ep.id)).text(),
+    await old.text(),
+  );
+  assert.deepEqual(await library.get("mp3-meta:" + ep.id), meta);
+  assert.ok((await library.get("audio:" + ep.id)).size > 44);
+});

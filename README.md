@@ -8,7 +8,7 @@ DIYFM turns language listening into radio you want to return to: self-contained 
 
 [Open the public test site](https://jayson-sheyue.github.io/DIYFM/) · [Get a Google AI Studio key](https://aistudio.google.com/apikey) · [API references](docs/api-references.md) · [Verification record](docs/testing.md)
 
-> **v2.1 is a static, bring-your-own-key application.** GitHub Pages hosts the application; your browser sends text, speech and music requests directly to Google. Each visitor provides their own key, pays for their own requests and has a separate browser library. Free hosting does not mean free model usage.
+> **v2.1.1 is a static, bring-your-own-key application.** GitHub Pages hosts the application; your browser sends text, speech and music requests directly to Google. Each visitor provides their own key, pays for their own requests and has a separate browser library. Free hosting does not mean free model usage.
 
 ## Features
 
@@ -57,6 +57,7 @@ Model IDs are editable. Availability depends on your key, region, billing and mo
 - **Play channel** follows the displayed order of ready episodes within that channel, wraps to the first after the last, and skips failed or unfinished records.
 - Change the mode above the episode list or in the bottom player. The controls stay synchronized and the browser remembers your choice. Speed carries across episodes; pausing or stopping does not resume automatically.
 - Voice and music previews play once and never enter the channel queue.
+- MP3 downloads are encoded from the same finished audio used by the player, including its mixed background music. The cache is verified against that audio; old or imported unverified MP3s are rebuilt locally. No model request is needed. A voice-only episode or one made with **No background music** remains voice-only.
 - **Delete episode** keeps channel preferences and other letters. **Delete channel** removes all its records and audio. Both ask for confirmation, cannot be undone, and can be preceded by a backup. Conflicting deletion is refused during channel production or MP3 preparation.
 
 ## Key, privacy and data boundaries
