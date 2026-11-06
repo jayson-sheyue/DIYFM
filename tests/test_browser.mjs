@@ -93,6 +93,28 @@ test("key vault validates before replacement and never exposes a public key gett
   assert.equal(vault.has(), false);
   assert.throws(() => vault.snapshot(DEFAULT_MODELS));
 });
+test("authorization keys with dots are accepted unchanged without inferring a Vertex endpoint", async () => {
+  const key = "AQ." + "synthetic-not-a-real-key_".repeat(15);
+  const vault = newVault();
+  vault.set("  " + key + "  ");
+  for (const invalid of [key + "\r\nInjected: header", "https://example.com/" + key, "x".repeat(4097)]) {
+    assert.throws(() => vault.set(invalid));
+    assert.equal(vault.snapshot(DEFAULT_MODELS).key, key);
+  }
+  let seen;
+  await googleRequest(vault.snapshot(DEFAULT_MODELS), "models/gemini-3.8-flash", undefined, {
+    method: "GET",
+    fetcher: async (url, config) => {
+      seen = { url, config };
+      return new Response("{}");
+    },
+  });
+  assert.equal(seen.config.headers["x-goog-api-key"], key);
+  assert.equal(new URL(seen.url).hostname, "generativelanguage.googleapis.com");
+  assert.ok(!seen.url.includes(key));
+  vault.clear();
+  assert.equal(vault.has(), false);
+});
 test("Google key is only in the header, fixed-origin URL and error text never disclose it", async () => {
   let seen;
   const snapshot = { key: KEY, models: DEFAULT_MODELS };

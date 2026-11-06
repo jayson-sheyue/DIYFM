@@ -17,9 +17,9 @@ export function newVault() {
     set(value) {
       if (
         typeof value !== "string" ||
-        !/^[A-Za-z0-9_-]{20,256}$/.test(value.trim())
+        !/^[A-Za-z0-9._-]{20,4096}$/.test(value.trim())
       )
-        throw new Error("Key 格式无效，请从 Google AI Studio 复制完整 Key。");
+        throw new Error("Key 格式无效，请复制完整 Key，勿包含空格、换行或网址。");
       key = value.trim();
       revision++;
     },

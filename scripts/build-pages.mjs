@@ -5,7 +5,7 @@ await mkdir("dist");
 await cp("static", "dist", { recursive: true });
 await writeFile("dist/.nojekyll", "");
 const forbidden =
-  /(?:AIza[\w-]{25,}|github_pat_[\w-]{20,}|gh[pousr]_[\w-]{20,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)/;
+  /(?:AIza[\w-]{25,}|AQ\.[A-Za-z0-9._-]{20,}|github_pat_[\w-]{20,}|gh[pousr]_[\w-]{20,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)/;
 async function audit(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);

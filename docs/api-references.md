@@ -2,6 +2,8 @@
 
 核实日期：2026-11-06。公共版使用 Gemini Developer API，不使用 Vertex / Cloud TTS 的 ADC 路径。默认模型来自对应官方目录；模型是否对某个 Key 开放仍需由账户实际权限确认。
 
+AI Studio 新版授权 Key 可能以 `AQ.` 开头；前端允许句点，不根据前缀猜测服务类型或跳转请求来源。Vertex AI Express Mode 使用独立的 `https://aiplatform.googleapis.com/v1/publishers/google/models/{model}:generateContent` 路径，当前公共版尚未实现该适配。依据：[授权 Key](https://ai.google.dev/gemini-api/docs/api-key)、[Express Mode REST](https://docs.cloud.google.com/gemini-enterprise-agent-platform/reference/express-mode/api-reference)。
+
 | 功能 | 实际集成 | 官方文档 |
 | --- | --- | --- |
 | API Key | HTTPS `x-goog-api-key` 请求头；只发往 `generativelanguage.googleapis.com` | [Key 管理与保护](https://ai.google.dev/gemini-api/docs/api-key) |
