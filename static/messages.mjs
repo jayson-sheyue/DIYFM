@@ -1,5 +1,45 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
 export const MESSAGES = {
+  已取消: { en: "Cancelled", ja: "キャンセル済み", "zh-CN": "已取消" },
+
+  "无法读取本机音频，原节目仍保留。": {
+    en: "Could not read local audio. Your episode is safe.",
+    ja: "ローカル音声を読み込めませんでした。番組は保持されています。",
+    "zh-CN": "无法读取本机音频，原节目仍保留。",
+  },
+  "无法校验本机音频，原节目仍保留。": {
+    en: "Could not verify local audio. Your episode is safe.",
+    ja: "ローカル音声を検証できませんでした。番組は保持されています。",
+    "zh-CN": "无法校验本机音频，原节目仍保留。",
+  },
+  "无法准备系统播放文件，原节目仍保留。": {
+    en: "Could not prepare system playback files. Your episode is safe.",
+    ja: "システム再生用のファイルを準備できませんでした。番組は保持されています。",
+    "zh-CN": "无法准备系统播放文件，原节目仍保留。",
+  },
+  "系统播放器启动失败，原节目仍保留。": {
+    en: "The system player could not start. Your episode is safe.",
+    ja: "システムプレーヤーを開始できませんでした。番組は保持されています。",
+    "zh-CN": "系统播放器启动失败，原节目仍保留。",
+  },
+
+  播放进度: { en: "Playback position", ja: "再生位置", "zh-CN": "播放进度" },
+  "保存已取消，原节目仍保留。": {
+    en: "Saving cancelled. Your episode is still saved.",
+    ja: "保存をキャンセルしました。番組は保持されています。",
+    "zh-CN": "保存已取消，原节目仍保留。",
+  },
+  "客户端操作未完成，原节目仍保留。请重试。": {
+    en: "The app could not complete this action. Your episodes are safe. Try again.",
+    ja: "操作を完了できませんでした。番組は保持されています。再試行してください。",
+    "zh-CN": "客户端操作未完成，原节目仍保留。请重试。",
+  },
+  下载客户端更新: {
+    en: "Download app updates",
+    ja: "アプリの更新をダウンロード",
+    "zh-CN": "下载客户端更新",
+  },
+
   "正在理解愿望、策划来信": {
     en: "Planning your letter",
     ja: "テーマを考えています",

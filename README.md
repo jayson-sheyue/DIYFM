@@ -8,7 +8,20 @@ DIYFM turns language listening into radio you want to return to: self-contained 
 
 [Open the public test site](https://jayson-sheyue.github.io/DIYFM/) · [Get a Google AI Studio key](https://aistudio.google.com/apikey) · [API references](docs/api-references.md) · [Verification record](docs/testing.md)
 
-> **v2.1.2 is a static, bring-your-own-key application.** GitHub Pages hosts the application; your browser sends text, speech and music requests directly to Google. Each visitor provides their own key, pays for their own requests and has a separate browser library. Free hosting does not mean free model usage.
+> **The web edition is a static, bring-your-own-key application.** GitHub Pages hosts the application; your browser sends text, speech and music requests directly to Google. Each visitor provides their own key, pays for their own requests and has a separate browser library. Free hosting does not mean free model usage.
+
+## Android and Mac clients
+
+**v2.2.0 adds standalone clients with bundled application resources and native playback/files.** [Client guide and build instructions](docs/clients.md) · [Release downloads](https://github.com/jayson-sheyue/DIYFM/releases).
+
+- **Android:** Android 8+ with a current System WebView; signed APK, foreground media service, background/channel playback and system media controls.
+- **Mac:** macOS 13+; Apple Silicon + Intel universal DMG/ZIP, native playback and save/open dialogs. The first test build is ad-hoc signed and **not Apple notarized**; downloaded copies may be blocked by macOS. Apple Silicon is tested; physical Intel Macs are not.
+- Saved episodes play offline. Making new episodes still needs internet and your own key. Keys remain in the app's current memory session and clear on exit.
+- Each client has an independent local library. Move programs using Settings → Export/Import backup; no automatic cloud sync. Quit/force-stop interrupts production; keep the app foregrounded while generating on Android.
+- MP3 exports include the finished BGM mix. Native exports use the system file dialog. Manual updates use **Download app updates**; Android upgrades must retain the same signing identity and app data.
+
+Developers: `npm run test:mac`, `npm run build:mac`, and (after JDK/SDK setup and one-time `npm run android:signing`) `npm run build:android`. End users only install the packages. See the client guide for signing, storage, update and validation boundaries.
+
 
 ## Features
 

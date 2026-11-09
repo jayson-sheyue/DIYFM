@@ -15,3 +15,15 @@ dist/
 .pytest_cache/
 coverage/
 docs/screenshots/
+
+# Native builds, SDK paths, signing material and local QA
+build/
+clients/android/.gradle/
+clients/android/local.properties
+*.keystore
+*.jks
+*.dmg
+*.apk
+*.aab
+*.xcarchive
+clients/android/.signing/

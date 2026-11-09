@@ -111,7 +111,18 @@ state.tasks = state.tasks.map((t) =>
       }
     : t,
 );
-const audio = $("shared-audio");
+const nativeClient = globalThis.DIYFM_NATIVE;
+const audio = nativeClient
+  ? nativeClient.createAudio($("shared-audio"), {
+      translate: tr,
+      onTrack: (id, title) => {
+        playback.episodeId = id;
+        if (!id) $("player").hidden = true;
+        $("player-title").textContent = title;
+        updatePlayButtons();
+      },
+    })
+  : $("shared-audio");
 const playback = { token: 0, url: "", episodeId: null, waiting: false };
 const voiceCache = new Map(),
   voiceInflight = new Map(),
@@ -184,6 +195,7 @@ function replaceShow(show) {
   if (i < 0) state.shows.unshift(show);
   else state.shows[i] = show;
   reconcilePlayback();
+  nativeClient?.prune();
   renderSidebar();
   renderStatus();
 }
@@ -251,10 +263,23 @@ async function playSource(source, title, token, episodeId = null) {
     playback.url = URL.createObjectURL(source);
     source = playback.url;
   }
+  audio.setContext?.({
+    title,
+    episodeId,
+    queue: episodeId
+      ? (
+          state.shows.find((s) =>
+            (s.episodes || []).some((e) => e.id === episodeId),
+          )?.episodes || []
+        )
+          .filter((e) => e.status === "ready" && e.url)
+          .map((e) => ({ id: e.id, title: e.title, url: e.url }))
+      : [],
+  });
   audio.src = source;
   audio.playbackRate = Number($("playback-speed").value);
   playback.episodeId = episodeId;
-  audio.onended = () => advanceEpisode(token, episodeId);
+  audio.onended = nativeClient ? null : () => advanceEpisode(token, episodeId);
   syncPlaybackMode();
   playback.waiting = false;
   audio.hidden = false;
@@ -266,7 +291,11 @@ async function playSource(source, title, token, episodeId = null) {
     if (token === playback.token) updatePlayButtons();
   } catch (e) {
     if (token === playback.token)
-      notice(tr("音频已就绪，但浏览器没有播放。可在下方播放器重试。"));
+      notice(
+        nativeClient
+          ? e.message
+          : tr("音频已就绪，但浏览器没有播放。可在下方播放器重试。"),
+      );
   }
 }
 function playbackModeOptions() {
@@ -304,6 +333,13 @@ function reconcilePlayback() {
     )
   )
     stopPlayback();
+  audio.reconcile?.(
+    state.shows.flatMap((show) =>
+      (show.episodes || [])
+        .filter((ep) => ep.status === "ready")
+        .map((ep) => ep.id),
+    ),
+  );
 }
 async function advanceEpisode(token, episodeId) {
   // Stale media events, pauses, stops and previews must never start a playlist.
@@ -455,9 +491,9 @@ function renderStudio() {
                     </select>
                   </div>
                   <label for="wish" class="wish-label"
-                    >${fresh
-                      ? tr("想听点什么？")
-                      : tr("这个频道，想听点什么？")}</label
+                    >${
+                      fresh ? tr("想听点什么？") : tr("这个频道，想听点什么？")
+                    }</label
                   >
                   <textarea
                     id="wish"
@@ -486,43 +522,52 @@ function renderStudio() {
                     >
                   </div>
                   <p class="understanding" id="understanding"></p>
-                  ${fresh
-                    ? trHTML`<details class="first-sound" id="first-sound">
+                  ${
+                    fresh
+                      ? trHTML`<details class="first-sound" id="first-sound">
                         <summary>
                           声音与底乐 <span>首次制作前也可以选择、试听</span>
                         </summary>
                         ${voiceFields(d)}
                       </details>`
-                    : ""}
-                  ${fresh
-                    ? ""
-                    : trHTML`<label for="episode-wish" class="episode-wish-label"
+                      : ""
+                  }
+                  ${
+                    fresh
+                      ? ""
+                      : trHTML`<label for="episode-wish" class="episode-wish-label"
                           >这期换个口味 <span>可选，只影响这一集</span></label
                         ><input
                           id="episode-wish"
                           maxlength="600"
                           value="${escapeHtml(d.episode_wish || "")}"
                           placeholder="比如：今天温暖一点，不聊工作"
-                        />`}
+                        />`
+                  }
                   <div class="wish-actions">
                     <p class="hint">
-                      ${fresh
-                        ? tr("没有想法也没关系，可以直接开始。")
-                        : tr("偏好会保存，已生成的节目会保存在本浏览器。")}
+                      ${
+                        fresh
+                          ? tr("没有想法也没关系，可以直接开始。")
+                          : tr("偏好会保存，已生成的节目会保存在本浏览器。")
+                      }
                     </p>
                     <div>
-                      ${fresh
-                        ? ""
-                        : trHTML([
-                            '<button class="quiet" type="button" id="save-channel">保存偏好</button>',
-                          ])}<button class="primary" id="make" type="submit">
+                      ${
+                        fresh
+                          ? ""
+                          : trHTML([
+                              '<button class="quiet" type="button" id="save-channel">保存偏好</button>',
+                            ])
+                      }<button class="primary" id="make" type="submit">
                         ${fresh ? tr("开始收听") : tr("制作新一期")}
                       </button>
                     </div>
                   </div>
-                  ${fresh
-                    ? ""
-                    : trHTML`<details class="channel-management">
+                  ${
+                    fresh
+                      ? ""
+                      : trHTML`<details class="channel-management">
                         <summary>修改频道名称</summary>
                         <label
                           >频道名称<input
@@ -530,15 +575,17 @@ function renderStudio() {
                             maxlength="80"
                             value="${escapeHtml(d.title)}"
                         /></label>
-                      </details>`}
+                      </details>`
+                  }
                 </form>
-                ${fresh
-                  ? trHTML`<div class="quiet-notes">
+                ${
+                  fresh
+                    ? trHTML`<div class="quiet-notes">
                       <span>${icon("letter")}原创虚构来信</span
                       ><span>${icon("headphones")}按难度编排</span
                       ><span>${icon("spark")}自动保存 · 可下载</span>
                     </div>`
-                  : trHTML`<section class="episode-section">
+                    : trHTML`<section class="episode-section">
                       <div class="section-heading">
                         <h2>频道里的来信</h2>
                         <label class="mode-control"
@@ -552,7 +599,8 @@ function renderStudio() {
                         >
                       </div>
                       <div id="episode-mount"></div>
-                    </section>`}
+                    </section>`
+                }
               `
         }</div>`;
   document.querySelectorAll("[data-tab]").forEach(
@@ -996,8 +1044,9 @@ async function loadTranscript(id) {
           .join("")}
       </p>
       <pre>${escapeHtml(data.script)}</pre>
-      ${(data.sources || []).length
-        ? trHTML`<h4>本期参考资料</h4>
+      ${
+        (data.sources || []).length
+          ? trHTML`<h4>本期参考资料</h4>
             <p class="hint">用于核对背景，来信情节为原创虚构。</p>
             <ul>
               ${data.sources
@@ -1008,7 +1057,10 @@ async function loadTranscript(id) {
                 )
                 .join("")}
             </ul>`
-        : trHTML(['<p class="hint">本期为原创情境，没有使用外部搜索来源。</p>'])}
+          : trHTML([
+              '<p class="hint">本期为原创情境，没有使用外部搜索来源。</p>',
+            ])
+      }
       <p class="hint">
         频道愿望：${escapeHtml(data.input?.wish || tr("自由选题"))}<br />当期愿望：${escapeHtml(
           data.input?.episode_wish || tr("沿用频道口味"),
@@ -1035,6 +1087,16 @@ async function loadTranscript(id) {
       $("transcript-" + id).textContent = tr(e.message);
   }
 }
+async function saveDownload(blob, name) {
+  if (nativeClient) return nativeClient.saveFile(blob, name);
+  const url = URL.createObjectURL(blob),
+    a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  return true;
+}
 async function downloadMp3(id, button) {
   const title =
     (currentShow()?.episodes || []).find((e) => e.id === id)?.title || id;
@@ -1049,14 +1111,9 @@ async function downloadMp3(id, button) {
   try {
     const r = await fmFetch(`/api/episodes/${id}/download`);
     if (!r.ok) throw new Error((await r.json()).message || tr("下载失败"));
-    const blob = await r.blob(),
-      url = URL.createObjectURL(blob),
-      a = document.createElement("a");
-    a.href = url;
-    a.download = title + ".mp3";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-    task.status = "ready";
+    const saved = await saveDownload(await r.blob(), title + ".mp3");
+    task.status = saved ? "ready" : "cancelled";
+    if (!saved) notice(tr("保存已取消，原节目仍保留。"), "info");
   } catch (e) {
     task.status = "failed";
     task.error = e.message;
@@ -1123,9 +1180,9 @@ function renderVoice(show) {
   $("channel-body").innerHTML = trHTML`<section class="wish-card voice-card">
     <h2>给频道选一种声音</h2>
     <p class="intro">
-      试听使用频道的${LANG[
-        show.language
-      ]}，切页会停止播放，已发出的生成仍会继续。修改只影响后续制作，正在制作的一集使用开始时的选择。
+      试听使用频道的${
+        LANG[show.language]
+      }，切页会停止播放，已发出的生成仍会继续。修改只影响后续制作，正在制作的一集使用开始时的选择。
     </p>
     ${voiceFields(show)}
   </section>`;
@@ -1344,7 +1401,7 @@ function renderInbox() {
     ? rows
         .map(
           (r) =>
-            `<li><button type="button" data-task="${escapeHtml(r.id)}" ${r.kind === "episode" && r.status === "failed" ? `aria-expanded="${state.inboxTask === r.id}"` : ""}><strong>${escapeHtml(r.channelTitle || tr(r.title))}</strong><small>${escapeHtml(r.kind === "episode" ? episodeTitle(r) : "")} · ${escapeHtml(r.status === "generating" ? PHASE[r.phase] || tr("正在处理") : r.status === "ready" ? (r.kind === "episode" ? tr("可播放") : ["download", "backup"].includes(r.kind) ? tr("已准备并请求下载") : tr("已完成，可再次试听")) : tr("未完成，点击查看"))}</small><small>${escapeHtml(formatDate(r.created_at))}</small></button>
+            `<li><button type="button" data-task="${escapeHtml(r.id)}" ${r.kind === "episode" && r.status === "failed" ? `aria-expanded="${state.inboxTask === r.id}"` : ""}><strong>${escapeHtml(r.channelTitle || tr(r.title))}</strong><small>${escapeHtml(r.kind === "episode" ? episodeTitle(r) : "")} · ${escapeHtml(r.status === "generating" ? PHASE[r.phase] || tr("正在处理") : r.status === "ready" ? (r.kind === "episode" ? tr("可播放") : ["download", "backup"].includes(r.kind) ? tr("已准备并请求下载") : tr("已完成，可再次试听")) : tr(r.status === "cancelled" ? "已取消" : "未完成，点击查看"))}</small><small>${escapeHtml(formatDate(r.created_at))}</small></button>
             ${
               state.inboxTask === r.id &&
               r.status !== "ready" &&
@@ -1358,12 +1415,14 @@ function renderInbox() {
                             type="button"
                             class="quiet"
                             data-retry-task="${escapeHtml(r.id)}"
-                            ${state.submitting ||
-                            generating(
-                              state.shows.find((s) => s.id === r.showId),
-                            )
-                              ? "disabled"
-                              : ""}
+                            ${
+                              state.submitting ||
+                              generating(
+                                state.shows.find((s) => s.id === r.showId),
+                              )
+                                ? "disabled"
+                                : ""
+                            }
                           >
                             重试本期</button
                           ><button
@@ -1453,6 +1512,7 @@ function setInterfaceLanguage(language) {
   const managementOpen = document.querySelector?.(".channel-management")?.open;
   i18n.setLocale(language);
   i18n.apply(document);
+  window.dispatchEvent?.(new Event("diyfm:locale"));
   renderSidebar();
   if (state.presets) {
     renderStudio();
@@ -1630,15 +1690,16 @@ $("export-backup").onclick = async () => {
   try {
     const r = await fmFetch("/api/backup");
     if (!r.ok) throw new Error(tr("备份导出失败，请重试。"));
-    const blob = await r.blob(),
-      url = URL.createObjectURL(blob),
-      a = document.createElement("a");
-    a.href = url;
-    a.download = "diyfm-backup.zip";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-    notice(tr("备份已下载，包含频道、台本、设置与音频。"), "ok");
-    task.status = "ready";
+    const saved = await saveDownload(await r.blob(), "diyfm-backup.zip");
+    notice(
+      tr(
+        saved
+          ? "备份已下载，包含频道、台本、设置与音频。"
+          : "保存已取消，原节目仍保留。",
+      ),
+      saved ? "ok" : "info",
+    );
+    task.status = saved ? "ready" : "cancelled";
   } catch (e) {
     task.status = "failed";
     task.error = e.message;
@@ -1721,6 +1782,50 @@ Promise.all([api("/api/presets"), api("/api/shows"), api("/api/settings")])
     renderSidebar();
     renderStudio();
     renderStatus();
+    const restored = nativeClient?.info.state;
+    if (restored?.id && !restored.ended) {
+      const owner = state.shows.find((show) =>
+        (show.episodes || []).some((ep) => ep.id === restored.id),
+      );
+      const episode = owner?.episodes.find((ep) => ep.id === restored.id);
+      if (episode?.url) {
+        audio.setContext({ episodeId: episode.id, title: episode.title });
+        audio._src = episode.url;
+        audio.loaded = true;
+        audio._rate = Number(restored.rate) || 1;
+        $("playback-speed").value = String(audio._rate);
+        playback.episodeId = episode.id;
+        $("player").hidden = false;
+        audio.hidden = false;
+        $("player-title").textContent = episode.title;
+        audio.apply(restored);
+      }
+    }
     setInterval(poll, 4000);
   })
   .catch((e) => notice(e.message));
+
+if (nativeClient) {
+  document.documentElement.classList.add("native-client");
+  const nativeInfo = document.createElement("p");
+  nativeInfo.className = "hint";
+  nativeInfo.textContent = `DIYFM ${nativeClient.info.version} · ${nativeClient.info.platform}`;
+  const updateButton = document.createElement("button");
+  updateButton.type = "button";
+  updateButton.className = "quiet";
+  updateButton.textContent = tr("下载客户端更新");
+  updateButton.onclick = () =>
+    nativeClient
+      .updates()
+      .catch(() => notice(tr("客户端操作未完成，原节目仍保留。请重试。")));
+  $("settings-view").append(nativeInfo, updateButton);
+  setInterval(() => {
+    audio.poll();
+    nativeClient.setBusy(runtime.isBusy());
+  }, 750);
+  window.addEventListener("focus", () => audio.poll());
+  window.addEventListener("diyfm:locale", () => {
+    audio.paint();
+    updateButton.textContent = tr("下载客户端更新");
+  });
+}

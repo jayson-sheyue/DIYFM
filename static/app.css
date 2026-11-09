@@ -1508,3 +1508,33 @@ p {
     flex: 1;
   }
 }
+
+/* The native player owns audio; these controls mirror its system session. */
+.native-audio {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.native-audio input[type="range"] {
+  flex: 1;
+  min-width: 50px;
+  padding: 0;
+  border: 0;
+  accent-color: var(--blue);
+}
+.native-audio .hint {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.native-client .player {
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+}
+@media (max-width: 720px) {
+  .native-audio {
+    gap: 8px;
+  }
+  .native-audio button {
+    padding: 7px 10px;
+  }
+}

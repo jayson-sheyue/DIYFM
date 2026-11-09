@@ -1,0 +1,50 @@
+plugins { id 'com.android.application' }
+import groovy.json.JsonSlurper
+
+def pkg = new JsonSlurper().parse(file('../../../package.json'))
+def signingFile = file('../.signing/signing.properties')
+def signingValues = new Properties()
+if (signingFile.exists()) signingFile.withInputStream { signingValues.load(it) }
+android {
+    namespace 'io.github.jaysonsheyue.diyfm'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'io.github.jaysonsheyue.diyfm'
+        minSdk 26
+        targetSdk 36
+        versionCode (pkg.version.tokenize('.')[0].toInteger()*1000000 + pkg.version.tokenize('.')[1].toInteger()*1000 + pkg.version.tokenize('.')[2].toInteger())
+        versionName pkg.version
+        buildConfigField 'String', 'SOURCE_REVISION', '"' + (System.getenv('DIYFM_BUILD_REVISION') ?: 'development') + '"' 
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+    if (signingFile.exists()) signingConfigs {
+        release {
+            storeFile file('../.signing/release.jks')
+            storePassword signingValues.storePassword
+            keyAlias 'diyfm'
+            keyPassword signingValues.keyPassword
+        }
+    }
+    testBuildType providers.gradleProperty('testBuildType').getOrElse('debug')
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (signingFile.exists()) signingConfig signingConfigs.release
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    buildFeatures { buildConfig true }
+    sourceSets.main.assets.srcDirs = ["${buildDir}/generated/assets"]
+}
+tasks.register('bundleWeb', Copy) {
+    from '../../../dist'
+    into "${buildDir}/generated/assets/web"
+}
+tasks.named('preBuild').configure { dependsOn 'bundleWeb' }
+dependencies {
+    implementation 'androidx.webkit:webkit:1.14.0'
+    implementation 'androidx.media3:media3-exoplayer:1.8.0'
+    implementation 'androidx.media3:media3-session:1.8.0'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
+}

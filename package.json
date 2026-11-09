@@ -1,12 +1,16 @@
 {
   "name": "diyfm",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "private": true,
   "description": "A private-by-default, bring-your-own-key language radio for GitHub Pages",
   "scripts": {
     "test": "node --test tests/*.js tests/*.mjs",
     "build": "node scripts/build-pages.mjs",
-    "vendor": "node scripts/vendor.mjs"
+    "vendor": "node scripts/vendor.mjs",
+    "build:mac": "npm run build && node scripts/build-clients.mjs --mac",
+    "build:android": "npm run build && node scripts/build-clients.mjs --android",
+    "android:signing": "node scripts/android-signing.mjs",
+    "test:mac": "./scripts/test-mac-files.sh"
   },
   "dependencies": {
     "fflate": "0.8.2",

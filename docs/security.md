@@ -35,3 +35,11 @@ DIYFM 公共版采用每位使用者自带 Gemini Developer API Key 的静态架
 报告缺陷时提供复现步骤和脱敏错误；不要提交真实 Key、完整浏览器存储导出或私人节目备份。安全相关细节不应直接放到公开 Issue 中；可先联系仓库维护者协商适当的报告方式。
 
 官方依据：[Gemini API Key 保护](https://ai.google.dev/gemini-api/docs/api-key)、[GitHub Pages 托管能力](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site)。
+
+## v2.2 原生客户端边界
+
+Mac / Android 只打包 `dist/` 静态白名单，与网页共用会话内 Key 策略；本次没有增加明文凭据持久化或服务端代理。原生消息桥不接收 Key 或任意命令，只允许本机音频、受限文件传输和媒体操作；校验主框架与固定来源。数据、签名身份与分发限制见 [客户端说明](clients.md)。
+
+Mac 使用仅绑定 `127.0.0.1:24618` 的静态文件服务，校验 Host 与规范化路径，不提供节目库、凭据或远程控制的 HTTP 接口；端口被占用就报错，不加载占用者的页面。原生桥要求受信任主框架的完整来源匹配。Android 使用 WebViewAssetLoader 与按来源限制的 WebMessageListener，不使用任意网页可调用的 addJavascriptInterface；缺失的内置资源返回 404，不回落到公网同名域名。
+
+文件传输限制单文件 500 MiB、单块 192 KiB，按顺序与总长度校验，原生播放文件额外核对 SHA-256 与 WAV 头；只接受受控媒体 ID，导出目标由系统文件对话框选择。外部 HTTPS 链接交给系统浏览器。Key 不进入原生媒体文件、文件名、签名配置或安装包。Android 签名私钥是独立的发布凭据，只在本机忽略目录保存，不随源码、静态站点或安装包公开。

@@ -21,3 +21,6 @@ Gemini 3.1 TTS 通常返回单声道 24kHz、16-bit PCM；程序读取 MIME 中�
 每次任务使用启动时的模型与内存凭据快照；只有非秘密的模型配置进入节目记录。模型访问失败、限额或 429 不自动无限重试，也不切换其他模型。音乐失败保留人声结果；内容未通过检查或语音不完整时保留失败状态及进度。
 
 最新费用与地区 / 账户限制请查看 [Google 定价](https://ai.google.dev/gemini-api/docs/pricing) 和 [支持地区](https://ai.google.dev/gemini-api/docs/available-regions)。不承诺 GitHub 免费托管等于免费生成。
+
+
+原生客户端使用的 WebKit / Android WebView / Media3 与系统文件接口、固定版本及官方依据见 [客户端集成说明](clients.md#official-integration-references)。Google 模型端点与鉴权方式不因客户端改变。

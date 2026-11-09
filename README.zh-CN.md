@@ -8,7 +8,20 @@ DIYFM 把语言学习做成可以持续听下去的 FM：独立的小故事、�
 
 [打开公开测试站点](https://jayson-sheyue.github.io/DIYFM/) · [Google AI Studio 获取 Key](https://aistudio.google.com/apikey) · [接口与官方文档](docs/api-references.md) · [测试与验证范围](docs/testing.md)
 
-> **v2.1.2 是每人自带 Key 的纯静态应用。** GitHub Pages 只托管程序；文本、语音和音乐请求由浏览器直接发给 Google。每位使用者填写自己的 Key、承担自己的调用费用，拥有自己的浏览器节目库。公开网址不代表模型调用免费。
+> **Web 版是每人自带 Key 的纯静态应用。** GitHub Pages 只托管程序；文本、语音和音乐请求由浏览器直接发给 Google。每位使用者填写自己的 Key、承担自己的调用费用，拥有自己的浏览器节目库。公开网址不代表模型调用免费。
+
+## Android 与 Mac 客户端
+
+**v2.2.0 新增内置应用资源、接入系统播放与文件能力的独立客户端。** [客户端说明与构建步骤](docs/clients.md) · [版本下载](https://github.com/jayson-sheyue/DIYFM/releases)。
+
+- **Android：** Android 8 及以上，使用较新的 System WebView；提供签名 APK、前台媒体服务、后台与频道连播、系统媒体控制。
+- **Mac：** macOS 13 及以上，Apple Silicon / Intel 通用 DMG 和 ZIP；使用原生播放器与打开/保存对话框。首个测试包采用本地签名，**尚未完成 Apple Developer ID 签名与公证**，下载后可能被 macOS 拦截。已在 Apple Silicon 实测，Intel 实机未验证。
+- 已保存的节目可以离线收听；制作新节目仍需联网并填写自己的 Key。Key 只保留在本次运行的内存中，退出后清除。
+- 网页、Android、Mac 各有独立的本地节目库，通过设置中的导出/导入备份迁移，不自动云同步。退出或强制停止会中断制作；Android 制作时请保持应用在前台。
+- MP3 包含成片中的 BGM，导出使用系统文件对话框。设置中的“下载客户端更新”提供手动更新入口；Android 后续版本须保持相同签名身份，覆盖安装以保留资料。
+
+开发者使用 `npm run test:mac`、`npm run build:mac`；配置 JDK/SDK 并首次执行 `npm run android:signing` 后，使用 `npm run build:android`。普通使用者只需安装包，无需开发环境。签名、资料位置、更新及验收边界详见客户端说明。
+
 
 ## 能做什么
 
