@@ -74,6 +74,8 @@ public class ClientIntegrationTest {
         main(()->{files.prune(player.activeKeys());return new JSONObject();});assertFalse(files.audio(a).exists());
     }
     @Test public void bundledFrontendStartsEnglishAndNativeBridgeWithoutNetwork() throws Exception {
+        String upgrade=InstrumentationRegistry.getArguments().getString("upgradePhase");
+        if(upgrade!=null){upgradeFixture(upgrade);return;}
         java.lang.reflect.Field field=MainActivity.class.getDeclaredField("web");field.setAccessible(true);WebView web=(WebView)field.get(activity.getActivity());
         String result="";
         for(int i=0;i<80;i++){
@@ -82,5 +84,89 @@ public class ClientIntegrationTest {
             assertTrue(gate.await(3,TimeUnit.SECONDS));result=value.get();if(result.contains(BuildConfig.VERSION_NAME)&&result.contains("true"))break;Thread.sleep(100);
         }
         assertTrue(result,result.contains("en"));assertTrue(result,result.contains(BuildConfig.VERSION_NAME));assertTrue(result,result.contains("true"));
+    }
+
+    // The signed test APK can seed/read only synthetic fixture data across an actual APK upgrade.
+    // This exercises the public local-library API, not UI clicks or Google generation.
+    void upgradeFixture(String phase) throws Exception {
+        assertTrue(phase.equals("seed")||phase.equals("verify"));
+        java.lang.reflect.Field field=MainActivity.class.getDeclaredField("web");field.setAccessible(true);WebView web=(WebView)field.get(activity.getActivity());
+        String expectedVersion=InstrumentationRegistry.getArguments().getString("expectedVersion");
+        for(int i=0;i<100;i++){String ready=readJS(web,"!!window.DIYFM_NATIVE && !!window.DIYFM");if(ready.equals("true"))break;Thread.sleep(100);}
+        assertEquals(JSONObject.quote(expectedVersion),readJS(web,"window.DIYFM_NATIVE?.info.version"));
+        byte[] audio=wav(880);
+        StringBuilder expectedHash=new StringBuilder();for(byte b:MessageDigest.getInstance("SHA-256").digest(audio))expectedHash.append(String.format(Locale.ROOT,"%02x",b&255));
+        String seed="";
+        if(phase.equals("seed")){
+            JSONObject ep=new JSONObject().put("id","qa_upgrade_audio").put("title","Synthetic upgrade tone").put("status","ready").put("script","Synthetic tone, not model-generated speech.");
+            JSONObject show=new JSONObject().put("id","qa_upgrade_show").put("title","Portrait upgrade QA").put("language","en").put("difficulty","basic").put("wish","Synthetic upgrade fixture").put("music_style","none").put("episodes",new JSONArray().put(ep));
+            java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream();
+            try(java.util.zip.ZipOutputStream zip=new java.util.zip.ZipOutputStream(output)){
+                zip.putNextEntry(new java.util.zip.ZipEntry("shows.json"));zip.write(new JSONObject().put("shows",new JSONArray().put(show)).toString().getBytes(StandardCharsets.UTF_8));zip.closeEntry();
+                zip.putNextEntry(new java.util.zip.ZipEntry("audio/qa_upgrade_audio.wav"));zip.write(audio);zip.closeEntry();
+            }
+            String data=android.util.Base64.encodeToString(output.toByteArray(),android.util.Base64.NO_WRAP);
+            seed="await window.DIYFM.importBackup(Uint8Array.from(atob("+JSONObject.quote(data)+"),c=>c.charCodeAt(0)).buffer);await window.DIYFM.fetch('/api/settings',{method:'PUT',body:JSON.stringify({llm_model:'upgrade-qa-model'})});";
+        }
+        String script="window.__upgradeQA=null;(async()=>{await window.DIYFM.ready;"+seed+"const {shows}=await(await window.DIYFM.fetch('/api/shows')).json();const show=shows.find(s=>s.title==='Portrait upgrade QA');const ep=show?.episodes?.find(e=>e.status==='ready');if(!ep?.url)throw Error('Fixture missing');const bytes=await(await fetch(ep.url)).arrayBuffer();const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(n=>n.toString(16).padStart(2,'0')).join('');const config=await(await window.DIYFM.fetch('/api/settings')).json();window.__upgradeQA={hash,model:config.settings.llm_model,title:show.title};})().catch(()=>window.__upgradeQA={error:'Fixture failed'});";
+        main(()->{web.evaluateJavascript(script,null);return new JSONObject();});
+        String raw="null";for(int i=0;i<100;i++){raw=readJS(web,"window.__upgradeQA");if(!raw.equals("null"))break;Thread.sleep(100);}
+        JSONObject result=new JSONObject(raw);assertFalse(result.toString(),result.has("error"));
+        assertEquals(expectedHash.toString(),result.getString("hash"));assertEquals("upgrade-qa-model",result.getString("model"));assertEquals("Portrait upgrade QA",result.getString("title"));
+        android.util.Log.i("DIYFM_QA","Upgrade fixture "+phase+" passed on "+expectedVersion+": channel, model preference and WAV SHA-256 preserved.");
+    }
+    String readJS(WebView web,String expression) throws Exception {
+        CountDownLatch gate=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>("null");
+        main(()->{web.evaluateJavascript(expression,v->{value.set(v);gate.countDown();});return new JSONObject();});
+        assertTrue(gate.await(5,TimeUnit.SECONDS));return value.get();
+    }
+    JSONObject layout(WebView web) throws Exception {
+        String result="";
+        for(int i=0;i<80;i++){
+            CountDownLatch gate=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>("");
+            main(()->{web.evaluateJavascript("JSON.stringify({width:innerWidth,height:innerHeight,scroll:document.documentElement.scrollWidth,button:document.querySelector('#make')?.getBoundingClientRect().height,header:document.querySelector('.dock')?.getBoundingClientRect().height,keyboard:document.documentElement.classList.contains('keyboard-open'),undersized:[...document.querySelectorAll('button,select')].filter(e=>e.getBoundingClientRect().height>0&&e.getBoundingClientRect().height<47.5).map(e=>e.id||e.className)})",v->{value.set(v);gate.countDown();});return new JSONObject();});
+            assertTrue(gate.await(3,TimeUnit.SECONDS));result=value.get();if(result.contains("button"))break;Thread.sleep(100);
+        }
+        return new JSONObject((String)new JSONTokener(result).nextValue());
+    }
+    @Test public void portraitViewportAndTouchTargetsMatchTheDevice() throws Exception {
+        java.lang.reflect.Field field=MainActivity.class.getDeclaredField("web");field.setAccessible(true);WebView web=(WebView)field.get(activity.getActivity());
+        JSONObject metrics=layout(web);
+        android.util.Log.i("DIYFM_QA","Portrait layout: "+metrics);
+        assertTrue("Test requires portrait",metrics.getDouble("height")>metrics.getDouble("width"));
+        assertTrue("Page overflows horizontally: "+metrics,metrics.getDouble("scroll")<=metrics.getDouble("width")+1);
+        assertTrue("Primary touch target too small: "+metrics,metrics.getDouble("button")>=48);
+        assertEquals("Some controls are too small: "+metrics,0,metrics.getJSONArray("undersized").length());
+        assertTrue("Header consumes too much of the portrait screen: "+metrics,metrics.getDouble("header")<=140);
+        float density=activity.getActivity().getResources().getDisplayMetrics().density;
+        assertEquals("CSS viewport ignores native container width",web.getWidth()/density,metrics.getDouble("width"),2);
+        assertEquals("CSS viewport ignores native container height",web.getHeight()/density,metrics.getDouble("height"),2);
+        if(android.os.Build.VERSION.SDK_INT>=30){
+            android.view.View content=(android.view.View)web.getParent();
+            android.view.WindowInsets original=content.getRootWindowInsets();assertNotNull(original);
+            android.view.WindowInsets keyboard=new android.view.WindowInsets.Builder(original).setInsets(android.view.WindowInsets.Type.ime(),android.graphics.Insets.of(0,0,0,(int)(280*density))).setVisible(android.view.WindowInsets.Type.ime(),true).build();
+            try {
+                main(()->{content.dispatchApplyWindowInsets(keyboard);return new JSONObject();});
+                JSONObject reduced=layout(web);
+                for(int i=0;i<30&&(!reduced.getBoolean("keyboard")||reduced.getDouble("height")>=metrics.getDouble("height")-100);i++){Thread.sleep(100);reduced=layout(web);}
+                assertTrue("IME does not reduce the actual viewport: "+reduced,reduced.getDouble("height")<metrics.getDouble("height")-100);
+                assertTrue("IME compact mode not applied",reduced.getBoolean("keyboard"));
+                assertTrue("Channel rail consumes editing space",reduced.getDouble("header")<metrics.getDouble("header")-30);
+            }finally{main(()->{content.dispatchApplyWindowInsets(original);return new JSONObject();});}
+            JSONObject restored=layout(web);
+            for(int i=0;i<30&&Math.abs(restored.getDouble("height")-metrics.getDouble("height"))>2;i++){Thread.sleep(100);restored=layout(web);}
+            assertFalse("IME mode remains stuck",restored.getBoolean("keyboard"));
+            assertEquals("Viewport did not recover after keyboard",metrics.getDouble("height"),restored.getDouble("height"),2);
+        }
+        try {
+            main(()->{activity.getActivity().setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);return new JSONObject();});
+            JSONObject landscape=layout(web);
+            for(int i=0;i<40&&landscape.getDouble("width")<=landscape.getDouble("height");i++){Thread.sleep(100);landscape=layout(web);}
+            assertTrue("Landscape transition did not reach WebView",landscape.getDouble("width")>landscape.getDouble("height"));
+        }finally{main(()->{activity.getActivity().setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);return new JSONObject();});}
+        JSONObject portrait=layout(web);
+        for(int i=0;i<40&&Math.abs(portrait.getDouble("width")-metrics.getDouble("width"))>2;i++){Thread.sleep(100);portrait=layout(web);}
+        assertEquals("Returning to portrait changes viewport width",metrics.getDouble("width"),portrait.getDouble("width"),2);
+        assertTrue("Rotation leaves horizontal overflow",portrait.getDouble("scroll")<=portrait.getDouble("width")+1);
     }
 }

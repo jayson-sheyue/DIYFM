@@ -1,4 +1,4 @@
-# DIYFM v2.2.0 验证记录
+# DIYFM v2.2.1 验证记录
 
 日期：2026-11-06。目标产物：GitHub Pages 项目子路径下的纯静态站点，每位使用者自带 API Key。旧 Python 后端仅保留兼容和迁移用途。
 
@@ -90,3 +90,13 @@ Firefox / Safari 独立系统浏览器、长期容量和真实 Google Key 成功
 - 首次 Android 停止测试发现 ExoPlayer.stop 不会清除 playWhenReady，已修复为先 pause，再 stop/clear，并通过原用例回归。Mac 首次读取音频失败定位在 WebKit 对 Blob 的连接策略，CSP 明确允许本机 Blob 读取后实际播放通过；没有放宽外部 Google API 来源或绕过 TLS 校验。
 - 当前没有 Apple Developer ID 身份，Mac 采用 ad-hoc 签名，未公证；不声明下载到其他 Mac 的 Gatekeeper 验收通过。Android 本地发布密钥仅在忽略目录，不公开；包应在最终源码提交后重建并校验签名与来源。
 - 未验证真实 Google Key 在新客户端内的付费生成成功；原有模型契约、缓存和 Key 保密回归通过，合成测试音轨不能代表云端合成或教学效果。
+
+
+## v2.2.1 手机竖屏适配（2026-11-09）
+
+- 原始实际 Android WebView 为 412×915 CSS px，主按钮仅 42 px；新增回归先在旧样式上失败。改为 native 容器处理 Insets 后可用视窗为 412×839，顶部约 125 px。第一次样式修正仍因 `.primary` 优先级覆盖通用按钮规则而失败；修正对应组件规则后，实际 Android 初始页可见按钮和选择器均达到 48 px，无横向溢出。
+- 内容区独立滚动，播放器留在可用视窗内；消息图标保留三语无障碍名称，手机频道条横向滚动，页面本身不横向滚动。320×700、360×800、430×932 和 800×360 浏览器尺寸实际检查了正文滚动、播放器边界以及横竖往返。窄屏下实际操作了三语设置、单曲/频道与倍速、展开声线/BGM、缺少 Key 时提交→设置→返回；原愿望和声音偏好保留，没有收费调用。
+- 61 项共享 Node 测试通过；Android 发布构建的 4 项平台集成回归覆盖原有播放/文件、竖屏几何、48 px 触摸区、实际 Activity 横竖往返和受控 IME Insets 收缩/恢复。IME 验证向真实 View 层发送受控 WindowInsets，读取真实 WebView 布局；不冒充人工点开系统软键盘或 Android 真机验收。
+- 本轮没有 Android 真机和厂商键盘环境；浏览器截图仅作为共享竖屏布局预览。网页同步共享布局；本轮 Mac 常用安装保留 2.2.0 和当前会话，源码包含共享样式，未宣称已发布 Mac 2.2.1。原生数据存储格式和 Android 签名身份不变。最终包、升级保留和公开下载校验结果记录在对应 Release，未公开的中间包不作为交付包。
+
+- 升级夹具通过本地节目库 API 在已发布的 Android 2.2.0 上创建明确标注的测试频道、合成 WAV 和自定义模型偏好；不使用 UI 脚本点击或真实 Key。复验命令在安装新 APK 前后分别运行 `adb shell am instrument -w -e class io.github.jaysonsheyue.diyfm.ClientIntegrationTest#bundledFrontendStartsEnglishAndNativeBridgeWithoutNetwork -e upgradePhase seed -e expectedVersion 2.2.0 io.github.jaysonsheyue.diyfm.test/androidx.test.runner.AndroidJUnitRunner` 与 `-e upgradePhase verify -e expectedVersion 2.2.1`。先在隔离设备安装签名测试 APK；中间仅 `adb install -r 新APK`，不能卸载，否则无法验证保留。最终阶段结果见 Release。

@@ -10,7 +10,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob: https://generativelanguage.googleapis.com; worker-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'"
     />
-    <link rel="stylesheet" href="./app.css?v=2.2.0" />
+    <link rel="stylesheet" href="./app.css?v=2.2.1" />
   </head>
   <body>
     <div class="chassis">
@@ -25,7 +25,12 @@
               aria-expanded="false"
               aria-controls="inbox"
             >
-              <span data-i18n="消息">Messages</span>
+              <svg class="inbox-symbol" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                <path d="M4 4h16v16H4z" />
+                <path d="M4 14h5l1.5 3h3l1.5-3h5" />
+              </svg>
+              <span class="inbox-label" data-i18n="消息">Messages</span>
               <span id="inbox-badge" hidden>0</span>
             </button>
           </div>
@@ -418,6 +423,6 @@
         </footer>
       </main>
     </div>
-    <script type="module" src="./app-entry.mjs?v=2.2.0"></script>
+    <script type="module" src="./app-entry.mjs?v=2.2.1"></script>
   </body>
 </html>

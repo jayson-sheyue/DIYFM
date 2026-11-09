@@ -6,6 +6,8 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.*;
 import android.view.View;
+import android.view.WindowInsets;
+import android.widget.FrameLayout;
 import android.webkit.*;
 import androidx.media3.session.*;
 import androidx.webkit.*;
@@ -24,17 +26,19 @@ public final class MainActivity extends Activity {
     private final ExecutorService io=Executors.newSingleThreadExecutor();
     private ListenableFuture<MediaController> controller;
     private boolean busy;
+    private boolean keyboardOpen;
     private String language="en";
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
         files=new NativeFiles(this);
         controller=new MediaController.Builder(this,new SessionToken(this,new ComponentName(this,PlaybackService.class))).buildAsync();
         web=new WebView(this);web.setBackgroundColor(Color.rgb(247,246,242));
-        WebSettings settings=web.getSettings();settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setMediaPlaybackRequiresUserGesture(true);
+        WebSettings settings=web.getSettings();settings.setUseWideViewPort(true);settings.setLoadWithOverviewMode(true);settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);settings.setMediaPlaybackRequiresUserGesture(true);
         settings.setAllowFileAccess(false);settings.setAllowContentAccess(true);settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
         WebViewAssetLoader loader=new WebViewAssetLoader.Builder().addPathHandler("/assets/",new WebViewAssetLoader.AssetsPathHandler(this)).build();
         web.setWebViewClient(new WebViewClient(){
+            @Override public void onPageFinished(WebView view,String url){updateKeyboardLayout();}
             @Override public WebResourceResponse shouldInterceptRequest(WebView view,WebResourceRequest request){
                 Uri uri=request.getUrl();
                 if(uri.getHost()!=null && uri.getHost().equals("appassets.androidplatform.net")) {
@@ -75,10 +79,24 @@ public final class MainActivity extends Activity {
             }
             @Override public boolean onJsBeforeUnload(WebView view,String url,String message,JsResult result){return onJsConfirm(view,url,message,result);}
         });
-        web.setOnApplyWindowInsetsListener((view,insets)->{
-            view.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;
+        // Pad the container so the WebView's actual CSS viewport excludes bars, cutouts and IME.
+        FrameLayout content=new FrameLayout(this);
+        content.addView(web,new FrameLayout.LayoutParams(-1,-1));
+        content.setOnApplyWindowInsetsListener((view,insets)->{
+            if(Build.VERSION.SDK_INT>=30){
+                android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                int keyboard=insets.getInsets(WindowInsets.Type.ime()).bottom;
+                keyboardOpen=insets.isVisible(WindowInsets.Type.ime());
+                view.setPadding(bars.left,bars.top,bars.right,Math.max(bars.bottom,keyboard));
+            }else{
+                view.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());
+            }
+            updateKeyboardLayout();return insets;
         });
-        setContentView(web);web.loadUrl(ORIGIN+"/assets/web/index.html");
+        setContentView(content);content.requestApplyInsets();web.loadUrl(ORIGIN+"/assets/web/index.html");
+    }
+    private void updateKeyboardLayout(){
+        web.evaluateJavascript("document.documentElement?.classList.toggle('keyboard-open',"+keyboardOpen+")",null);
     }
     private String text(String en,String ja,String zh){return language.equals("ja")?ja:language.equals("zh-CN")?zh:en;}
     private void openExternal(Uri uri){try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}catch(Exception ignored){}}

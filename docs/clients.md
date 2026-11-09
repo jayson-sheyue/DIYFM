@@ -1,13 +1,19 @@
 # DIYFM native clients
 
-DIYFM 2.2.0 adds installable Android and macOS clients. Both bundle the same reviewed HTML/CSS/JavaScript as the website and use native audio and file APIs. They do not depend on GitHub Pages being online to open the application or replay saved episodes. Generation still requires a network connection and your own Google AI Studio key.
+DIYFM provides installable Android and macOS clients. The 2.2.1 release updates Android and the shared web layout; the current Mac download remains 2.2.0. Both bundle the same reviewed HTML/CSS/JavaScript as the website and use native audio and file APIs. They do not depend on GitHub Pages being online to open the application or replay saved episodes. Generation still requires a network connection and your own Google AI Studio key.
 
 ## Install and first use
 
-- **Android:** Android 8.0 / API 26 or later, with an up-to-date Android System WebView supporting WebMessageListener and modern JavaScript. Install `DIYFM-2.2.0-android.apk` using Android's normal package installer. This is a direct-install test build, not a Play Store listing. No microphone, broad storage access, account login or shared model key is required.
+- **Android:** Android 8.0 / API 26 or later, with an up-to-date Android System WebView supporting WebMessageListener and modern JavaScript. Install `DIYFM-2.2.1-android.apk` using Android's normal package installer. This is a direct-install test build, not a Play Store listing. No microphone, broad storage access, account login or shared model key is required.
 - **Mac:** macOS 13 or later. `DIYFM-2.2.0-mac-universal.dmg` contains an Apple Silicon + Intel universal application; copy DIYFM to Applications. A ZIP is provided as an alternative. The initial build has an ad-hoc signature and is **not Apple Developer ID signed or notarized**. macOS may block a downloaded copy; its trust decision remains with the user. Do not disable Gatekeeper or remove quarantine as an installation step. The actual machine tested is Apple Silicon; Intel is cross-compiled but not run on physical Intel hardware.
 - Open Settings, choose English / 日本語 / 中文, and enable your own key. First launch always uses English. Generated channels, scripts and audio stay in the client's local library. No key is bundled with either app.
 - To move programs from the website, export a backup there, then choose **Settings → Import backup** in the client. The ZIP format is shared; imports merge into the destination library with new IDs. There is no automatic account or cloud sync.
+
+## Phone portrait layout
+
+Phone widths use a compact header and a horizontally scrollable channel strip. The main content scrolls independently while the player stays within the usable viewport. Visible buttons and selectors have at least 48 CSS px touch height. Long translated actions wrap; the Messages icon retains its translated accessible name. Desktop layouts continue to use the side navigation.
+
+Android pads a containing native view for system bars, display cutouts and the IME, so the WebView's actual viewport shrinks instead of drawing under them. When the keyboard is visible on Android 11+, the channel strip and secondary player options collapse to leave editing space, then return after dismissal. Older supported Android versions retain system `adjustResize` behavior; this release's inset/rotation checks ran on API 36, not every older OS or vendor keyboard.
 
 ## Native playback and files
 
@@ -31,7 +37,7 @@ MP3 and ZIP exports use the system's save/create-document dialog, not a browser 
 
 This first test release uses manual updates through the existing GitHub repository's Releases page. **Download app updates** is available in client settings; Mac also provides a menu item. It opens the download page and does not execute downloaded software. No automatic installation or OTA validation is claimed.
 
-Replace the Mac application while it is closed, preserving its app identity and user data. Install a newer Android APK over the existing app, using the **same signing key and application ID**. Uninstalling first deletes its private library. There is no earlier released native version; reinstalling the candidate with preserved data is the initial upgrade check, not proof of a future migration.
+Replace the Mac application while it is closed, preserving its app identity and user data. Install a newer Android APK over the existing app, using the **same signing key and application ID**. Uninstalling first deletes its private library. The first native release is 2.2.0; 2.2.1 uses the same storage origins, application IDs and Android signing identity. Export a backup before updating. Consult the release verification notes for which actual upgrade paths and devices were exercised; a same-version reinstall is not proof of a future migration.
 
 The Android publisher key is generated locally by `npm run android:signing` under ignored `clients/android/.signing/`. Back up the entire directory securely; losing it prevents compatible APK upgrades. Never commit it, upload it to a release, include it in an APK, or substitute a new key for an already-installed production client. The local key password file has owner-only permissions. A production signing/notarization setup or store publication is a separate distribution step.
 
@@ -72,6 +78,8 @@ Tests use generated synthetic tones, actual local files and the actual platform 
 
 ## Official integration references
 
+- [Android window insets and edge-to-edge](https://developer.android.com/develop/ui/views/layout/edge-to-edge)
+- [Android WebView viewport settings](https://developer.android.com/reference/android/webkit/WebSettings#setUseWideViewPort(boolean))
 - [Android local app assets](https://developer.android.com/develop/ui/views/layout/webapps/load-local-content)
 - [Android WebView messaging](https://developer.android.com/reference/androidx/webkit/WebViewCompat)
 - [Media3 background playback](https://developer.android.com/media/media3/session/background-playback)
