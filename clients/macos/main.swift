@@ -11,6 +11,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     let io = DispatchQueue(label: "io.github.jaysonsheyue.diyfm.files")
     var busy = false
     var language = "en"
+    var appMenu: NSMenu!
+    var editMenu: NSMenu!
+    var windowsMenu: NSMenu!
+    var editMenuItem: NSMenuItem!
+    var windowsMenuItem: NSMenuItem!
     func text(_ en: String, _ ja: String, _ zh: String) -> String { language == "ja" ? ja : language == "zh-CN" ? zh : en }
     func applicationDidFinishLaunching(_ note: Notification) {
         do {
@@ -21,15 +26,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
             web = WKWebView(frame: .zero, configuration: configuration); web.navigationDelegate = self; web.uiDelegate = self
             window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1160, height: 820), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
             window.title = "DIYFM"; window.minSize = NSSize(width: 390, height: 600); window.contentView = web; window.delegate = self; window.center(); window.setFrameAutosaveName("DIYFM.Main")
-            let menu = NSMenu(); let appItem = NSMenuItem(); menu.addItem(appItem); let appMenu = NSMenu(); appItem.submenu = appMenu
+            let menu = NSMenu(); let appItem = NSMenuItem(); menu.addItem(appItem); appMenu = NSMenu(); appItem.submenu = appMenu
             appMenu.addItem(withTitle: "About DIYFM", action: #selector(about), keyEquivalent: "").target = self
             appMenu.addItem(withTitle: "Download App Updates…", action: #selector(updates), keyEquivalent: "").target = self
             appMenu.addItem(.separator()); appMenu.addItem(withTitle: "Hide DIYFM", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
             appMenu.addItem(withTitle: "Quit DIYFM", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-            let editItem = NSMenuItem(); editItem.title = "Edit"; menu.addItem(editItem); let edit = NSMenu(title: "Edit"); editItem.submenu = edit
+            let editItem = NSMenuItem(); editItem.title = "Edit"; menu.addItem(editItem); let edit = NSMenu(title: "Edit"); editItem.submenu = edit; editMenu = edit; editMenuItem = editItem
             for (title, selector, key) in [("Undo", Selector(("undo:")), "z"), ("Cut", #selector(NSText.cut(_:)), "x"), ("Copy", #selector(NSText.copy(_:)), "c"), ("Paste", #selector(NSText.paste(_:)), "v"), ("Select All", #selector(NSText.selectAll(_:)), "a")] { edit.addItem(withTitle: title, action: selector, keyEquivalent: key) }
             let windowItem = NSMenuItem(); windowItem.title = "Window"; menu.addItem(windowItem)
-            let windowMenu = NSMenu(title: "Window"); windowItem.submenu = windowMenu
+            let windowMenu = NSMenu(title: "Window"); windowItem.submenu = windowMenu; windowsMenu = windowMenu; windowsMenuItem = windowItem
             windowMenu.addItem(withTitle: "Show DIYFM", action: #selector(showMain), keyEquivalent: "0").target = self
             NSApp.mainMenu = menu
             guard let resources = Bundle.main.resourceURL else { throw NSError(domain: "DIYFM.Resources", code: 1) }
@@ -44,13 +49,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     func fail(_ message: String) { let alert = NSAlert(); alert.messageText = "DIYFM"; alert.informativeText = message; alert.runModal(); NSApp.terminate(nil) }
     @objc func showMain() { window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true) }
     func localizeMenus() {
-        guard let menu = NSApp.mainMenu, let application = menu.items.first?.submenu, menu.items.count >= 3, let edit = menu.items[1].submenu, let windows = menu.items[2].submenu else { return }
+        guard let application = appMenu, let edit = editMenu, let windows = windowsMenu else { return }
         let labels = [text("About DIYFM", "DIYFMについて", "关于 DIYFM"), text("Download App Updates…", "アプリの更新をダウンロード…", "下载客户端更新…"), "", text("Hide DIYFM", "DIYFMを隠す", "隐藏 DIYFM"), text("Quit DIYFM", "DIYFMを終了", "退出 DIYFM")]
         for (i,label) in labels.enumerated() where i < application.items.count && !label.isEmpty { application.items[i].title = label }
-        menu.items[1].title = text("Edit", "編集", "编辑")
+        editMenuItem.title = text("Edit", "編集", "编辑"); edit.title = editMenuItem.title
         let edits = [text("Undo", "取り消す", "撤销"), text("Cut", "カット", "剪切"), text("Copy", "コピー", "复制"), text("Paste", "ペースト", "粘贴"), text("Select All", "すべてを選択", "全选")]
         for (i,label) in edits.enumerated() where i < edit.items.count { edit.items[i].title = label }
-        menu.items[2].title = text("Window", "ウインドウ", "窗口"); windows.items[0].title = text("Show DIYFM", "DIYFMを表示", "显示 DIYFM")
+        windowsMenuItem.title = text("Window", "ウインドウ", "窗口"); windows.title = windowsMenuItem.title; windows.items[0].title = text("Show DIYFM", "DIYFMを表示", "显示 DIYFM")
     }
     @objc func about() { NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "DIYFM", .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "", .credits: NSAttributedString(string: "Letter Radio · English / 日本語 / 中文\nLocal library · Bring your own Google AI Studio key")]) }
     @objc func updates() { NSWorkspace.shared.open(URL(string: "https://github.com/jayson-sheyue/DIYFM/releases")!) }
