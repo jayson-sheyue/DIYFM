@@ -82,18 +82,19 @@ public final class MainActivity extends Activity {
         // Pad the container so the WebView's actual CSS viewport excludes bars, cutouts and IME.
         FrameLayout content=new FrameLayout(this);
         content.addView(web,new FrameLayout.LayoutParams(-1,-1));
-        content.setOnApplyWindowInsetsListener((view,insets)->{
-            if(Build.VERSION.SDK_INT>=30){
-                android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
-                int keyboard=insets.getInsets(WindowInsets.Type.ime()).bottom;
-                keyboardOpen=insets.isVisible(WindowInsets.Type.ime());
-                view.setPadding(bars.left,bars.top,bars.right,Math.max(bars.bottom,keyboard));
-            }else{
-                view.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());
-            }
-            updateKeyboardLayout();return insets;
-        });
+        content.setOnApplyWindowInsetsListener(this::applyContentInsets);
         setContentView(content);content.requestApplyInsets();web.loadUrl(ORIGIN+"/assets/web/index.html");
+    }
+    WindowInsets applyContentInsets(View view,WindowInsets insets){
+        if(Build.VERSION.SDK_INT>=30){
+            android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+            int keyboard=insets.getInsets(WindowInsets.Type.ime()).bottom;
+            keyboardOpen=insets.isVisible(WindowInsets.Type.ime());
+            view.setPadding(bars.left,bars.top,bars.right,Math.max(bars.bottom,keyboard));
+        }else{
+            view.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());
+        }
+        updateKeyboardLayout();return insets;
     }
     private void updateKeyboardLayout(){
         web.evaluateJavascript("document.documentElement?.classList.toggle('keyboard-open',"+keyboardOpen+")",null);

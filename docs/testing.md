@@ -102,3 +102,5 @@ Firefox / Safari 独立系统浏览器、长期容量和真实 Google Key 成功
 - 升级夹具通过本地节目库 API 在已发布的 Android 2.2.0 上创建明确标注的测试频道、合成 WAV 和自定义模型偏好；不使用 UI 脚本点击或真实 Key。复验命令在安装新 APK 前后分别运行 `adb shell am instrument -w -e class io.github.jaysonsheyue.diyfm.ClientIntegrationTest#bundledFrontendStartsEnglishAndNativeBridgeWithoutNetwork -e upgradePhase seed -e expectedVersion 2.2.0 io.github.jaysonsheyue.diyfm.test/androidx.test.runner.AndroidJUnitRunner` 与 `-e upgradePhase verify -e expectedVersion 2.2.1`。先在隔离设备安装签名测试 APK；中间仅 `adb install -r 新APK`，不能卸载，否则无法验证保留。最终阶段结果见 Release。
 
 - 一轮签名候选回归在首个布局 DOM 回调等待阶段超时；原始报告保存在本地 `build/qa/portrait-cold-start-timeout.xml`。此前测试没有等待 WebView 首次导航提交，现先验证应用 URL 和页面进度完成再读取，并保留有界回调期限与全部布局断言；未将这一失败直接归因为 CSS 或放宽尺寸断言。
+
+- 另一轮受控 IME 测试发现一次性 `dispatchApplyWindowInsets` 不能持续代表键盘状态：真实系统仍报告键盘关闭，后续重新分发布局 Insets 可覆盖夹具。诊断日志实际记录到布局期间 1 次真实关闭键盘回调。测试现在在该检查期间固定受控 Insets 来源，仍调用生产处理函数并断言真实 WebView 收缩、频道条折叠和恢复；结束时恢复系统来源。生产逻辑继续服从真实系统，不锁定或忽略系统 Insets。原始失败报告仅保留本地 `build/qa/portrait-controlled-insets-overridden.xml`。

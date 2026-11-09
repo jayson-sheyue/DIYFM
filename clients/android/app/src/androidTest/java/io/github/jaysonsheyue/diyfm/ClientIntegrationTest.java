@@ -157,14 +157,25 @@ public class ClientIntegrationTest {
             android.view.View content=(android.view.View)web.getParent();
             android.view.WindowInsets original=content.getRootWindowInsets();assertNotNull(original);
             android.view.WindowInsets keyboard=new android.view.WindowInsets.Builder(original).setInsets(android.view.WindowInsets.Type.ime(),android.graphics.Insets.of(0,0,0,(int)(280*density))).setVisible(android.view.WindowInsets.Type.ime(),true).build();
+            MainActivity host=activity.getActivity();
+            java.util.concurrent.atomic.AtomicInteger closedCallbacks=new java.util.concurrent.atomic.AtomicInteger();
             try {
-                main(()->{content.dispatchApplyWindowInsets(keyboard);return new JSONObject();});
+                // Keep the controlled source installed through relayout. A one-shot dispatch can
+                // be overwritten by the OS's real closed-IME state while this fixture is active.
+                main(()->{
+                    content.setOnApplyWindowInsetsListener((view,delivered)->{
+                        if(!delivered.isVisible(android.view.WindowInsets.Type.ime()))closedCallbacks.incrementAndGet();
+                        return host.applyContentInsets(view,keyboard);
+                    });
+                    content.dispatchApplyWindowInsets(keyboard);return new JSONObject();
+                });
                 JSONObject reduced=layout(web);
                 for(int i=0;i<30&&(!reduced.getBoolean("keyboard")||reduced.getDouble("height")>=metrics.getDouble("height")-100);i++){Thread.sleep(100);reduced=layout(web);}
                 assertTrue("IME does not reduce the actual viewport: "+reduced,reduced.getDouble("height")<metrics.getDouble("height")-100);
                 assertTrue("IME compact mode not applied",reduced.getBoolean("keyboard"));
                 assertTrue("Channel rail consumes editing space",reduced.getDouble("header")<metrics.getDouble("header")-30);
-            }finally{main(()->{content.dispatchApplyWindowInsets(original);return new JSONObject();});}
+                android.util.Log.i("DIYFM_QA","Controlled IME source: real closed-IME callbacks during relayout="+closedCallbacks.get());
+            }finally{main(()->{content.setOnApplyWindowInsetsListener(host::applyContentInsets);content.dispatchApplyWindowInsets(original);return new JSONObject();});}
             JSONObject restored=layout(web);
             for(int i=0;i<30&&Math.abs(restored.getDouble("height")-metrics.getDouble("height"))>2;i++){Thread.sleep(100);restored=layout(web);}
             assertFalse("IME mode remains stuck",restored.getBoolean("keyboard"));
