@@ -77,11 +77,12 @@ public class ClientIntegrationTest {
         String upgrade=InstrumentationRegistry.getArguments().getString("upgradePhase");
         if(upgrade!=null){upgradeFixture(upgrade);return;}
         java.lang.reflect.Field field=MainActivity.class.getDeclaredField("web");field.setAccessible(true);WebView web=(WebView)field.get(activity.getActivity());
+        waitDocument(web);
         String result="";
         for(int i=0;i<80;i++){
             CountDownLatch gate=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>("");
             main(()->{web.evaluateJavascript("JSON.stringify({language:document.documentElement.lang,ready:!!document.querySelector('#make')?.textContent.trim(),native:!!window.DIYFM_NATIVE,version:window.DIYFM_NATIVE?.info.version})",v->{value.set(v);gate.countDown();});return new JSONObject();});
-            assertTrue(gate.await(3,TimeUnit.SECONDS));result=value.get();if(result.contains(BuildConfig.VERSION_NAME)&&result.contains("true"))break;Thread.sleep(100);
+            assertTrue("WebView DOM callback timed out after document commit",gate.await(5,TimeUnit.SECONDS));result=value.get();if(result.contains(BuildConfig.VERSION_NAME)&&result.contains("true"))break;Thread.sleep(100);
         }
         assertTrue(result,result.contains("en"));assertTrue(result,result.contains(BuildConfig.VERSION_NAME));assertTrue(result,result.contains("true"));
     }
@@ -92,6 +93,7 @@ public class ClientIntegrationTest {
         assertTrue(phase.equals("seed")||phase.equals("verify"));
         java.lang.reflect.Field field=MainActivity.class.getDeclaredField("web");field.setAccessible(true);WebView web=(WebView)field.get(activity.getActivity());
         String expectedVersion=InstrumentationRegistry.getArguments().getString("expectedVersion");
+        waitDocument(web);
         for(int i=0;i<100;i++){String ready=readJS(web,"!!window.DIYFM_NATIVE && !!window.DIYFM");if(ready.equals("true"))break;Thread.sleep(100);}
         assertEquals(JSONObject.quote(expectedVersion),readJS(web,"window.DIYFM_NATIVE?.info.version"));
         byte[] audio=wav(880);
@@ -115,17 +117,27 @@ public class ClientIntegrationTest {
         assertEquals(expectedHash.toString(),result.getString("hash"));assertEquals("upgrade-qa-model",result.getString("model"));assertEquals("Portrait upgrade QA",result.getString("title"));
         android.util.Log.i("DIYFM_QA","Upgrade fixture "+phase+" passed on "+expectedVersion+": channel, model preference and WAV SHA-256 preserved.");
     }
+    void waitDocument(WebView web) throws Exception {
+        boolean ready=false;
+        for(int i=0;i<150;i++){
+            JSONObject navigation=main(()->new JSONObject().put("progress",web.getProgress()).put("url",String.valueOf(web.getUrl())));
+            if(navigation.getInt("progress")==100 && navigation.getString("url").equals(MainActivity.ORIGIN+"/assets/web/index.html")){ready=true;break;}
+            Thread.sleep(100);
+        }
+        assertTrue("Application document navigation did not complete",ready);
+    }
     String readJS(WebView web,String expression) throws Exception {
         CountDownLatch gate=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>("null");
         main(()->{web.evaluateJavascript(expression,v->{value.set(v);gate.countDown();});return new JSONObject();});
         assertTrue(gate.await(5,TimeUnit.SECONDS));return value.get();
     }
     JSONObject layout(WebView web) throws Exception {
+        waitDocument(web);
         String result="";
         for(int i=0;i<80;i++){
             CountDownLatch gate=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>("");
             main(()->{web.evaluateJavascript("JSON.stringify({width:innerWidth,height:innerHeight,scroll:document.documentElement.scrollWidth,button:document.querySelector('#make')?.getBoundingClientRect().height,header:document.querySelector('.dock')?.getBoundingClientRect().height,keyboard:document.documentElement.classList.contains('keyboard-open'),undersized:[...document.querySelectorAll('button,select')].filter(e=>e.getBoundingClientRect().height>0&&e.getBoundingClientRect().height<47.5).map(e=>e.id||e.className)})",v->{value.set(v);gate.countDown();});return new JSONObject();});
-            assertTrue(gate.await(3,TimeUnit.SECONDS));result=value.get();if(result.contains("button"))break;Thread.sleep(100);
+            assertTrue("WebView DOM callback timed out after document commit",gate.await(5,TimeUnit.SECONDS));result=value.get();if(result.contains("button"))break;Thread.sleep(100);
         }
         return new JSONObject((String)new JSONTokener(result).nextValue());
     }

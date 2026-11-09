@@ -17,7 +17,7 @@ DIYFM turns language listening into radio you want to return to: self-contained 
 **v2.2.1 improves phone portrait layouts:** compact navigation, 48 dp controls, independently scrolling content and a player that stays on screen. Android resizes the actual WebView viewport for system bars, cutouts and the keyboard; rotating back restores the portrait layout.
 
 - **Android:** Android 8+ with a current System WebView; signed APK, foreground media service, background/channel playback and system media controls.
-- **Mac (current download: 2.2.0):** macOS 13+; Apple Silicon + Intel universal DMG/ZIP, native playback and save/open dialogs. The first test build is ad-hoc signed and **not Apple notarized**; downloaded copies may be blocked by macOS. Apple Silicon is tested; physical Intel Macs are not.
+- **Mac:** macOS 13+; Apple Silicon + Intel universal DMG/ZIP, native playback and save/open dialogs. The first test build is ad-hoc signed and **not Apple notarized**; downloaded copies may be blocked by macOS. Apple Silicon is tested; physical Intel Macs are not.
 - Saved episodes play offline. Making new episodes still needs internet and your own key. Keys remain in the app's current memory session and clear on exit.
 - Each client has an independent local library. Move programs using Settings → Export/Import backup; no automatic cloud sync. Quit/force-stop interrupts production; keep the app foregrounded while generating on Android.
 - MP3 exports include the finished BGM mix. Native exports use the system file dialog. Manual updates use **Download app updates**; Android upgrades must retain the same signing identity and app data.
