@@ -14,7 +14,7 @@ android {
         targetSdk 36
         versionCode (pkg.version.tokenize('.')[0].toInteger()*1000000 + pkg.version.tokenize('.')[1].toInteger()*1000 + pkg.version.tokenize('.')[2].toInteger())
         versionName pkg.version
-        buildConfigField 'String', 'SOURCE_REVISION', '"' + (System.getenv('DIYFM_BUILD_REVISION') ?: 'development') + '"' 
+        buildConfigField 'String', 'SOURCE_REVISION', '"' + (System.getenv('DIYFM_BUILD_REVISION') ?: 'development') + '"'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
     if (signingFile.exists()) signingConfigs {
