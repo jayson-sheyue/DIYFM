@@ -87,6 +87,25 @@ public class ClientIntegrationTest {
         assertTrue(result,result.contains("en"));assertTrue(result,result.contains(BuildConfig.VERSION_NAME));assertTrue(result,result.contains("true"));
     }
 
+    @Test public void channelPackagePreviewCommitAndReexportKeepNativeReadableAudio() throws Exception {
+        java.lang.reflect.Field field=MainActivity.class.getDeclaredField("web");field.setAccessible(true);WebView web=(WebView)field.get(activity.getActivity());
+        waitDocument(web);
+        for(int i=0;i<100;i++){if(readJS(web,"!!window.DIYFM_NATIVE && !!window.DIYFM").equals("true"))break;Thread.sleep(100);}
+        JSONObject ep=new JSONObject().put("id","qa_share_audio").put("title","Synthetic sharing tone").put("status","ready").put("duration_seconds",1).put("script","Host: Synthetic fixture.\nGuest: Not a language lesson.");
+        JSONObject show=new JSONObject().put("id","qa_share_show").put("title","Synthetic sharing QA").put("language","en").put("difficulty","basic").put("wish","PRIVATE_QA_INPUT").put("music_style","none").put("episodes",new JSONArray().put(ep));
+        java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream();
+        try(java.util.zip.ZipOutputStream zip=new java.util.zip.ZipOutputStream(output)){
+            zip.putNextEntry(new java.util.zip.ZipEntry("shows.json"));zip.write(new JSONObject().put("shows",new JSONArray().put(show)).toString().getBytes(StandardCharsets.UTF_8));zip.closeEntry();
+            zip.putNextEntry(new java.util.zip.ZipEntry("audio/qa_share_audio.wav"));zip.write(wav(880));zip.closeEntry();
+        }
+        String data=android.util.Base64.encodeToString(output.toByteArray(),android.util.Base64.NO_WRAP);
+        String script="window.__sharingQA=null;(async()=>{const api=window.DIYFM;await api.ready;await api.importBackup(Uint8Array.from(atob("+JSONObject.quote(data)+"),c=>c.charCodeAt(0)).buffer);const list=async()=>(await(await api.fetch('/api/shows')).json()).shows;const original=(await list()).find(s=>s.title==='Synthetic sharing QA');const blob=await api.exportChannel(original.id,{author:'QA creator',source_url:'https://example.org/',license:'Synthetic fixture',episodeIds:original.episodes.map(e=>e.id)});const buffer=await blob.arrayBuffer();const before=(await list()).length;const preview=await api.prepareImport(buffer);if((await list()).length!==before)throw Error('Preview wrote data');const added=await api.commitImport(preview.token);const same=await api.prepareImport(buffer);if(!same.duplicate)throw Error('No deduplication');const again=await api.commitImport(same.token);if(again.showId!==added.showId)throw Error('Duplicate changed identity');const saved=(await list()).find(s=>s.id===added.showId);const audio=await(await fetch(saved.episodes[0].url)).blob();const digest=[...new Uint8Array(await crypto.subtle.digest('SHA-256',await audio.arrayBuffer()))].map(n=>n.toString(16).padStart(2,'0')).join('');window.__sharingQA={author:saved.provenance.author,hash:digest,channels:(await list()).length-before,script:preview.channels[0].episodes[0].script};})().catch(e=>window.__sharingQA={error:e.message});";
+        main(()->{web.evaluateJavascript(script,null);return new JSONObject();});
+        String raw="null";for(int i=0;i<150;i++){raw=readJS(web,"window.__sharingQA");if(!raw.equals("null"))break;Thread.sleep(100);}
+        JSONObject result=new JSONObject(raw);assertFalse(result.toString(),result.has("error"));
+        StringBuilder digest=new StringBuilder();for(byte b:MessageDigest.getInstance("SHA-256").digest(wav(880)))digest.append(String.format(Locale.ROOT,"%02x",b&255));
+        assertEquals(digest.toString(),result.getString("hash"));assertEquals("QA creator",result.getString("author"));assertEquals(1,result.getInt("channels"));assertTrue(result.getString("script").contains("Synthetic fixture"));
+    }
     // The signed test APK can seed/read only synthetic fixture data across an actual APK upgrade.
     // This exercises the public local-library API, not UI clicks or Google generation.
     void upgradeFixture(String phase) throws Exception {

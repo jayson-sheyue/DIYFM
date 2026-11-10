@@ -2,6 +2,8 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
+**v2.3 adds channel sharing:** export selected finished episodes with public credits, preview ZIP imports, and use Discover to add curated channels locally without a key. The official catalog starts empty until packages are explicitly reviewed and published. [Sharing and curator guide](docs/sharing.md).
+
 **Choose English or Japanese, tell us what you feel like hearing, and listen to two hosts open a fictional letter.**
 
 DIYFM turns language listening into radio you want to return to: self-contained stories, natural conversation and useful expressions recurring in context. It is listening first. You do not need to supply research material, answer quizzes, record your voice, shadow the hosts or maintain a streak.
@@ -19,7 +21,7 @@ DIYFM turns language listening into radio you want to return to: self-contained 
 - **Android:** Android 8+ with a current System WebView; signed APK, foreground media service, background/channel playback and system media controls.
 - **Mac:** macOS 13+; Apple Silicon + Intel universal DMG/ZIP, native playback and save/open dialogs. The first test build is ad-hoc signed and **not Apple notarized**; downloaded copies may be blocked by macOS. Apple Silicon is tested; physical Intel Macs are not.
 - Saved episodes play offline. Making new episodes still needs internet and your own key. Keys remain in the app's current memory session and clear on exit.
-- Each client has an independent local library. Move programs using Settings → Export/Import backup; no automatic cloud sync. Quit/force-stop interrupts production; keep the app foregrounded while generating on Android.
+- Each client has an independent local library. Move programs using Settings → Export backup / Import file; no automatic cloud sync. Quit/force-stop interrupts production; keep the app foregrounded while generating on Android.
 - MP3 exports include the finished BGM mix. Native exports use the system file dialog. Manual updates use **Download app updates**; Android upgrades must retain the same signing identity and app data.
 
 Developers: `npm run test:mac`, `npm run build:mac`, and (after JDK/SDK setup and one-time `npm run android:signing`) `npm run build:android`. End users only install the packages. See the client guide for signing, storage, update and validation boundaries.
@@ -96,7 +98,7 @@ Each production task captures preferences, listening language, metadata language
 Failed attempts remain in Messages. A retry uses the original input and reuses saved plans, research, reviewed scripts and compatible voice segments where available. It uses current model settings; incomplete or incompatible stages still need new service calls.
 
 - **Export backup** includes channels, scripts, completed audio, music, production segments and ordinary model settings. It excludes keys and voice-preview cache.
-- **Import backup** merges channels with new IDs, without replacing existing works or your current models/key. Invalid manifests and missing completed audio reject the import without replacing the library.
+- **Import file** merges channels with new IDs, without replacing existing works or your current models/key. Invalid manifests and missing completed audio reject the import without replacing the library.
 - ZIP import/export is limited to 500 MB to control browser memory. For larger libraries, download individual MP3s and organize them in batches.
 - Refreshing or closing interrupts production. Reopening marks tasks without a surviving executor as interrupted and does not automatically resume paid generation. Browser throttling, sleep and network outages can also affect completion.
 
@@ -124,7 +126,7 @@ The Flask/Vertex sources remain for legacy compatibility. The main static applic
 
 An existing legacy environment can still run `app.py`, whose root redirects to `/static/index.html`. Only at this explicit local path does the browser attempt to copy legacy channels, scripts and completed audio into its library, without calling Google or changing the original files. Keep a copy of `data/` first; failed reads leave the original library intact.
 
-You can also **Import backup** using a ZIP exported by the old version. Migration never copies ADC credentials or treats legacy Vertex configuration as Developer API configuration. Unfinished records remain available for inspection; cross-version imports do not guarantee reuse of every intermediate stage.
+You can also **Import file** using a ZIP exported by the old version. Migration never copies ADC credentials or treats legacy Vertex configuration as Developer API configuration. Unfinished records remain available for inspection; cross-version imports do not guarantee reuse of every intermediate stage.
 
 ## Deploy to GitHub Pages
 

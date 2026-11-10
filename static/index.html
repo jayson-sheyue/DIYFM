@@ -8,9 +8,9 @@
     <meta name="referrer" content="no-referrer" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob: https://generativelanguage.googleapis.com; worker-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob: https://generativelanguage.googleapis.com https://jayson-sheyue.github.io/DIYFM/catalog/; worker-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'"
     />
-    <link rel="stylesheet" href="./app.css?v=2.2.1" />
+    <link rel="stylesheet" href="./app.css?v=2.3.0" />
   </head>
   <body>
     <div class="chassis">
@@ -74,6 +74,14 @@
           <button
             type="button"
             class="nav-btn"
+            data-view="resources"
+            id="nav-resources"
+          >
+            <span data-i18n="精选">Discover</span>
+          </button>
+          <button
+            type="button"
+            class="nav-btn"
             data-view="settings"
             id="nav-settings"
           >
@@ -106,6 +114,7 @@
       <main class="desk">
         <div id="conflict-bar" class="conflict" hidden></div>
         <section id="studio"></section>
+        <section id="resources-view" hidden></section>
         <section id="settings-view" hidden>
           <header class="desk-head">
             <div class="desk-title-group">
@@ -121,7 +130,7 @@
                 <span data-i18n="导出备份">Export backup</span>
               </button>
               <button type="button" class="quiet" id="import-backup">
-                <span data-i18n="导入备份">Import backup</span>
+                <span data-i18n="导入文件">Import file</span>
               </button>
               <input
                 type="file"
@@ -423,6 +432,6 @@
         </footer>
       </main>
     </div>
-    <script type="module" src="./app-entry.mjs?v=2.2.1"></script>
+    <script type="module" src="./app-entry.mjs?v=2.3.0"></script>
   </body>
 </html>

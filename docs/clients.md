@@ -1,13 +1,17 @@
 # DIYFM native clients
 
-DIYFM provides installable Android and macOS clients. The 2.2.1 release updates Android, Mac and the shared web layout. Both bundle the same reviewed HTML/CSS/JavaScript as the website and use native audio and file APIs. They do not depend on GitHub Pages being online to open the application or replay saved episodes. Generation still requires a network connection and your own Google AI Studio key.
+DIYFM provides installable Android and macOS clients. The 2.3.0 release adds channel packages, import previews, credits and curated downloads on Android, Mac and the website. Both bundle the same reviewed HTML/CSS/JavaScript as the website and use native audio and file APIs. They do not depend on GitHub Pages being online to open the application or replay saved episodes. Generation still requires a network connection and your own Google AI Studio key.
 
 ## Install and first use
 
-- **Android:** Android 8.0 / API 26 or later, with an up-to-date Android System WebView supporting WebMessageListener and modern JavaScript. Install `DIYFM-2.2.1-android.apk` using Android's normal package installer. This is a direct-install test build, not a Play Store listing. No microphone, broad storage access, account login or shared model key is required.
-- **Mac:** macOS 13 or later. `DIYFM-2.2.1-mac-universal.dmg` contains an Apple Silicon + Intel universal application; copy DIYFM to Applications. A ZIP is provided as an alternative. The initial build has an ad-hoc signature and is **not Apple Developer ID signed or notarized**. macOS may block a downloaded copy; its trust decision remains with the user. Do not disable Gatekeeper or remove quarantine as an installation step. The actual machine tested is Apple Silicon; Intel is cross-compiled but not run on physical Intel hardware.
+- **Android:** Android 8.0 / API 26 or later, with an up-to-date Android System WebView supporting WebMessageListener and modern JavaScript. Install `DIYFM-2.3.0-android.apk` using Android's normal package installer. This is a direct-install test build, not a Play Store listing. No microphone, broad storage access, account login or shared model key is required.
+- **Mac:** macOS 13 or later. `DIYFM-2.3.0-mac-universal.dmg` contains an Apple Silicon + Intel universal application; copy DIYFM to Applications. A ZIP is provided as an alternative. The initial build has an ad-hoc signature and is **not Apple Developer ID signed or notarized**. macOS may block a downloaded copy; its trust decision remains with the user. Do not disable Gatekeeper or remove quarantine as an installation step. The actual machine tested is Apple Silicon; Intel is cross-compiled but not run on physical Intel hardware.
 - Open Settings, choose English / 日本語 / 中文, and enable your own key. First launch always uses English. Generated channels, scripts and audio stay in the client's local library. No key is bundled with either app.
-- To move programs from the website, export a backup there, then choose **Settings → Import backup** in the client. The ZIP format is shared; imports merge into the destination library with new IDs. There is no automatic account or cloud sync.
+- To move programs from the website, export a backup there, then choose **Settings → Import file** in the client. The ZIP format is shared; imports merge into the destination library with new IDs. There is no automatic account or cloud sync.
+
+## Channel sharing
+
+Use **Share channel** to save selected finished episodes and public credits as a ZIP. Use **Discover** for curated downloads or **Settings → Import file** for a package/backup preview. Confirming saves to this device without a key or upload. Sharing preserves the finished BGM mix and excludes keys/settings/private inputs. All three editions use the same versioned format; the new channel package needs DIYFM 2.3 or later. [Workflow, limits and curator guide](sharing.md).
 
 ## Phone portrait layout
 
@@ -37,7 +41,7 @@ MP3 and ZIP exports use the system's save/create-document dialog, not a browser 
 
 This first test release uses manual updates through the existing GitHub repository's Releases page. **Download app updates** is available in client settings; Mac also provides a menu item. It opens the download page and does not execute downloaded software. No automatic installation or OTA validation is claimed.
 
-Replace the Mac application while it is closed, preserving its app identity and user data. Install a newer Android APK over the existing app, using the **same signing key and application ID**. Uninstalling first deletes its private library. The first native release is 2.2.0; 2.2.1 uses the same storage origins, application IDs and Android signing identity. Export a backup before updating. Consult the release verification notes for which actual upgrade paths and devices were exercised; a same-version reinstall is not proof of a future migration.
+Replace the Mac application while it is closed, preserving its app identity and user data. Install a newer Android APK over the existing app, using the **same signing key and application ID**. Uninstalling first deletes its private library. The first native release is 2.2.0; 2.3.0 uses the same storage origins, application IDs and Android signing identity. Export a backup before updating. Consult the release verification notes for which actual upgrade paths and devices were exercised; a same-version reinstall is not proof of a future migration.
 
 The Android publisher key is generated locally by `npm run android:signing` under ignored `clients/android/.signing/`. Back up the entire directory securely; losing it prevents compatible APK upgrades. Never commit it, upload it to a release, include it in an APK, or substitute a new key for an already-installed production client. The local key password file has owner-only permissions. A production signing/notarization setup or store publication is a separate distribution step.
 

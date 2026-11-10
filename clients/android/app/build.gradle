@@ -36,8 +36,9 @@ android {
     buildFeatures { buildConfig true }
     sourceSets.main.assets.srcDirs = ["${buildDir}/generated/assets"]
 }
-tasks.register('bundleWeb', Copy) {
+tasks.register('bundleWeb', Sync) {
     from '../../../dist'
+    exclude 'catalog/packages/**'
     into "${buildDir}/generated/assets/web"
 }
 tasks.named('preBuild').configure { dependsOn 'bundleWeb' }

@@ -46,7 +46,7 @@ if (mac) {
   await rm(app, { recursive: true, force: true });
   await mkdir(join(contents, "MacOS"), { recursive: true });
   await mkdir(join(contents, "Resources"), { recursive: true });
-  await cp("dist", join(contents, "Resources", "web"), { recursive: true });
+  await cp("dist", join(contents, "Resources", "web"), { recursive: true, filter: source => !source.replaceAll("\\", "/").includes("catalog/packages") });
   for (const arch of ["arm64", "x86_64"]) {
     run("xcrun", [
       "swiftc",

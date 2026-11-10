@@ -418,12 +418,15 @@ function setView(view) {
   if (view === "settings" && !state.settingsDirty)
     loadSettings().catch((e) => notice(e.message));
   renderStatus();
+  if (view === "resources") sharingUI?.enter();
 }
 function showView() {
   $("studio").hidden = state.view !== "studio";
   $("settings-view").hidden = state.view !== "settings";
+  $("resources-view").hidden = state.view !== "resources";
   $("nav-studio").classList.toggle("is-on", state.view === "studio");
   $("nav-settings").classList.toggle("is-on", state.view === "settings");
+  $("nav-resources").classList.toggle("is-on", state.view === "resources");
 }
 function renderSidebar() {
   $("show-list").innerHTML = state.shows.length
@@ -466,6 +469,7 @@ function renderStudio() {
                     声音设置
                   </button>
                 </nav>
+                <button type="button" class="quiet" id="share-channel" ${(show.episodes || []).some(e => e.status === "ready") ? "" : "disabled"}>${tr("分享频道")}</button>
                 <button
                   type="button"
                   class="delete-control"
@@ -475,6 +479,7 @@ function renderStudio() {
                 </button>
               </div>`
         }
+        ${show?.provenance ? sourceCredit(show.provenance) : ""}
         <div id="channel-body">${
           state.tab === "voice" && show
             ? ""
@@ -613,6 +618,7 @@ function renderStudio() {
       }),
   );
   if ($("delete-channel")) $("delete-channel").onclick = () => deleteChannel();
+  if ($("share-channel")) $("share-channel").onclick = () => sharingUI?.share();
   if (state.tab === "voice" && show) {
     renderVoice(show);
     renderStatus();
@@ -951,6 +957,9 @@ async function deleteEpisode(id, showId = state.current) {
 function episodeTitle(ep) {
   return ep.status !== "ready" && !ep.has_script ? tr(ep.title) : ep.title;
 }
+function sourceCredit(source) {
+  return `<aside class="source-credit channel-credit"><strong>${escapeHtml(tr("创作者署名"))}: ${escapeHtml(source.author)}</strong><span>${escapeHtml(tr("使用条款"))}: ${escapeHtml(source.license)}</span>${source.source_url ? `<a href="${escapeHtml(source.source_url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(tr("查看来源"))} ↗</a>` : ""}</aside>`;
+}
 function renderEpisodes() {
   const mount = $("episode-mount"),
     show = currentShow();
@@ -969,6 +978,7 @@ function renderEpisodes() {
       (ep) => `<article class="letter-episode ${ep.status}">
         <div class="episode-heading"><span class="episode-type">${icon("letter")}${ep.status === "ready" ? tr("一封虚构来信") : tr("本期正在制作")}</span><div class="episode-tools"><time>${escapeHtml(formatDate(ep.created_at))}</time>${ep.status === "ready" ? trHTML`<button type="button" class="delete-control" data-delete-episode="${escapeHtml(ep.id)}" aria-label="删除这一集：${escapeHtml(episodeTitle(ep))}" ${state.deleting.size || generating(show) ? "disabled" : ""}>${icon("trash")}${state.deleting.has(ep.id) ? tr("删除中…") : tr("删除本集")}</button>` : ""}</div></div>
         <h3>${escapeHtml(episodeTitle(ep))}</h3>
+        ${ep.provenance && ep.provenance.content_id !== show.provenance?.content_id ? sourceCredit(ep.provenance) : ""}
         ${ep.interpretation ? `<p class="episode-description">${escapeHtml(ep.interpretation)}</p>` : ""}
         ${ep.input?.episode_wish ? trHTML`<p class="hint">这期的口味：${escapeHtml(ep.input.episode_wish)}</p>` : ""}
         ${ep.status === "generating" ? trHTML`<p class="job-stage" role="status"><span class="spinner"></span>${escapeHtml(PHASE[ep.phase] || tr("正在制作"))}。应用内换页不会取消，请保持此网页打开。</p>` : ""}
@@ -1401,7 +1411,7 @@ function renderInbox() {
     ? rows
         .map(
           (r) =>
-            `<li><button type="button" data-task="${escapeHtml(r.id)}" ${r.kind === "episode" && r.status === "failed" ? `aria-expanded="${state.inboxTask === r.id}"` : ""}><strong>${escapeHtml(r.channelTitle || tr(r.title))}</strong><small>${escapeHtml(r.kind === "episode" ? episodeTitle(r) : "")} · ${escapeHtml(r.status === "generating" ? PHASE[r.phase] || tr("正在处理") : r.status === "ready" ? (r.kind === "episode" ? tr("可播放") : ["download", "backup"].includes(r.kind) ? tr("已准备并请求下载") : tr("已完成，可再次试听")) : tr(r.status === "cancelled" ? "已取消" : "未完成，点击查看"))}</small><small>${escapeHtml(formatDate(r.created_at))}</small></button>
+            `<li><button type="button" data-task="${escapeHtml(r.id)}" ${r.kind === "episode" && r.status === "failed" ? `aria-expanded="${state.inboxTask === r.id}"` : ""}><strong>${escapeHtml(r.channelTitle || tr(r.title))}</strong><small>${escapeHtml(r.kind === "episode" ? episodeTitle(r) : "")} · ${escapeHtml(r.status === "generating" ? PHASE[r.phase] || tr("正在处理") : r.status === "ready" ? (r.kind === "episode" ? tr("可播放") : ["download", "backup", "share"].includes(r.kind) ? tr("已准备并请求下载") : tr("已完成，可再次试听")) : tr(r.status === "cancelled" ? "已取消" : "未完成，点击查看"))}</small><small>${escapeHtml(formatDate(r.created_at))}</small></button>
             ${
               state.inboxTask === r.id &&
               r.status !== "ready" &&
@@ -1432,7 +1442,7 @@ function renderInbox() {
                           >
                             查看频道
                           </button>`
-                      : ""
+                      : r.kind === "share" && r.showId ? trHTML`<button type="button" class="quiet" data-task-channel="${escapeHtml(r.showId)}">查看频道</button>` : ""
                   }</div>`
                 : ""
             }</li>`,
@@ -1537,6 +1547,7 @@ function setInterfaceLanguage(language) {
   if (!playback.episodeId)
     $("player-title").textContent = tr($("player-title").textContent);
   renderStatus();
+  sharingUI?.repaint();
 }
 $("ui-language").onchange = () => setInterfaceLanguage($("ui-language").value);
 $("new-channel").onclick = () => openShow(null);
@@ -1545,6 +1556,7 @@ $("nav-studio").onclick = () => {
   renderStudio();
 };
 $("nav-settings").onclick = () => setView("settings");
+$("nav-resources").onclick = () => setView("resources");
 $("status-dismiss").onclick = () => {
   state.notice = null;
   renderStatus();
@@ -1611,31 +1623,15 @@ $("test-api-key").onclick = async () => {
     button.disabled = false;
   }
 };
-$("import-backup").onclick = () => $("backup-file").click();
+$("import-backup").onclick = () => sharingUI?.chooseFile();
 $("backup-file").onchange = async () => {
   const file = $("backup-file").files?.[0];
   if (!file) return;
-  const button = $("import-backup");
-  button.disabled = true;
-  try {
-    const result = await runtime.importBackup(await file.arrayBuffer());
-    state.libraryVersion++;
-    state.shows = (await api("/api/shows")).shows;
-    renderSidebar();
-    renderEpisodes();
-    notice(
-      trText`已导入 ${result.channels} 个频道、${result.episodes} 条记录。已有频道和模型设置保留。`,
-      "ok",
-    );
-  } catch (e) {
-    notice(e.message || tr("备份无法读取，已有频道仍保留。"));
-  } finally {
-    button.disabled = false;
-    $("backup-file").value = "";
-  }
+  sharingUI?.prepareFile(file);
+  $("backup-file").value = "";
 };
 window.addEventListener?.("beforeunload", (event) => {
-  if (runtime?.isBusy()) {
+  if (runtime?.isBusy() || sharingUI?.isBusy()) {
     event.preventDefault();
     event.returnValue = "";
   }
@@ -1771,6 +1767,15 @@ async function poll() {
     state.polling = false;
   }
 }
+const sharingUI = globalThis.DIYFM_SHARE_UI?.({
+  runtime, tr, escapeHtml, saveDownload, addTask, persistTasks, currentShow,
+  onImported: async result => {
+    state.libraryVersion++;
+    state.shows = (await api("/api/shows")).shows;
+    openShow(result.showId || state.current);
+    notice(tr(result.duplicate ? "相同内容已在本地，已打开已有频道。" : "已保存到本地，可以离线收听。"), "ok");
+  },
+});
 Promise.all([api("/api/presets"), api("/api/shows"), api("/api/settings")])
   .then(([presets, shows, settings]) => {
     state.presets = presets;
@@ -1821,7 +1826,7 @@ if (nativeClient) {
   $("settings-view").append(nativeInfo, updateButton);
   setInterval(() => {
     audio.poll();
-    nativeClient.setBusy(runtime.isBusy());
+    nativeClient.setBusy(runtime.isBusy() || sharingUI?.isBusy());
   }, 750);
   window.addEventListener("focus", () => audio.poll());
   window.addEventListener("diyfm:locale", () => {

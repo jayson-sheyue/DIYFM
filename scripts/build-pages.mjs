@@ -1,5 +1,7 @@
 import { rm, mkdir, cp, writeFile, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { validateCatalog } from "./catalog.mjs";
+await validateCatalog();
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist");
 await cp("static", "dist", { recursive: true });

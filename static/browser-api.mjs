@@ -1,4 +1,4 @@
-import { i18n } from "./i18n.mjs";
+import { i18n } from "./i18n.mjs?v=2.3.0";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
@@ -21,6 +21,7 @@ import {
   encodeMP3,
 } from "./audio.mjs?v=2.1.2";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.3.0";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -83,6 +84,7 @@ export function createBrowserAPI({
   mp3 = encodeMP3,
   locks = globalThis.navigator?.locks,
   legacy = false,
+  catalogURL = CATALOG_URL,
 } = {}) {
   const vault = newVault(),
     jobs = new Map(),
@@ -92,6 +94,9 @@ export function createBrowserAPI({
     downloads = new Map(),
     urls = new Map();
   let account = "";
+  const stagedImports = new Map();
+  let catalogEntries = [];
+  let importRevision = 0;
   const pageController = new AbortController();
   const cloud = (snap, path, body, options) =>
     request(snap, path, body, {
@@ -575,7 +580,7 @@ export function createBrowserAPI({
       headers: { "Content-Type": "application/zip" },
     });
   }
-  async function importBackup(buffer) {
+  async function decodeBackup(buffer) {
     if (buffer.byteLength > 500 * 1024 * 1024)
       throw error("备份不能超过 500MB。");
     let total = 0;
@@ -589,7 +594,9 @@ export function createBrowserAPI({
       },
     });
     if (!files["shows.json"]) throw error("备份中缺少节目清单。");
-    const data = JSON.parse(strFromU8(files["shows.json"]));
+    let data;
+    try { data = JSON.parse(strFromU8(files["shows.json"])); }
+    catch { throw error("备份无法读取，已有频道仍保留。"); }
     if (!Array.isArray(data.shows) || data.shows.length > 1000)
       throw error("节目清单格式无效。");
     const imports = [],
@@ -611,6 +618,8 @@ export function createBrowserAPI({
       show.created_at = show.updated_at = now();
       show.episodes = [];
       show.materials = [];
+      if (s.provenance) show.provenance = provenance(s.provenance);
+      if (typeof s.description === "string") show.description = s.description.slice(0, 1200);
       for (const old of (s.episodes || []).slice(0, 1000)) {
         if (!safeId(old.id)) throw error("备份含无效的节目编号。");
         const id = "ep_" + uuid().replaceAll("-", ""),
@@ -630,10 +639,91 @@ export function createBrowserAPI({
       }
       imports.push(show);
     }
+    return { imports, puts, count };
+  }
+  async function importBackup(buffer) {
+    const { imports, puts, count } = await decodeBackup(buffer);
     await library.mutate("shows", (old) => ({
       puts: [["shows", [...imports, ...(old || [])]], ...puts],
     }));
     return { channels: imports.length, episodes: count };
+  }
+  async function prepareImport(buffer) {
+    const token = uuid(), revision = ++importRevision;
+    stagedImports.clear();
+    await ready;
+    let stage, preview;
+    if (isChannelPackage(buffer)) {
+      const decoded = await decodeChannel(buffer), { manifest, contentId } = decoded;
+      const origin = { ...manifest.attribution, channel_id: manifest.channel.id, content_id: contentId };
+      const show = {
+        id: "show_" + uuid().replaceAll("-", ""), title: manifest.channel.title,
+        language: manifest.channel.language, difficulty: manifest.channel.difficulty,
+        wish: "", length: "SHORT", host_voice: "Kore", guest_voice: "Puck", music_style: "none",
+        revision: 0, created_at: now(), updated_at: now(), materials: [], provenance: origin,
+        description: manifest.channel.description, episodes: [],
+      };
+      const puts = [];
+      for (const item of manifest.episodes) {
+        const id = "ep_" + uuid().replaceAll("-", ""), ep = cleanImportedEpisode({ ...item, status: "ready" }, id, show);
+        ep.provenance = item.origin || manifest.channel.origin || origin;
+        show.episodes.push(ep);
+        puts.push(["audio:" + id, new Blob([decoded.files[item.audio.path]], { type: "audio/wav" })]);
+      }
+      const existing = (await list()).find(s => s.provenance?.content_id === contentId);
+      const prior = (await list()).some(s => s.provenance?.channel_id === manifest.channel.id);
+      stage = { imports: [show], puts, count: show.episodes.length, contentId };
+      preview = { kind: "channel", token, bytes: buffer.byteLength, channels: [{ id: manifest.channel.id, title: show.title, language: show.language, difficulty: show.difficulty, description: show.description, attribution: manifest.attribution, origin: manifest.channel.origin, episodes: manifest.episodes.map(e => ({ title: e.title, duration_seconds: e.duration_seconds, summary: e.summary, script: e.script, origin: e.origin })) }], duplicate: !!existing, separateVersion: prior && !existing };
+    } else {
+      stage = await decodeBackup(buffer);
+      preview = { kind: "backup", token, bytes: buffer.byteLength, duplicate: false, channels: stage.imports.map(s => ({ title: s.title, language: s.language, difficulty: s.difficulty, attribution: s.provenance, episodes: s.episodes.map(e => ({ title: e.title, duration_seconds: e.duration_seconds, script: e.script, status: e.status })) })) };
+    }
+    if (revision !== importRevision) throw new DOMException("Cancelled", "AbortError");
+    stagedImports.set(token, stage);
+    return preview;
+  }
+  async function commitImport(token) {
+    const stage = stagedImports.get(token);
+    if (!stage) throw error("导入预览已关闭，请重新选择文件。");
+    if (!stage.commit) stage.commit = library.mutate("shows", raw => {
+      if (stagedImports.get(token) !== stage) throw error("导入预览已关闭，请重新选择文件。");
+      const old = raw || [], existing = stage.contentId && old.find(s => s.provenance?.content_id === stage.contentId);
+      if (existing) return { result: { channels: 0, episodes: 0, duplicate: true, showId: existing.id } };
+      return { puts: [["shows", [...stage.imports, ...old]], ...stage.puts], result: { channels: stage.imports.length, episodes: stage.count, showId: stage.imports[0]?.id, duplicate: false } };
+    }).catch(e => { stage.commit = null; throw e; });
+    return stage.commit;
+  }
+  async function exportChannel(id, options) {
+    await ready;
+    const show = (await list()).find(s => s.id === id);
+    if (!show) throw error("频道不存在。", 404);
+    return encodeChannel(show, options, id => library.get("audio:" + id));
+  }
+  async function catalog() {
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 20000);
+    try {
+      const response = await fetcher(catalogURL, { signal: controller.signal, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store" });
+      const bytes = await readBounded(response, 1024 * 1024, controller.signal);
+      const entries = parseCatalog(JSON.parse(new TextDecoder().decode(bytes)), catalogURL);
+      catalogEntries = entries;
+      return entries;
+    } catch (e) {
+      throw error(e.name === "AbortError" ? "目录连接超时，请稍后刷新。" : "无法刷新资源目录。已保存的节目仍可离线收听。");
+    } finally { clearTimeout(timer); }
+  }
+  async function prepareCatalog(id, signal) {
+    const entry = catalogEntries.find(e => e.id === id);
+    if (!entry) throw error("请先刷新资源目录。");
+    const response = await fetcher(entry.url, { signal, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store" });
+    const bytes = await readBounded(response, SHARE_LIMIT, signal);
+    if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
+    if (bytes.byteLength !== entry.bytes || await sha256(bytes) !== entry.sha256) throw error("目录文件校验失败，未导入任何节目。");
+    const preview = await prepareImport(bytes), c = preview.channels[0];
+    if (preview.kind !== "channel" || c.id !== entry.id || c.title !== entry.title || c.language !== entry.language || c.difficulty !== entry.difficulty || c.description !== entry.description || c.episodes.length !== entry.episodes || JSON.stringify(c.attribution) !== JSON.stringify(entry.attribution)) {
+      stagedImports.delete(preview.token); throw error("目录资料与分享包不一致，未导入任何节目。");
+    }
+    if (signal?.aborted) { stagedImports.delete(preview.token); throw new DOMException("Cancelled", "AbortError"); }
+    return preview;
   }
   async function migrateLocal() {
     if (!legacy || (await library.get("legacy-copied"))) return;
@@ -742,6 +832,7 @@ export function createBrowserAPI({
           ? ""
           : "导入了未完成记录。原台本如有保留，可重新制作。",
       music_source: text(old.music_source, 30),
+      ...(old.provenance ? { provenance: provenance(old.provenance) } : {}),
     };
   }
   const ready = (async () => {
@@ -914,6 +1005,15 @@ export function createBrowserAPI({
       return "Key 可以访问所选文本模型；未运行生成请求，语音和底乐能力需分别使用时确认。";
     },
     importBackup,
+    prepareImport,
+    commitImport,
+    discardImport: token => {
+      if (token) stagedImports.delete(token);
+      else { importRevision++; stagedImports.clear(); }
+    },
+    exportChannel,
+    catalog,
+    prepareCatalog,
     isBusy: () =>
       jobs.size > 0 ||
       [...musicJobs.values()].some((j) => j.status === "running"),
@@ -924,6 +1024,8 @@ export function createBrowserAPI({
       account = "";
       for (const url of urls.values()) URL.revokeObjectURL(url);
       urls.clear();
+      stagedImports.clear();
+      importRevision++;
     },
   });
 }

@@ -1,5 +1,7 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.3.0";
 export const MESSAGES = {
+  ...SHARING_MESSAGES,
   已取消: { en: "Cancelled", ja: "キャンセル済み", "zh-CN": "已取消" },
 
   "无法读取本机音频，原节目仍保留。": {
