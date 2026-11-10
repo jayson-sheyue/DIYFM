@@ -1,4 +1,4 @@
-import { i18n } from "./i18n.mjs?v=2.3.0";
+import { i18n } from "./i18n.mjs?v=2.3.1";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
@@ -21,7 +21,7 @@ import {
   encodeMP3,
 } from "./audio.mjs?v=2.1.2";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.3.0";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.3.1";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>

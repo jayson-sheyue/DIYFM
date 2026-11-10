@@ -1,7 +1,22 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.3.0";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.3.1";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
+  "保存与制作说明": { en: "Storage & production", ja: "保存と制作について", "zh-CN": "保存与制作说明" },
+  "模型设置": { en: "Model settings", ja: "モデル設定", "zh-CN": "模型设置" },
+  "新一期": { en: "New episode", ja: "新しいエピソード", "zh-CN": "新一期" },
+  "选择频道": {"en": "Choose channel", "ja": "チャンネルを選択", "zh-CN": "选择频道"},
+  "新建频道": {"en": "New channel", "ja": "新しいチャンネル", "zh-CN": "新建频道"},
+  "返回节目": {"en": "Back to episodes", "ja": "エピソードに戻る", "zh-CN": "返回节目"},
+  "内容与偏好": {"en": "Content & preferences", "ja": "内容と好み", "zh-CN": "内容与偏好"},
+  "频道管理": {"en": "Channel options", "ja": "チャンネル管理", "zh-CN": "频道管理"},
+  "来源与使用条款": {"en": "Source & usage terms", "ja": "出典と利用条件", "zh-CN": "来源与使用条款"},
+  "本集操作": {"en": "Episode options", "ja": "エピソードの操作", "zh-CN": "本集操作"},
+  "节目库与文件": {"en": "Library & files", "ja": "ライブラリとファイル", "zh-CN": "节目库与文件"},
+  "备份整个节目库，或导入朋友分享的频道。": {"en": "Back up your library or import a shared channel.", "ja": "ライブラリをバックアップしたり、共有チャンネルを取り込めます。", "zh-CN": "备份整个节目库，或导入朋友分享的频道。"},
+  "Key 隐私与费用": {"en": "Key privacy & costs", "ja": "キーの保護と料金", "zh-CN": "Key 隐私与费用"},
+  "播放设置": {"en": "Playback settings", "ja": "再生設定", "zh-CN": "播放设置"},
+
   已取消: { en: "Cancelled", ja: "キャンセル済み", "zh-CN": "已取消" },
 
   "无法读取本机音频，原节目仍保留。": {

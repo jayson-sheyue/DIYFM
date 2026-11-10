@@ -27,3 +27,6 @@ clients/android/local.properties
 *.aab
 *.xcarchive
 clients/android/.signing/
+
+# Local channel exports can contain private creator content.
+/diyfm-channel-*.zip

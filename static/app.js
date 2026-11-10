@@ -203,6 +203,7 @@ function draftKey() {
   return state.current || "new";
 }
 function formValues() {
+  if (!$("wish-form")) return loadDraft(currentShow());
   return {
     title: $("channel-title")?.value.trim() || currentShow()?.title || "",
     language: $("language")?.value || "en",
@@ -421,6 +422,7 @@ function setView(view) {
   if (view === "resources") sharingUI?.enter();
 }
 function showView() {
+  document.body.dataset.view = state.view;
   $("studio").hidden = state.view !== "studio";
   $("settings-view").hidden = state.view !== "settings";
   $("resources-view").hidden = state.view !== "resources";
@@ -429,6 +431,9 @@ function showView() {
   $("nav-resources").classList.toggle("is-on", state.view === "resources");
 }
 function renderSidebar() {
+  document.body.classList.toggle("has-channels", state.shows.length > 0);
+  $("channel-switch").innerHTML = `<option value="">${escapeHtml(tr("选择频道"))}</option>` + state.shows.map(s => `<option value="${escapeHtml(s.id)}" ${s.id === state.current ? "selected" : ""}>${escapeHtml(s.title)}</option>`).join("");
+  $("channel-switch").value = state.current || "";
   $("show-list").innerHTML = state.shows.length
     ? state.shows
         .map(
@@ -441,26 +446,42 @@ function renderSidebar() {
     .querySelectorAll("[data-channel]")
     .forEach((b) => (b.onclick = () => openShow(b.dataset.channel)));
 }
+function changeChannelTab(tab) {
+  if (!currentShow() || !["listen", "compose", "voice"].includes(tab)) return;
+  captureDraft();
+  stopPlayback();
+  state.tab = tab;
+  renderStudio();
+  $("studio").scrollTop = 0;
+}
 function renderStudio() {
   const show = currentShow(),
     d = loadDraft(show),
     fresh = !show;
   $("studio").innerHTML = `
-        <header class="radio-heading"><div><p class="eyebrow">${fresh ? tr("LETTERS, JUST FOR YOUR EARS") : tr("YOUR OWN FREQUENCY")}</p>
+        <header class="radio-heading ${fresh ? "" : "channel-heading"}"><div>${fresh ? `<p class="eyebrow">${tr("LETTERS, JUST FOR YOUR EARS")}</p>` : ""}
         ${fresh ? trHTML(["<h1>听一封来信，<br>走进另一种语言。</h1>"]) : `<h1>${escapeHtml(show.title)}</h1>`}
-        <p class="intro">${fresh ? tr("两位主持，一封虚构来信。让日常里的小意外，成为今天想听的故事。") : tr("频道记住你的口味，每一集都是新的来信。")}</p></div>
+        <p class="intro" ${fresh ? "" : 'id="channel-meta"'}>${fresh ? tr("两位主持，一封虚构来信。让日常里的小意外，成为今天想听的故事。") : `${LANG[show.language] || tr("英语")} · ${trText`${(show.episodes || []).filter(e => e.status === "ready").length} 集可听`}`}</p></div>
         <img class="station-art" src="./letter-radio.svg" alt="" width="260" height="188"></header>
         ${
           fresh
             ? ""
-            : trHTML`<div class="channel-toolbar">
-                <nav class="tabs" aria-label="频道页面">
+            : `<div class="channel-toolbar ${state.tab === "listen" ? "is-library" : "is-editing"}">
+                ${state.tab === "listen" ? `<button type="button" class="quiet" id="open-compose">${icon("spark")}${tr("新一期")}</button>` : `<button type="button" class="quiet" data-tab="listen">← ${tr("返回节目")}</button>`}
+                <details class="channel-menu"><summary>${tr("频道管理")} <span aria-hidden="true">···</span></summary><div class="channel-menu-items">
+                <button type="button" data-tab="compose">${tr("内容与偏好")}</button>
+                <button type="button" data-tab="voice">${tr("声音设置")}</button>
+                <button type="button" id="share-channel" ${(show.episodes || []).some(e => e.status === "ready") ? "" : "disabled"}>${tr("分享频道")}</button>
+                <button type="button" class="danger" id="delete-channel">${icon("trash")}${tr("删除频道")}</button>
+                </div></details>
+              </div>
+              ${state.tab === "listen" ? "" : trHTML`<nav class="tabs editor-tabs" aria-label="频道页面">
                   <button
                     type="button"
-                    data-tab="listen"
-                    class="${state.tab === "listen" ? "is-on" : ""}"
+                    data-tab="compose"
+                    class="${state.tab === "compose" ? "is-on" : ""}"
                   >
-                    收听与偏好</button
+                    内容与偏好</button
                   ><button
                     type="button"
                     data-tab="voice"
@@ -468,21 +489,12 @@ function renderStudio() {
                   >
                     声音设置
                   </button>
-                </nav>
-                <button type="button" class="quiet" id="share-channel" ${(show.episodes || []).some(e => e.status === "ready") ? "" : "disabled"}>${tr("分享频道")}</button>
-                <button
-                  type="button"
-                  class="delete-control"
-                  id="delete-channel"
-                >
-                  ${icon("trash")}删除频道
-                </button>
-              </div>`
+                </nav>`}`
         }
-        ${show?.provenance ? sourceCredit(show.provenance) : ""}
+        ${show?.provenance ? `<details class="channel-source"><summary>${tr("来源与使用条款")} · ${escapeHtml(show.provenance.author)}</summary>${sourceCredit(show.provenance)}</details>` : ""}
         <div id="channel-body">${
-          state.tab === "voice" && show
-            ? ""
+          show && state.tab !== "compose"
+            ? (state.tab === "listen" ? `<section class="episode-section"><div class="section-heading"><h2>${tr("频道里的来信")}</h2><label class="mode-control"><span>${tr("播放模式")}</span><select id="channel-playback-mode" data-playback-mode>${playbackModeOptions()}</select></label></div><div id="episode-mount"></div></section>` : "")
             : trHTML`
                 <form
                   id="wish-form"
@@ -590,38 +602,24 @@ function renderStudio() {
                       ><span>${icon("headphones")}按难度编排</span
                       ><span>${icon("spark")}自动保存 · 可下载</span>
                     </div>`
-                    : trHTML`<section class="episode-section">
-                      <div class="section-heading">
-                        <h2>频道里的来信</h2>
-                        <label class="mode-control"
-                          >播放模式<select
-                            id="channel-playback-mode"
-                            data-playback-mode
-                            title="频道内按来信列表顺序连播，最后一集回到第一集"
-                          >
-                            ${playbackModeOptions()}
-                          </select></label
-                        >
-                      </div>
-                      <div id="episode-mount"></div>
-                    </section>`
+                    : "" /* Episodes have their own listening page. */
                 }
               `
         }</div>`;
-  document.querySelectorAll("[data-tab]").forEach(
-    (b) =>
-      (b.onclick = () => {
-        captureDraft();
-        stopPlayback();
-        state.tab = b.dataset.tab;
-        renderStudio();
-      }),
-  );
+  document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => changeChannelTab(b.dataset.tab));
+  if ($("open-compose")) $("open-compose").onclick = () => changeChannelTab("compose");
   if ($("delete-channel")) $("delete-channel").onclick = () => deleteChannel();
   if ($("share-channel")) $("share-channel").onclick = () => sharingUI?.share();
   if (state.tab === "voice" && show) {
     renderVoice(show);
     renderStatus();
+    return;
+  }
+  if (show && state.tab === "listen") {
+    syncPlaybackMode();
+    renderEpisodes();
+    renderStatus();
+    renderConflict();
     return;
   }
   $("wish").value = d.wish;
@@ -684,6 +682,7 @@ function renderStatus() {
         };
   $("status-text").textContent = tr(msg.message);
   $("statusbar").dataset.tone = msg.tone;
+  $("statusbar").hidden = !state.notice && !job;
   $("status-dismiss").hidden = msg.tone !== "error";
   const make = $("make");
   if (make) {
@@ -963,6 +962,7 @@ function sourceCredit(source) {
 function renderEpisodes() {
   const mount = $("episode-mount"),
     show = currentShow();
+  if (show && $("channel-meta")) $("channel-meta").textContent = `${LANG[show.language] || tr("英语")} · ${trText`${(show.episodes || []).filter(e => e.status === "ready").length} 集可听`}`;
   if (!mount || !show) return;
   const eps = (show.episodes || []).filter(
     (ep) => ep.status === "ready" || ep.status === "generating",
@@ -976,7 +976,7 @@ function renderEpisodes() {
   mount.innerHTML = eps
     .map(
       (ep) => `<article class="letter-episode ${ep.status}">
-        <div class="episode-heading"><span class="episode-type">${icon("letter")}${ep.status === "ready" ? tr("一封虚构来信") : tr("本期正在制作")}</span><div class="episode-tools"><time>${escapeHtml(formatDate(ep.created_at))}</time>${ep.status === "ready" ? trHTML`<button type="button" class="delete-control" data-delete-episode="${escapeHtml(ep.id)}" aria-label="删除这一集：${escapeHtml(episodeTitle(ep))}" ${state.deleting.size || generating(show) ? "disabled" : ""}>${icon("trash")}${state.deleting.has(ep.id) ? tr("删除中…") : tr("删除本集")}</button>` : ""}</div></div>
+        <div class="episode-heading"><span class="episode-type">${icon("letter")}${ep.status === "ready" ? tr("一封虚构来信") : tr("本期正在制作")}</span><div class="episode-tools"><time>${escapeHtml(formatDate(ep.created_at))}</time>${ep.status === "ready" ? `<details class="episode-menu"><summary aria-label="${tr("本集操作")}">···</summary>${trHTML`<button type="button" class="delete-control" data-delete-episode="${escapeHtml(ep.id)}" aria-label="删除这一集：${escapeHtml(episodeTitle(ep))}" ${state.deleting.size || generating(show) ? "disabled" : ""}>${icon("trash")}${state.deleting.has(ep.id) ? tr("删除中…") : tr("删除本集")}</button>`}</details>` : ""}</div></div>
         <h3>${escapeHtml(episodeTitle(ep))}</h3>
         ${ep.provenance && ep.provenance.content_id !== show.provenance?.content_id ? sourceCredit(ep.provenance) : ""}
         ${ep.interpretation ? `<p class="episode-description">${escapeHtml(ep.interpretation)}</p>` : ""}
@@ -1550,6 +1550,19 @@ function setInterfaceLanguage(language) {
   sharingUI?.repaint();
 }
 $("ui-language").onchange = () => setInterfaceLanguage($("ui-language").value);
+document.addEventListener("click", e => {
+  document.querySelectorAll(".channel-menu[open], .episode-menu[open], .player-settings[open]").forEach(menu => {
+    if (!menu.contains(e.target)) menu.open = false;
+  });
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  document.querySelectorAll(".channel-menu[open], .episode-menu[open], .player-settings[open]").forEach(menu => {
+    if (menu.contains(document.activeElement)) menu.querySelector("summary")?.focus();
+    menu.open = false;
+  });
+});
+$("channel-switch").onchange = () => openShow($("channel-switch").value || null);
 $("new-channel").onclick = () => openShow(null);
 $("nav-studio").onclick = () => {
   setView("studio");

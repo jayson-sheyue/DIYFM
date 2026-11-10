@@ -45,6 +45,7 @@ function setup(initialStorage = {}, translation, backend) {
     DIYFM_I18N: translation,
     DIYFM: backend,
     document: {
+      body: { dataset: {}, classList: { toggle() {} } },
       documentElement: { lang: "en" },
       getElementById: element,
       querySelectorAll: () => [],
@@ -511,4 +512,25 @@ test("localized transcript rendering preserves escaped original script and input
   assert.match(markup,/原文 &lt;b&gt;keep&lt;\/b&gt;/);
   assert.match(markup,/習得を示すものではありません/);
   assert.doesNotMatch(markup,/<script>|<b>keep/);
+});
+
+test("saving outside the composer uses the retained draft instead of empty defaults", () => {
+  const { ctx, run } = setup();
+  run("Object.assign(state.shows[0],{language:'ja',wish:'saved preference',host_voice:'Zephyr',length:'LONG',revision:7});writeLocal('draft:channel',{language:'ja',wish:'unsaved preference',difficulty:'advanced',length:'MEDIUM',host_voice:'Charon',guest_voice:'Puck',music_style:'none',revision:7})");
+  const original = ctx.document.getElementById;
+  ctx.document.getElementById = id => id === 'wish-form' ? null : original(id);
+  const values = run("formValues()");
+  assert.equal(values.wish, 'unsaved preference');
+  assert.equal(values.language, 'ja');
+  assert.equal(values.host_voice, 'Charon');
+  assert.equal(values.music_style, 'none');
+  assert.equal(values.revision, 7);
+});
+
+test("episode changes refresh the listening header count without replacing the editor", () => {
+  const { run, elements } = setup();
+  run("state.shows[0].episodes=[{id:'one',status:'ready',title:'First'},{id:'two',status:'ready',title:'Second'}];renderEpisodes()");
+  assert.match(elements.get('channel-meta').textContent,/2/);
+  run("state.shows[0].episodes.splice(0,1);renderEpisodes()");
+  assert.match(elements.get('channel-meta').textContent,/1/);
 });

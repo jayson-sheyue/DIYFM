@@ -4,7 +4,7 @@ DIYFM 2.3 adds the same sharing workflow to the website, Android and Mac. No acc
 
 ## Share one channel
 
-Open a saved channel and choose **Share channel**. Select 1–50 finished episodes, enter a public creator credit and usage terms, and optionally add an HTTPS source link and public description. **Save channel package** saves a ZIP using the browser download or native save dialog. It never uploads the channel. If no finished episode exists, sharing is disabled.
+Open a saved channel and choose **Channel options → Share channel**. Select 1–50 finished episodes, enter a public creator credit and usage terms, and optionally add an HTTPS source link and public description. **Save channel package** saves a ZIP using the browser download or native save dialog. It never uploads the channel. If no finished episode exists, sharing is disabled.
 
 The package contains only the selected finished mixed WAVs (including their existing BGM), scripts, expressions, references and public credits. Private wishes, per-episode inputs, drafts, incomplete records, raw speech/music intermediates, model settings, keys and unrelated channels are excluded. Audio is copied without regeneration or re-encoding. The v1 limit is 100 MiB including the archive, with PCM 16-bit WAV audio; select fewer episodes if needed. Channels imported from older versions must have a readable finished WAV to be shared.
 

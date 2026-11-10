@@ -81,7 +81,7 @@ public class ClientIntegrationTest {
         String result="";
         for(int i=0;i<80;i++){
             CountDownLatch gate=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>("");
-            main(()->{web.evaluateJavascript("JSON.stringify({language:document.documentElement.lang,ready:!!document.querySelector('#make')?.textContent.trim(),native:!!window.DIYFM_NATIVE,version:window.DIYFM_NATIVE?.info.version})",v->{value.set(v);gate.countDown();});return new JSONObject();});
+            main(()->{web.evaluateJavascript("JSON.stringify({language:document.documentElement.lang,ready:!!document.querySelector('#make, #open-compose')?.textContent.trim(),native:!!window.DIYFM_NATIVE,version:window.DIYFM_NATIVE?.info.version})",v->{value.set(v);gate.countDown();});return new JSONObject();});
             assertTrue("WebView DOM callback timed out after document commit",gate.await(5,TimeUnit.SECONDS));result=value.get();if(result.contains(BuildConfig.VERSION_NAME)&&result.contains("true"))break;Thread.sleep(100);
         }
         assertTrue(result,result.contains("en"));assertTrue(result,result.contains(BuildConfig.VERSION_NAME));assertTrue(result,result.contains("true"));
@@ -105,6 +105,34 @@ public class ClientIntegrationTest {
         JSONObject result=new JSONObject(raw);assertFalse(result.toString(),result.has("error"));
         StringBuilder digest=new StringBuilder();for(byte b:MessageDigest.getInstance("SHA-256").digest(wav(880)))digest.append(String.format(Locale.ROOT,"%02x",b&255));
         assertEquals(digest.toString(),result.getString("hash"));assertEquals("QA creator",result.getString("author"));assertEquals(1,result.getInt("channels"));assertTrue(result.getString("script").contains("Synthetic fixture"));
+    }
+    @Test public void listeningFirstNavigationPreservesDraftAndKeepsEpisodesAboveTheFold() throws Exception {
+        java.lang.reflect.Field field=MainActivity.class.getDeclaredField("web");field.setAccessible(true);WebView web=(WebView)field.get(activity.getActivity());
+        waitDocument(web);
+        for(int i=0;i<100;i++){if(readJS(web,"!!window.DIYFM && !!document.querySelector('#ui-language')").equals("true"))break;Thread.sleep(100);}
+        JSONObject show=new JSONObject().put("id","qa_layout_source").put("title","Late-night letters / 夜の手紙").put("language","en").put("difficulty","basic").put("wish","Original layout QA preference").put("music_style","none").put("episodes",new JSONArray()
+            .put(new JSONObject().put("id","qa_layout_a").put("title","The elevator that stopped on every floor").put("status","ready").put("duration_seconds",1).put("script","Host: Layout QA, synthetic audio."))
+            .put(new JSONObject().put("id","qa_layout_b").put("title","A message meant for someone else / 宛先ちがい").put("status","ready").put("duration_seconds",1).put("script","Guest: Test fixture, not a lesson.")));
+        java.io.ByteArrayOutputStream output=new java.io.ByteArrayOutputStream();
+        try(java.util.zip.ZipOutputStream zip=new java.util.zip.ZipOutputStream(output)){
+            zip.putNextEntry(new java.util.zip.ZipEntry("shows.json"));zip.write(new JSONObject().put("shows",new JSONArray().put(show)).toString().getBytes(StandardCharsets.UTF_8));zip.closeEntry();
+            for(String id:new String[]{"qa_layout_a","qa_layout_b"}){zip.putNextEntry(new java.util.zip.ZipEntry("audio/"+id+".wav"));zip.write(wav(880));zip.closeEntry();}
+        }
+        String data=android.util.Base64.encodeToString(output.toByteArray(),android.util.Base64.NO_WRAP);
+        String script="window.__layoutQA=null;(async()=>{await window.DIYFM.ready;await window.DIYFM.importBackup(Uint8Array.from(atob("+JSONObject.quote(data)+"),c=>c.charCodeAt(0)).buffer);location.reload();})().catch(e=>window.__layoutQA={error:e.message});";
+        main(()->{web.evaluateJavascript(script,null);return new JSONObject();});
+        boolean listed=false;
+        for(int i=0;i<100;i++){if(readJS(web,"[...document.querySelectorAll('#channel-switch option')].some(e=>e.textContent==='Late-night letters / 夜の手紙')").equals("true")){listed=true;break;}Thread.sleep(100);}
+        assertTrue("Fixture not listed after reload",listed);
+        String ui="window.__layoutQA=null;(async()=>{const $=id=>document.getElementById(id);const check=(ok,msg)=>{if(!ok)throw Error(msg)};const tick=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));const fire=(id,value)=>{$(id).value=value;$(id).dispatchEvent(new Event('change',{bubbles:true}))};fire('ui-language','en');const pick=[...$('channel-switch').options].find(o=>o.textContent==='Late-night letters / 夜の手紙');fire('channel-switch',pick.value);await tick();check(!$('wish-form'),'Listening page is still a form');check(document.querySelectorAll('[data-play]').length===2,'Episodes missing');const play=document.querySelector('[data-play]').getBoundingClientRect(),nav=document.querySelector('.dock-nav').getBoundingClientRect();check(play.bottom<nav.top,'First Play action is below the fold');check(nav.top>innerHeight-90,'Navigation is not at the bottom');$('open-compose').click();check(!!$('wish-form'),'Composer did not open');$('wish').value='Retained layout QA draft';$('wish').dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('.editor-tabs [data-tab=voice]').click();check(!!$('host'),'Sound controls missing');document.querySelector('.editor-tabs [data-tab=compose]').click();check($('wish').value==='Retained layout QA draft','Sound switch lost draft');document.querySelector('[data-tab=listen]').click();check(!$('wish-form'),'Return did not reach episodes');$('open-compose').click();check($('wish').value==='Retained layout QA draft','Return lost draft');$('make').click();await tick();check(!$('settings-view').hidden,'Missing Key did not lead to settings');$('nav-studio').click();check($('wish').value==='Retained layout QA draft','Key detour lost draft');document.querySelector('[data-tab=listen]').click();for(const lang of ['ja','zh-CN','en']){$('nav-settings').click();fire('ui-language',lang);$('nav-studio').click();check(!$('wish-form'),'Locale restored wrong page');check(document.documentElement.scrollWidth<=innerWidth+1,'Locale overflows');}window.__layoutQA={ok:true,width:innerWidth,height:innerHeight,playBottom:play.bottom,navTop:nav.top};})().catch(e=>window.__layoutQA={error:e.message});";
+        main(()->{web.evaluateJavascript(ui,null);return new JSONObject();});
+        String raw="null";for(int i=0;i<150;i++){raw=readJS(web,"window.__layoutQA");if(!raw.equals("null"))break;Thread.sleep(100);}
+        JSONObject result=new JSONObject(raw);assertFalse(result.toString(),result.has("error"));assertTrue(result.toString(),result.getBoolean("ok"));
+        android.util.Log.i("DIYFM_QA","Listening hierarchy and UI order: "+result);
+        android.graphics.Bitmap shot=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
+        java.io.File screenshot=new java.io.File(activity.getActivity().getExternalFilesDir(null),"listening-first-portrait.png");
+        try(java.io.FileOutputStream file=new java.io.FileOutputStream(screenshot)){assertTrue(shot.compress(android.graphics.Bitmap.CompressFormat.PNG,100,file));}finally{shot.recycle();}
+        main(()->{web.evaluateJavascript("document.getElementById('new-channel').click()",null);return new JSONObject();});
     }
     // The signed test APK can seed/read only synthetic fixture data across an actual APK upgrade.
     // This exercises the public local-library API, not UI clicks or Google generation.
@@ -155,7 +183,7 @@ public class ClientIntegrationTest {
         String result="";
         for(int i=0;i<80;i++){
             CountDownLatch gate=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>("");
-            main(()->{web.evaluateJavascript("JSON.stringify({width:innerWidth,height:innerHeight,scroll:document.documentElement.scrollWidth,button:document.querySelector('#make')?.getBoundingClientRect().height,header:document.querySelector('.dock')?.getBoundingClientRect().height,keyboard:document.documentElement.classList.contains('keyboard-open'),undersized:[...document.querySelectorAll('button,select')].filter(e=>e.getBoundingClientRect().height>0&&e.getBoundingClientRect().height<47.5).map(e=>e.id||e.className)})",v->{value.set(v);gate.countDown();});return new JSONObject();});
+            main(()->{web.evaluateJavascript("JSON.stringify({width:innerWidth,height:innerHeight,scroll:document.documentElement.scrollWidth,button:document.querySelector('#make, #open-compose')?.getBoundingClientRect().height,header:document.querySelector('.dock')?.getBoundingClientRect().height,keyboard:document.documentElement.classList.contains('keyboard-open'),undersized:[...document.querySelectorAll('button,select')].filter(e=>e.getBoundingClientRect().height>0&&e.getBoundingClientRect().height<47.5).map(e=>e.id||e.className)})",v->{value.set(v);gate.countDown();});return new JSONObject();});
             assertTrue("WebView DOM callback timed out after document commit",gate.await(5,TimeUnit.SECONDS));result=value.get();if(result.contains("button"))break;Thread.sleep(100);
         }
         return new JSONObject((String)new JSONTokener(result).nextValue());
@@ -192,7 +220,8 @@ public class ClientIntegrationTest {
                 for(int i=0;i<30&&(!reduced.getBoolean("keyboard")||reduced.getDouble("height")>=metrics.getDouble("height")-100);i++){Thread.sleep(100);reduced=layout(web);}
                 assertTrue("IME does not reduce the actual viewport: "+reduced,reduced.getDouble("height")<metrics.getDouble("height")-100);
                 assertTrue("IME compact mode not applied",reduced.getBoolean("keyboard"));
-                assertTrue("Channel rail consumes editing space",reduced.getDouble("header")<metrics.getDouble("header")-30);
+                assertTrue("Header expands during editing",reduced.getDouble("header")<=metrics.getDouble("header"));
+                if(metrics.getDouble("header")>100)assertTrue("Channel switch consumes editing space",reduced.getDouble("header")<metrics.getDouble("header")-30);
                 android.util.Log.i("DIYFM_QA","Controlled IME source: real closed-IME callbacks during relayout="+closedCallbacks.get());
             }finally{main(()->{content.setOnApplyWindowInsetsListener(host::applyContentInsets);content.dispatchApplyWindowInsets(original);return new JSONObject();});}
             JSONObject restored=layout(web);

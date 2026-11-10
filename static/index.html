@@ -10,7 +10,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob: https://generativelanguage.googleapis.com https://jayson-sheyue.github.io/DIYFM/catalog/; worker-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'"
     />
-    <link rel="stylesheet" href="./app.css?v=2.3.0" />
+    <link rel="stylesheet" href="./app.css?v=2.3.1" />
   </head>
   <body>
     <div class="chassis">
@@ -68,7 +68,7 @@
             class="nav-btn is-on"
             data-view="studio"
             id="nav-studio"
-          >
+          ><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 14v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="12" width="5" height="9" rx="2"/><rect x="16" y="12" width="5" height="9" rx="2"/></svg>
             <span><span data-i18n="收听">Listen</span></span>
           </button>
           <button
@@ -76,7 +76,7 @@
             class="nav-btn"
             data-view="resources"
             id="nav-resources"
-          >
+          ><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m16 8-2 6-6 2 2-6Z"/></svg>
             <span data-i18n="精选">Discover</span>
           </button>
           <button
@@ -84,7 +84,7 @@
             class="nav-btn"
             data-view="settings"
             id="nav-settings"
-          >
+          ><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="white"/><circle cx="15" cy="17" r="3" fill="white"/></svg>
             <span><span data-i18n="设置">Settings</span></span>
           </button>
         </nav>
@@ -95,7 +95,8 @@
               ><span data-i18n="节目">Channels</span></span
             >
           </div>
-          <button type="button" class="new-channel" id="new-channel">
+          <label class="channel-switch-label" for="channel-switch" data-i18n="选择频道">Choose channel</label><select id="channel-switch" class="channel-switch" aria-label="Choose channel" data-i18n-aria-label="选择频道"></select>
+          <button type="button" class="new-channel" id="new-channel" aria-label="New channel" data-i18n-aria-label="新建频道"><span class="new-symbol" aria-hidden="true">＋</span>
             <span data-i18n="＋ 新建频道">＋ New channel</span>
           </button>
           <ul id="show-list"></ul>
@@ -125,29 +126,7 @@
               </p>
               <h1><span data-i18n="设置">Settings</span></h1>
             </div>
-            <div class="desk-actions">
-              <button type="button" class="quiet" id="export-backup">
-                <span data-i18n="导出备份">Export backup</span>
-              </button>
-              <button type="button" class="quiet" id="import-backup">
-                <span data-i18n="导入文件">Import file</span>
-              </button>
-              <input
-                type="file"
-                id="backup-file"
-                accept=".zip,application/zip"
-                hidden
-              />
-              <button type="button" class="quiet" id="clear-preview-cache">
-                <span data-i18n="清理试听缓存">Clear preview cache</span>
-              </button>
-              <button type="button" class="quiet" id="restore-settings">
-                <span data-i18n="恢复模型默认">Restore default models</span>
-              </button>
-              <button type="button" class="primary" id="save-settings">
-                <span data-i18n="保存模型设置">Save model settings</span>
-              </button>
-            </div>
+
           </header>
           <section
             class="language-settings spec-card"
@@ -212,6 +191,7 @@
                 ><span id="key-state" class="hint" role="status"></span>
               </div>
               <p class="auth-note" id="auth-note"></p>
+              <details class="settings-help"><summary data-i18n="Key 隐私与费用">Key privacy &amp; costs</summary>
               <p class="hint">
                 <span
                   data-i18n="Key 不写入浏览器存储、备份、地址栏或仓库。只通过 HTTPS 请求头发给 Google；不要在不信任的网页或浏览器扩展环境中使用 Key。刷新、关闭或离开页面后会清除。"
@@ -253,9 +233,10 @@
                   fail.</span
                 >
               </p>
+              </details>
             </div>
           </article>
-          <div class="auth-banner">
+          <details class="settings-help storage-help"><summary data-i18n="保存与制作说明">Storage &amp; production</summary>          <div class="auth-banner">
             <p class="hint" id="settings-effect"></p>
             <p class="hint">
               <span
@@ -267,6 +248,8 @@
               >
             </p>
           </div>
+          </details>
+          <details class="model-settings"><summary data-i18n="模型设置">Model settings</summary>
           <div class="settings-rack">
             <article class="spec-card">
               <header class="spec-head">
@@ -380,6 +363,21 @@
               </div>
             </article>
           </div>
+          <div class="model-actions">
+            <button type="button" class="primary" id="save-settings" data-i18n="保存模型设置">Save model settings</button>
+            <button type="button" class="quiet" id="restore-settings" data-i18n="恢复模型默认">Restore default models</button>
+          </div>
+          </details>
+          <section class="spec-card library-settings">
+            <h2 data-i18n="节目库与文件">Library &amp; files</h2>
+            <p class="hint" data-i18n="备份整个节目库，或导入朋友分享的频道。">Back up your library or import a shared channel.</p>
+            <div class="library-actions">
+              <button type="button" class="quiet" id="export-backup" data-i18n="导出备份">Export backup</button>
+              <button type="button" class="quiet" id="import-backup" data-i18n="导入文件">Import file</button>
+              <button type="button" class="linkish" id="clear-preview-cache" data-i18n="清理试听缓存">Clear preview cache</button>
+            </div>
+            <input type="file" id="backup-file" accept=".zip,application/zip" hidden />
+          </section>
         </section>
         <section
           id="player"
@@ -396,7 +394,7 @@
             </button>
           </div>
           <audio id="shared-audio" controls preload="none"></audio>
-          <div class="player-options">
+          <details class="player-settings"><summary data-i18n="播放设置">Playback settings</summary><div class="player-options">
             <label class="mode-control"
               ><span data-i18n="播放模式">Playback mode</span>
               <select id="playback-mode" data-playback-mode>
@@ -416,7 +414,7 @@
                 <option value="1.5">1.5×</option>
               </select></label
             >
-          </div>
+          </div></details>
         </section>
         <footer id="statusbar" class="statusbar" data-tone="info">
           <div class="status-main">
@@ -432,6 +430,6 @@
         </footer>
       </main>
     </div>
-    <script type="module" src="./app-entry.mjs?v=2.3.0"></script>
+    <script type="module" src="./app-entry.mjs?v=2.3.1"></script>
   </body>
 </html>

@@ -16,7 +16,7 @@ DIYFM turns language listening into radio you want to return to: self-contained 
 
 **v2.2.0 adds standalone clients with bundled application resources and native playback/files.** [Client guide and build instructions](docs/clients.md) · [Release downloads](https://github.com/jayson-sheyue/DIYFM/releases).
 
-**v2.2.1 improves phone portrait layouts:** compact navigation, 48 dp controls, independently scrolling content and a player that stays on screen. Android resizes the actual WebView viewport for system bars, cutouts and the keyboard; rotating back restores the portrait layout.
+**v2.3.1 puts listening first on phones:** bottom navigation, a compact channel selector and episodes shown before editing. **New episode** opens production; **Channel options** contains preferences, voices, sharing and deletion. Playback mode/speed are under **Playback settings**, model controls under **Settings → Model settings**, and files under **Settings → Library & files**. Controls retain 48 px touch height and content scrolls independently. Android resizes the actual WebView viewport for system bars, cutouts and the keyboard; rotating back restores the portrait layout.
 
 - **Android:** Android 8+ with a current System WebView; signed APK, foreground media service, background/channel playback and system media controls.
 - **Mac:** macOS 13+; Apple Silicon + Intel universal DMG/ZIP, native playback and save/open dialogs. The first test build is ad-hoc signed and **not Apple notarized**; downloaded copies may be blocked by macOS. Apple Silicon is tested; physical Intel Macs are not.
