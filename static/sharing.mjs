@@ -1,5 +1,5 @@
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { readWav } from "./audio.mjs?v=2.1.2";
+import { readWav } from "./audio.mjs?v=2.4.1";
 
 export const SHARE_LIMIT = 100 * 1024 * 1024;
 export const CATALOG_URL = "https://jayson-sheyue.github.io/DIYFM/catalog/index.json";

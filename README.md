@@ -2,6 +2,8 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
+**v2.4.1 fixes multi-speaker voice collapse:** every `Host` and `Guest` turn is now synthesized with isolated single-speaker `voiceConfig` (`host_voice` vs `guest_voice`), per-turn silence trimming, loudness balancing, bounded `429`/`503` retry backoff, and turn-level resume checkpoints — eliminating cases where Gemini multi-speaker TTS read almost an entire episode in a single voice. Both bundled starter channels (**Starter · English Letters** and **Starter · 日本語のお便り**) have also been re-synthesized with verified distinct two-host voices.
+
 **v2.4.0 bundles English and Japanese starter channels:** brand-new installations on Web, Android and Mac open with two finished sample channels (**Starter · English Letters** and **Starter · 日本語のお便り**) — complete with mixed host dialogue, background music, transcripts and expressions — ready to play immediately offline without an API key. Deleting a starter channel never resurrects it, upgrading an existing library keeps your saved channels untouched, and both samples remain available anytime in **Discover**.
 
 **v2.3 adds channel sharing:** export selected finished episodes with public credits, preview ZIP imports, and use Discover to add curated channels locally without a key. [Sharing and curator guide](docs/sharing.md).

@@ -11,8 +11,15 @@ import {
   music,
   DEFAULT_MODELS,
 } from "../static/gemini.mjs";
-import { wavBlob, readWav, partsBlob, RATE } from "../static/audio.mjs";
-import { generate, validateEpisode } from "../static/harness.mjs";
+import {
+  wavBlob,
+  readWav,
+  partsBlob,
+  trimSilencePCM,
+  normalizeTurnPCM,
+  RATE,
+} from "../static/audio.mjs?v=2.4.1";
+import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.4.1";
 import {
   zipSync,
   strToU8,
@@ -458,7 +465,7 @@ test("required research without real sources fails before speech or script gener
   assert.equal(calls, 2);
 });
 test("episode metadata language is captured separately from the listening language", async () => {
-  const { i18n } = await import("../static/i18n.mjs?v=2.4.0");
+  const { i18n } = await import("../static/i18n.mjs?v=2.4.1");
   i18n.setLocale("ja");
   let seen;
   const gate = new Promise((resolve) => {
@@ -641,4 +648,206 @@ test("failed MP3 replacement preserves old files but never serves an invalidated
   );
   assert.deepEqual(await library.get("mp3-meta:" + ep.id), meta);
   assert.ok((await library.get("audio:" + ep.id)).size > 44);
+});
+test("episode synthesis isolates Host and Guest into single-speaker requests on every turn", async () => {
+  const multiTurn = {
+    ...structuredClone(content),
+    script: [
+      "Host: Good evening, everyone.",
+      "Guest: Glad to be here tonight.",
+      'Host: A listener wrote: "I walked into the wrong bathhouse towel in hand."',
+      "Guest: Oh no, that happens to every first-time traveler!",
+      "Host: Exactly, and a kind local showed the right way.",
+      "Guest: Rules make much more sense once you see the care behind them.",
+    ].join("\n"),
+    turns: [
+      { speaker: "Host", text: "Good evening, everyone." },
+      { speaker: "Guest", text: "Glad to be here tonight." },
+      {
+        speaker: "Host",
+        text: 'A listener wrote: "I walked into the wrong bathhouse towel in hand."',
+      },
+      {
+        speaker: "Guest",
+        text: "Oh no, that happens to every first-time traveler!",
+      },
+      { speaker: "Host", text: "Exactly, and a kind local showed the right way." },
+      {
+        speaker: "Guest",
+        text: "Rules make much more sense once you see the care behind them.",
+      },
+    ],
+  };
+  const ttsRequests = [];
+  const hostPart = await tonePart(tonePCM(440, 1, 0.2));
+  const guestPart = await tonePart(tonePCM(880, 1, 0.2));
+  const library = makeLibrary(),
+    api = createBrowserAPI({
+      library,
+      editor: async () => structuredClone(multiTurn),
+      request: async (_snap, path, body) => {
+        ttsRequests.push({ path, body });
+        const voiceName =
+          body.generationConfig?.speechConfig?.voiceConfig?.prebuiltVoiceConfig
+            ?.voiceName;
+        const part = voiceName === "Charon" ? guestPart : hostPart;
+        return {
+          candidates: [
+            {
+              content: {
+                parts: [{ inlineData: { mimeType: part.mime, data: part.data } }],
+              },
+            },
+          ],
+        };
+      },
+    });
+  await api.ready;
+  await api.setKey(KEY);
+  const show = (
+    await call(api, "/api/shows", "POST", {
+      wish: "温泉旅行",
+      host_voice: "Zephyr",
+      guest_voice: "Charon",
+      music_style: "none",
+    })
+  ).data.show;
+  await call(api, `/api/shows/${show.id}/episodes`, "POST", {
+    request_id: "strict-two-voices",
+  });
+  const { ep } = await finished(api, show.id);
+  assert.equal(ep.status, "ready");
+  assert.equal(ttsRequests.length, 6);
+  const expectedVoices = [
+    "Zephyr",
+    "Charon",
+    "Zephyr",
+    "Charon",
+    "Zephyr",
+    "Charon",
+  ];
+  ttsRequests.forEach(({ path, body }, idx) => {
+    assert.match(path, /:generateContent$/);
+    const sc = body.generationConfig.speechConfig;
+    assert.equal(
+      sc.multiSpeakerVoiceConfig,
+      undefined,
+      "episode turns must not use multiSpeakerVoiceConfig",
+    );
+    assert.equal(sc.voiceConfig.prebuiltVoiceConfig.voiceName, expectedVoices[idx]);
+    assert.equal(sc.languageCode, "en-US");
+    const promptText = body.contents[0].parts[0].text;
+    assert.ok(!/(?:^|\s)(?:Host|Guest)\s*:/.test(promptText));
+    assert.ok(
+      promptText.includes(
+        expectedVoices[idx] === "Charon"
+          ? "natural grounded male"
+          : "natural clear female",
+      ),
+    );
+    assert.ok(promptText.includes(multiTurn.turns[idx].text));
+  });
+  const master = readWav(await (await library.get("audio:" + ep.id)).arrayBuffer());
+  const windowAmp = (startSec, freq) => {
+    const s = Math.floor(startSec * RATE),
+      e = s + Math.floor(0.5 * RATE);
+    let re = 0,
+      im = 0;
+    for (let i = s; i < e; i++) {
+      const ph = (2 * Math.PI * freq * i) / RATE;
+      re += master.pcm[i] * Math.cos(ph);
+      im += master.pcm[i] * Math.sin(ph);
+    }
+    return (2 * Math.hypot(re, im)) / (e - s);
+  };
+  // Each turn is 1.0s + 0.22s pause -> Turn 0 at 0.2s (Host 440Hz), Turn 1 at 1.42s (Guest 880Hz), Turn 3 at 3.86s (Guest 880Hz)
+  assert.ok(windowAmp(0.2, 440) > 0.15 && windowAmp(0.2, 880) < 0.02);
+  assert.ok(windowAmp(1.45, 880) > 0.15 && windowAmp(1.45, 440) < 0.02);
+  assert.ok(windowAmp(3.9, 880) > 0.15 && windowAmp(3.9, 440) < 0.02);
+});
+test("per-turn synthesis retries transient 429 errors, checkpoints turns and ignores legacy batch cache", async () => {
+  const fourTurns = {
+    ...structuredClone(content),
+    script: "Host: One.\nGuest: Two.\nHost: Three.\nGuest: Four.",
+    turns: [
+      { speaker: "Host", text: "One." },
+      { speaker: "Guest", text: "Two." },
+      { speaker: "Host", text: "Three." },
+      { speaker: "Guest", text: "Four." },
+    ],
+  };
+  let seenTexts = [],
+    failFourth = true,
+    rateLimitSecondOnce = true,
+    sleeps = [];
+  const { api, library, show } = await fixture({
+    sleep: async (ms) => {
+      sleeps.push(ms);
+    },
+    retryBaseMs: 10,
+    editor: async () => structuredClone(fourTurns),
+    synthesize: async (_snap, text, opts) => {
+      seenTexts.push({ text, voice: opts.voice, single: opts.single });
+      if (text === "Two." && rateLimitSecondOnce) {
+        rateLimitSecondOnce = false;
+        throw new Error("Google 请求失败（HTTP 429）。配额或速率受限，请稍后重试。");
+      }
+      if (text === "Four." && failFourth) {
+        throw new Error("controlled failure on final turn");
+      }
+      return [audioPart];
+    },
+  });
+  await call(api, `/api/shows/${show.id}/episodes`, "POST", {
+    request_id: "checkpoint-first",
+  });
+  const first = await finished(api, show.id);
+  assert.equal(first.ep.status, "failed");
+  assert.deepEqual(sleeps, [10]);
+  assert.ok(await library.get(`voice:${first.ep.id}:turn:0`));
+  assert.ok(await library.get(`voice:${first.ep.id}:turn:1`));
+  assert.ok(await library.get(`voice:${first.ep.id}:turn:2`));
+  assert.equal(await library.get(`voice:${first.ep.id}:turn:3`), undefined);
+  // Plant a legacy pre-2.4.1 multi-speaker batch key at index 3; per-turn resume must ignore it.
+  await library.write([
+    [`voice:${first.ep.id}:3`, new Blob(["corrupt-legacy-batch"])],
+  ]);
+  seenTexts = [];
+  failFourth = false;
+  await call(api, `/api/shows/${show.id}/episodes`, "POST", {
+    request_id: "checkpoint-retry",
+    retry_episode_id: first.ep.id,
+  });
+  const second = await finished(api, show.id);
+  assert.equal(second.ep.status, "ready");
+  assert.deepEqual(seenTexts, [{ text: "Four.", voice: "Puck", single: true }]);
+});
+test("speechTurns parses fallback scripts, strips duplicate labels and DSP helpers preserve healthy audio", () => {
+  const parsed = speechTurns(
+    [],
+    "Host: Host: Welcome back!\nGuest: Guest: Happy to join.",
+  );
+  assert.deepEqual(parsed, [
+    { speaker: "Host", text: "Welcome back!" },
+    { speaker: "Guest", text: "Happy to join." },
+  ]);
+  const longSentence = "This is a clear radio sentence. ";
+  const split = speechTurns(
+    [{ speaker: "Guest", text: longSentence.repeat(80) }],
+    "",
+    600,
+  );
+  assert.ok(split.length >= 4);
+  assert.ok(split.every((t) => t.speaker === "Guest" && t.text.length <= 600));
+  const padded = new Float32Array(RATE * 2);
+  const voice = tonePCM(440, 1, 0.03);
+  padded.set(voice, Math.floor(RATE * 0.5));
+  const trimmed = trimSilencePCM(padded);
+  assert.ok(trimmed.length < RATE * 1.15 && trimmed.length >= RATE);
+  const lifted = normalizeTurnPCM(trimmed);
+  const origPeak = Math.max(...trimmed.map(Math.abs));
+  const liftedPeak = Math.max(...lifted.map(Math.abs));
+  assert.ok(liftedPeak > origPeak * 2, "quiet turns should be lifted");
+  const healthy = tonePCM(440, 1, 0.25);
+  assert.equal(normalizeTurnPCM(healthy), healthy);
 });

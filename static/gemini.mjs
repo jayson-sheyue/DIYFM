@@ -167,23 +167,82 @@ export function audioParts(payload) {
   if (!parts.length) throw new Error("模型没有返回可播放的音频，已保留台本。");
   return parts;
 }
+const MALE_VOICES = new Set([
+  "Puck",
+  "Charon",
+  "Fenrir",
+  "Orus",
+  "Enceladus",
+  "Iapetus",
+  "Umbriel",
+  "Algieba",
+  "Algenib",
+  "Rasalgethi",
+  "Alnilam",
+  "Schedar",
+  "Achird",
+  "Zubenelgenubi",
+  "Sadachbia",
+  "Sadaltager",
+]);
+const FEMALE_VOICES = new Set([
+  "Zephyr",
+  "Kore",
+  "Leda",
+  "Aoede",
+  "Callirrhoe",
+  "Autonoe",
+  "Despina",
+  "Erinome",
+  "Laomedeia",
+  "Achernar",
+  "Gacrux",
+  "Pulcherrima",
+  "Vindemiatrix",
+  "Sulafat",
+]);
+function voiceRegisterAnchor(voiceName, speaker = "Host") {
+  const role =
+    speaker === "Guest" ? "responsive radio co-host" : "steady lead radio host";
+  if (MALE_VOICES.has(voiceName))
+    return `natural grounded male ${role} voice in normal chest register, do not raise pitch into falsetto`;
+  if (FEMALE_VOICES.has(voiceName))
+    return `natural clear female ${role} voice in steady normal register`;
+  return `consistent ${role} voice in natural register`;
+}
 export function speechBody(
   text,
   {
     host = "Kore",
     guest = "Puck",
+    voice: selectedVoice = "",
+    speaker = "Host",
     language = "en",
     direction = "",
     single = false,
   } = {},
 ) {
-  const voice = (name) => ({ prebuiltVoiceConfig: { voiceName: name } });
+  const voice = (name) => ({ prebuiltVoiceConfig: { voiceName: name } }),
+    chosen = selectedVoice || host,
+    langName = language === "ja" ? "Japanese" : "English",
+    langCode = language === "ja" ? "ja-JP" : "en-US",
+    style = String(direction || "")
+      .replace(/[:\r\n]+/g, ", ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 240),
+    anchor = voiceRegisterAnchor(chosen, speaker),
+    clean = String(text || "")
+      .replace(/^\s*(?:Host|Guest)\s*[:：]\s*/i, "")
+      .trim();
   return {
     contents: [
       {
         parts: [
           {
-            text: `Read naturally and clearly in ${language === "ja" ? "Japanese" : "English"}. ${direction.slice(0, 600)}\n${text}`,
+            text: single
+              ? `Say the following in ${langName}, naturally and clearly at a steady conversational radio volume (${anchor}${style ? `; ${style}` : ""}): ${clean}`
+              : `TTS the following conversation between Host and Guest in ${langName}, keeping the two voices clearly distinct on every turn${style ? ` (${style})` : ""}:\n${text}`,
           },
         ],
       },
@@ -191,8 +250,9 @@ export function speechBody(
     generationConfig: {
       responseModalities: ["AUDIO"],
       speechConfig: single
-        ? { voiceConfig: voice(host) }
+        ? { languageCode: langCode, voiceConfig: voice(chosen) }
         : {
+            languageCode: langCode,
             multiSpeakerVoiceConfig: {
               speakerVoiceConfigs: [
                 { speaker: "Host", voiceConfig: voice(host) },

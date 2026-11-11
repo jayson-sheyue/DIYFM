@@ -10,6 +10,7 @@ import io
 import os
 import re
 import sys
+import time
 import wave
 from array import array
 from pathlib import Path
@@ -1158,16 +1159,66 @@ def _fm_tts_fallback_line(text: str) -> str:
     return '我们继续。'
 
 
-def _synthesize_fm_dialogue_pcm(script: str, *, host_voice: str, guest_voice: str, language_code: str, model_name: str = '', strict: bool = False, narration_prompt: str = '') -> bytes:
-    """使用 Cloud Gemini-TTS 的 MultiSpeakerMarkup 合成 24kHz PCM 对话。
+def _trim_fm_turn_pcm(pcm: bytes, threshold: int = 196, pad_sec: float = 0.03) -> bytes:
+    """裁掉单句首尾多余静音并加极短淡入淡出，让逐句拼接停顿自然且无咔哒声。"""
+    if not pcm or len(pcm) < 4:
+        return pcm
+    samples = _pcm16_to_samples(pcm)
+    n = len(samples)
+    start = 0
+    end = n - 1
+    while start <= end and abs(samples[start]) < threshold:
+        start += 1
+    while end >= start and abs(samples[end]) < threshold:
+        end -= 1
+    if start > end:
+        return pcm
+    pad = int(FM_SAMPLE_RATE * pad_sec)
+    lo = max(0, start - pad)
+    hi = min(n, end + 1 + pad)
+    if lo == 0 and hi == n:
+        return pcm
+    trimmed = array('h', samples[lo:hi])
+    fade = min(int(FM_SAMPLE_RATE * 0.01), len(trimmed) // 4)
+    for idx in range(fade):
+        w = (idx + 1) / fade
+        trimmed[idx] = int(trimmed[idx] * w)
+        trimmed[-1 - idx] = int(trimmed[-1 - idx] * w)
+    return _samples_to_pcm16(trimmed)
 
-    安全策略误拦时：先换更短提示词并去掉标签，再按句拆开；单句仍被拦则用中性衔接句代替，避免整集失败。
+
+def _fm_voice_anchor(voice_id: str, speaker: str = 'Host') -> str:
+    label = next((item.get('label', '') for item in FM_VOICE_PRESETS if item.get('id') == voice_id), '')
+    role = 'responsive radio co-host' if speaker == 'Guest' else 'steady lead radio host'
+    if '男声' in label:
+        return (
+            f'Speak in a natural, grounded male {role} voice in your normal chest register '
+            '(do not raise pitch into falsetto or imitate another speaker).'
+        )
+    if '女声' in label:
+        return f'Speak in a natural, clear female {role} voice in a steady normal register.'
+    return f'Speak in one consistent {role} voice in your natural register.'
+
+
+def _fm_tts_retriable(exc: BaseException) -> bool:
+    low = str(exc or '').lower()
+    return any(
+        token in low
+        for token in ('429', '503', 'resource exhausted', 'resource_exhausted', 'rate limit', 'unavailable', 'deadline')
+    )
+
+
+def _synthesize_fm_dialogue_pcm(script: str, *, host_voice: str, guest_voice: str, language_code: str, model_name: str = '', strict: bool = False, narration_prompt: str = '') -> bytes:
+    """逐回合调用 Cloud Gemini-TTS 单声线接口合成 24kHz PCM 对话。
+
+    每回合仅挂载当前角色对应的单一声线（Host -> host_voice，Guest -> guest_voice），
+    从物理上杜绝双人模式（MultiSpeakerMarkup）在长段落/引用书信后锁定单一声线串台的问题。
     """
     try:
         from google.cloud import texttospeech
     except ImportError as e:
         raise NotebookLMError(
-            '服务端未安装支持双人 Gemini-TTS 的 google-cloud-texttospeech。',
+            '服务端未安装支持 Gemini-TTS 的 google-cloud-texttospeech。',
             status_code=500,
             code='fm_tts_dep_missing',
         ) from e
@@ -1176,96 +1227,105 @@ def _synthesize_fm_dialogue_pcm(script: str, *, host_voice: str, guest_voice: st
     if host == guest:
         raise NotebookLMError('FM 的主持人与嘉宾需要选择不同声线。', status_code=400, code='fm_same_voice')
     turns = _parse_fm_turns(script)
-    batches = _split_fm_turn_batches(turns)
     primary_lang = _fm_language_code(language_code)
     model = (model_name or _model_setting('tts_model') or FM_TTS_MODEL).strip()
     client = texttospeech.TextToSpeechClient()
     skipped = 0
-
-    def _voice(lang: str):
-        return texttospeech.VoiceSelectionParams(
-            language_code=lang,
-            model_name=model,
-            multi_speaker_voice_config=texttospeech.MultiSpeakerVoiceConfig(
-                speaker_voice_configs=[
-                    texttospeech.MultispeakerPrebuiltVoice(speaker_alias='Host', speaker_id=host),
-                    texttospeech.MultispeakerPrebuiltVoice(speaker_alias='Guest', speaker_id=guest),
-                ]
-            ),
+    direction = re.sub(r'\s+', ' ', (narration_prompt or '').strip())[:240]
+    def _turn_prompts(voice_id: str, speaker: str) -> tuple[str, str]:
+        anchor = _fm_voice_anchor(voice_id, speaker)
+        rich = (
+            f'{anchor} Read this single radio dialogue turn naturally and clearly '
+            'at a steady speaking volume. Do not whisper or drop volume.'
+            + (f' {direction}' if direction else '')
         )
+        plain = f'{anchor} Read this line clearly and calmly.'
+        return rich, plain
 
     config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.LINEAR16,
         sample_rate_hertz=FM_SAMPLE_RATE,
     )
 
-    def _call(batch: list[tuple[str, str]], prompt: str, lang: str) -> bytes:
-        markup = texttospeech.MultiSpeakerMarkup(
-            turns=[
-                texttospeech.MultiSpeakerMarkup.Turn(speaker=speaker, text=text)
-                for speaker, text in batch
-            ]
-        )
-        response = client.synthesize_speech(
-            input=texttospeech.SynthesisInput(multi_speaker_markup=markup, prompt=prompt),
-            voice=_voice(lang),
-            audio_config=config,
-            timeout=180,
-        )
-        return response.audio_content or b''
+    def _call_single(voice_id: str, text: str, prompt: str, lang: str) -> bytes:
+        for attempt in range(4):
+            try:
+                response = client.synthesize_speech(
+                    input=texttospeech.SynthesisInput(text=text, prompt=prompt),
+                    voice=texttospeech.VoiceSelectionParams(
+                        language_code=lang,
+                        model_name=model,
+                        name=voice_id,
+                    ),
+                    audio_config=config,
+                    timeout=180,
+                )
+                return response.audio_content or b''
+            except Exception as exc:
+                if attempt < 3 and _fm_tts_retriable(exc):
+                    time.sleep(2.5 * (2 ** attempt))
+                    continue
+                raise
+        return b''
 
-    def _langs_for(batch: list[tuple[str, str]]) -> list[str]:
+    def _langs_for(text: str) -> list[str]:
         langs = [primary_lang]
         if strict:
             return langs
-        joined = '\n'.join(text for _sp, text in batch)
-        if re.search(r'[\u3040-\u30ff]', joined) and primary_lang != 'ja-JP':
+        if re.search(r'[\u3040-\u30ff]', text) and primary_lang != 'ja-JP':
             langs.append('ja-JP')
-        if re.search(r'[\u4e00-\u9fff]', joined) and primary_lang not in ('cmn-CN', 'zh-CN'):
+        if re.search(r'[\u4e00-\u9fff]', text) and primary_lang not in ('cmn-CN', 'zh-CN'):
             langs.append('cmn-CN')
         return langs
 
-    def _synth_batch(batch: list[tuple[str, str]]) -> bytes:
+    def _synth_piece(speaker: str, raw_text: str) -> bytes:
         nonlocal skipped
-        cleaned = []
-        for speaker, text in batch:
-            safe = _fm_tts_safe_line(text) or _fm_tts_fallback_line(text)
-            cleaned.append((speaker, safe))
+        voice_id = guest if speaker == 'Guest' else host
+        clean = re.sub(r'^\s*(?:Host|Guest)\s*[:：]\s*', '', str(raw_text or ''), flags=re.IGNORECASE)
+        safe = _fm_tts_safe_line(clean) or _fm_tts_fallback_line(clean)
+        rich_prompt, plain_prompt = _turn_prompts(voice_id, speaker)
         last_err: Optional[BaseException] = None
-        for prompt in (FM_SPEECH_PROMPT + ' ' + narration_prompt[:600], FM_SPEECH_PROMPT_PLAIN):
-            for lang in _langs_for(cleaned):
+        for prompt in (rich_prompt, plain_prompt):
+            for lang in _langs_for(safe):
                 try:
-                    audio = _call(cleaned, prompt, lang)
+                    audio = _call_single(voice_id, safe, prompt, lang)
                     if audio:
                         return audio
                 except Exception as exc:
                     last_err = exc
                     if not _fm_tts_policy_blocked(exc):
                         raise
-        if len(cleaned) > 1:
-            mid = max(1, len(cleaned) // 2)
-            return _synth_batch(cleaned[:mid]) + _synth_batch(cleaned[mid:])
-        speaker, text = cleaned[0]
+        sub_pieces = _split_tts_chunks(safe, max_chars=220)
+        if len(sub_pieces) > 1:
+            return b''.join(_synth_piece(speaker, p) for p in sub_pieces)
         if strict:
             raise NotebookLMError('有一句台词未能完整配音，本期已停止。台本已保留，可以重试。', status_code=502, code='fm_tts_incomplete') from last_err
         skipped += 1
         try:
-            return _call([(speaker, _fm_tts_fallback_line(text))], FM_SPEECH_PROMPT_PLAIN, primary_lang)
+            return _call_single(voice_id, _fm_tts_fallback_line(safe), plain_prompt, primary_lang)
         except Exception:
             return b''
 
+    pause_pcm = b'\x00\x00' * int(FM_SAMPLE_RATE * 0.22)
     try:
         pcm_parts: list[bytes] = []
-        for batch in batches:
-            audio = _synth_batch(batch)
-            if audio:
-                pcm_parts.append(audio)
+        for speaker, text in turns:
+            pieces = _split_tts_chunks(text, max_chars=900) or [text]
+            turn_chunks: list[bytes] = []
+            for piece in pieces:
+                audio = _synth_piece(speaker, piece)
+                if audio:
+                    turn_chunks.append(_trim_fm_turn_pcm(audio))
+            if turn_chunks:
+                intra_pause = b'\x00\x00' * int(FM_SAMPLE_RATE * 0.08)
+                turn_pcm = _lift_quiet_fm_pcm(intra_pause.join(turn_chunks))
+                pcm_parts.append(turn_pcm)
     except NotebookLMError:
         raise
     except Exception as e:
         if _fm_tts_policy_blocked(e):
             raise NotebookLMError(
-                '双人 FM 对话被语音安全策略拦截。请缩短焦点里的敏感表述，或换一段材料后重试。',
+                'FM 对话被语音安全策略拦截。请缩短焦点里的敏感表述，或换一段材料后重试。',
                 status_code=502,
                 code='fm_tts_failed',
             ) from e
@@ -1277,7 +1337,7 @@ def _synthesize_fm_dialogue_pcm(script: str, *, host_voice: str, guest_voice: st
             client.transport.close()
         except Exception:
             pass
-    pcm = _lift_quiet_fm_pcm(b''.join(pcm_parts))
+    pcm = _lift_quiet_fm_pcm(pause_pcm.join(pcm_parts))
     if len(pcm) < FM_SAMPLE_RATE * 2:
         raise NotebookLMError(
             '双人 FM 对话被语音安全策略拦截，未能合成可播放音频。请调整节目焦点或材料后重试。'

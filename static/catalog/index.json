@@ -14,9 +14,9 @@
         "license": "Bundled starter sample (fictional listener letter, AI-synthesized voices & music). Free for personal listening and sharing with attribution."
       },
       "episodes": 1,
-      "package": "packages/81ff2872833b24a0ab3881530d1e30b1eab10ab7f05f7cc5d28be0114c839118.zip",
-      "bytes": 6702556,
-      "sha256": "81ff2872833b24a0ab3881530d1e30b1eab10ab7f05f7cc5d28be0114c839118"
+      "package": "packages/e6ea0cbccd00b00e26b3b0b511f10a55483d150950f6e88e2297d8134ce49a7c.zip",
+      "bytes": 7777234,
+      "sha256": "e6ea0cbccd00b00e26b3b0b511f10a55483d150950f6e88e2297d8134ce49a7c"
     },
     {
       "id": "show_starter_ja",
@@ -30,9 +30,9 @@
         "license": "Bundled starter sample (fictional listener letter, AI-synthesized voices & music). Free for personal listening and sharing with attribution."
       },
       "episodes": 1,
-      "package": "packages/070b32b30b685bffb300d00cc4daeaf270953248793005e9d3df5a755b121c67.zip",
-      "bytes": 6866688,
-      "sha256": "070b32b30b685bffb300d00cc4daeaf270953248793005e9d3df5a755b121c67"
+      "package": "packages/0067c416502084c2fad7030d949a70f9f2f727c51c02ce5009607de424b76848.zip",
+      "bytes": 7740788,
+      "sha256": "0067c416502084c2fad7030d949a70f9f2f727c51c02ce5009607de424b76848"
     }
   ]
 }

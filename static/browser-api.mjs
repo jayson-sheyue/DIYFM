@@ -1,4 +1,4 @@
-import { i18n } from "./i18n.mjs?v=2.4.0";
+import { i18n } from "./i18n.mjs?v=2.4.1";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
@@ -8,20 +8,22 @@ import {
   googleRequest,
   speech,
   music,
-} from "./gemini.mjs";
-import { generate, speechBatches } from "./harness.mjs?v=2.1.0";
+} from "./gemini.mjs?v=2.4.1";
+import { generate, speechTurns } from "./harness.mjs?v=2.4.1";
 import {
   RATE,
   partsBlob,
   blobPCM,
+  trimSilencePCM,
+  normalizeTurnPCM,
   joinPCM,
   mixPCM,
   wavBlob,
   base64Bytes,
   encodeMP3,
-} from "./audio.mjs?v=2.1.2";
+} from "./audio.mjs?v=2.4.1";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.0";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.1";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -87,6 +89,8 @@ export function createBrowserAPI({
   catalogURL = CATALOG_URL,
   bundledCatalogURL = "",
   seedStarterChannels = false,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  retryBaseMs = 2500,
 } = {}) {
   const vault = newVault(),
     jobs = new Map(),
@@ -268,7 +272,7 @@ export function createBrowserAPI({
               checkpoint,
               resume || {},
               (s, p, o) =>
-                import("./gemini.mjs").then((m) =>
+                import("./gemini.mjs?v=2.4.1").then((m) =>
                   m.textResult(s, p, { ...o, request: cloud }),
                 ),
             );
@@ -279,37 +283,61 @@ export function createBrowserAPI({
         difficulty: show.difficulty,
       });
       await phase("voice");
-      const batches = speechBatches(content.turns),
+      const turns = speechTurns(content.turns, content.script),
         voice = [];
+      if (!turns.length)
+        throw error("台本缺少可配音的对白，已保留草稿。");
       const same =
         resume &&
         resume.config?.tts_model === snap.models.tts_model &&
         resume.input?.host_voice === show.host_voice &&
         resume.input?.guest_voice === show.guest_voice &&
         resume.script === content.script;
-      for (let i = 0; i < batches.length; i++) {
-        let blob = same ? await library.get(`voice:${resume.id}:${i}`) : null;
+      for (let i = 0; i < turns.length; i++) {
+        const turn = turns[i],
+          speakerVoice =
+            turn.speaker === "Guest" ? show.guest_voice : show.host_voice;
+        let blob = same
+          ? await library.get(`voice:${resume.id}:turn:${i}`)
+          : null;
         if (!blob) {
-          blob = await partsBlob(
-            await synthesize(
-              snap,
-              batches[i],
-              {
-                host: show.host_voice,
-                guest: show.guest_voice,
-                language: show.language,
-                direction: content.plan?.voice_direction || "",
-              },
-              cloud,
-            ),
-          );
-          if ((await blobPCM(blob)).length < RATE * 0.2)
+          let parts;
+          for (let attempt = 0; ; attempt++) {
+            try {
+              parts = await synthesize(
+                snap,
+                turn.text,
+                {
+                  single: true,
+                  voice: speakerVoice,
+                  host: speakerVoice,
+                  guest:
+                    turn.speaker === "Guest"
+                      ? show.host_voice
+                      : show.guest_voice,
+                  speaker: turn.speaker,
+                  language: show.language,
+                  direction: content.plan?.voice_direction || "",
+                },
+                cloud,
+              );
+              break;
+            } catch (err) {
+              if (attempt < 3 && /HTTP (?:429|503)/.test(err?.message || "")) {
+                await sleep(retryBaseMs * 2 ** attempt);
+                continue;
+              }
+              throw err;
+            }
+          }
+          blob = await partsBlob(parts);
+          if ((await blobPCM(blob)).length < RATE * 0.15)
             throw error("有一段台词未能完整配音，已保留台本与已完成音频。");
         }
-        await library.write([[`voice:${id}:${i}`, blob]]);
-        voice.push(await blobPCM(blob));
+        await library.write([[`voice:${id}:turn:${i}`, blob]]);
+        voice.push(normalizeTurnPCM(trimSilencePCM(await blobPCM(blob))));
       }
-      const pcm = joinPCM(voice, Math.round(RATE * 0.08));
+      const pcm = joinPCM(voice, Math.round(RATE * 0.22));
       let musicPCM = null,
         musicNote = "",
         musicSource = "none";

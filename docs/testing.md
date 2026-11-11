@@ -1,4 +1,4 @@
-# DIYFM v2.4.0 验证记录
+# DIYFM v2.4.1 验证记录
 
 日期：2026-11-06。目标产物：GitHub Pages 项目子路径下的纯静态站点，每位使用者自带 API Key。旧 Python 后端仅保留兼容和迁移用途。
 
@@ -133,3 +133,13 @@ Firefox / Safari 独立系统浏览器、长期容量和真实 Google Key 成功
 - Bundled `catalog/packages/*.zip` into both macOS (`DIYFM.app/Contents/Resources/web/catalog/`) and Android (`assets/web/catalog/`, uncompressed `.zip` entries in `build.gradle`) installers. Raised macOS `LocalServer.swift` static asset ceiling from 4 MiB to 100 MiB (`SHARE_LIMIT`), added `application/zip` MIME mapping, and switched TCP response completion to `.finalMessage` + `isComplete: true` so multi-megabyte bundled packages stream without premature socket reset.
 - First-launch seeding (`seedStarters()` in `static/browser-api.mjs`) runs once when IndexedDB is empty and `starter-seeded` is unset, preserving English-first initial UI (`Starter · English Letters` ordered first, `Starter · 日本語のお便り` second). Deleting starter channels never resurrects them on reload; upgrading an existing non-empty library sets `starter-seeded` without injecting starter channels; offline native Discover falls back to `bundledCatalogURL` and online `prepareCatalog()` reuses verified local bundle bytes when SHA-256 matches.
 - Automated verification: **86 Node tests** (`npm test`), `node scripts/catalog.mjs check`, `npm run build` credential scan, and `npm run test:mac` (including >7 MiB `.zip` `LocalServer` response resolution, `Host` check, and path-traversal rejection) all passed. Android release APK and macOS universal DMG/ZIP build, upgrade preservation (`2.3.1` → `2.4.0`), and release checksums are verified on the clean `v2.4.0` commit.
+
+## v2.4.1 Per-turn Host/Guest voice isolation & refreshed starter samples (2026-11-11)
+
+- Root cause verified via acoustic F0 and multimodal listening checks on finished recordings:
+  1. Gemini TTS multi-speaker mode (`multiSpeakerVoiceConfig` / `MultiSpeakerMarkup`) frequently drops speaker transitions across multi-turn scripts or after long quoted listener-letter passages (in prior local English recordings, 75%–100% of `Guest` turns collapsed onto `Host`'s voice).
+  2. Even in single-speaker mode, steerable Gemini TTS voices (`Puck`, etc.) can drift into a soft high-pitched register on gentle/empathetic lines unless the prompt anchors each voice's natural vocal register.
+- Fix across web/native (`static/gemini.mjs`, `static/harness.mjs`, `static/audio.mjs`, `static/browser-api.mjs`) and legacy Python synthesis (`fm_synth.py`):
+  - Every `Host` turn and `Guest` turn is synthesized via isolated single-speaker `voiceConfig` (`host_voice` vs `guest_voice`) with a natural register anchor (`MALE_VOICES` chest register vs `FEMALE_VOICES` clear register), leading/trailing silence trimming, quiet-turn loudness lifting, `220 ms` conversational inter-turn pause, bounded `HTTP 429`/`503` backoff retry, and per-turn checkpointing (`voice:{id}:turn:{i}`) isolated from legacy batch keys.
+- Re-synthesized both bundled starter packages (`show_starter_en` and `show_starter_ja`) through the per-turn register-anchored pipeline and verified all 9 turns of each episode aurally and acoustically before mixing with `morning_acoustic` BGM and validating via `node scripts/catalog.mjs check`.
+- Automated verification: **89 Node tests** (`npm test`), **39 Python tests** (`.venv/bin/python -m unittest`), `node scripts/catalog.mjs check`, `npm run build` credential scan, and `npm run test:mac` all passed.

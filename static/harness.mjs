@@ -88,6 +88,58 @@ export function cleanDraft(raw) {
       : [],
   };
 }
+function splitLongTurnText(text, limit = 1800) {
+  const clean = String(text || "")
+    .replace(/^\s*(?:Host|Guest)\s*[:：]\s*/i, "")
+    .replace(/\s*\n+\s*/g, " ")
+    .trim();
+  if (!clean) return [];
+  if (clean.length <= limit) return [clean];
+  const sentences = clean
+      .split(/(?<=[.!?。！？])\s+|(?<=[。！？])/u)
+      .map((s) => s.trim())
+      .filter(Boolean),
+    chunks = [];
+  let cur = "";
+  for (const part of sentences.length ? sentences : [clean]) {
+    if (part.length > limit) {
+      if (cur) {
+        chunks.push(cur);
+        cur = "";
+      }
+      for (let i = 0; i < part.length; i += limit)
+        chunks.push(part.slice(i, i + limit));
+      continue;
+    }
+    if (cur && cur.length + 1 + part.length > limit) {
+      chunks.push(cur);
+      cur = part;
+    } else cur = cur ? `${cur} ${part}` : part;
+  }
+  if (cur) chunks.push(cur);
+  return chunks;
+}
+export function speechTurns(turns, script = "", limit = 1800) {
+  const source =
+    Array.isArray(turns) && turns.length
+      ? turns
+      : String(script || "")
+          .split(/\r?\n/)
+          .map((line) => line.match(/^\s*(Host|Guest)\s*[:：]\s*(.+)$/i))
+          .filter(Boolean)
+          .map((m) => ({
+            speaker: /^guest$/i.test(m[1]) ? "Guest" : "Host",
+            text: m[2],
+          }));
+  const out = [];
+  for (const item of source) {
+    if (!item) continue;
+    const speaker = item.speaker === "Guest" ? "Guest" : "Host";
+    for (const text of splitLongTurnText(item.text, limit))
+      out.push({ speaker, text });
+  }
+  return out;
+}
 export function speechBatches(turns, limit = 2400) {
   const batches = [];
   let batch = [],

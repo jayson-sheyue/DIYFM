@@ -1,5 +1,5 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.0";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.1";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
   "保存与制作说明": { en: "Storage & production", ja: "保存と制作について", "zh-CN": "保存与制作说明" },

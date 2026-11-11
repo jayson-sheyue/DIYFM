@@ -118,6 +118,52 @@ export async function partsBlob(parts) {
   }
   return wavBlob(joinPCM(blocks));
 }
+export function trimSilencePCM(
+  pcm,
+  { threshold = 0.006, pad = Math.round(RATE * 0.03) } = {},
+) {
+  if (!pcm?.length) return pcm;
+  let start = 0,
+    end = pcm.length - 1;
+  while (start <= end && Math.abs(pcm[start]) < threshold) start++;
+  while (end >= start && Math.abs(pcm[end]) < threshold) end--;
+  if (start > end) return pcm;
+  const from = Math.max(0, start - pad),
+    to = Math.min(pcm.length, end + 1 + pad);
+  if (from === 0 && to === pcm.length) return pcm;
+  const out = pcm.slice(from, to),
+    fade = Math.min(Math.round(RATE * 0.01), Math.floor(out.length / 4));
+  for (let i = 0; i < fade; i++) {
+    const w = (i + 1) / fade;
+    out[i] *= w;
+    out[out.length - 1 - i] *= w;
+  }
+  return out;
+}
+export function normalizeTurnPCM(
+  pcm,
+  { floorRms = 0.085, targetRms = 0.125, maxGain = 3.2 } = {},
+) {
+  if (!pcm?.length || pcm.length < Math.round(RATE * 0.1)) return pcm;
+  const hop = Math.round(RATE * 0.05),
+    voiced = [];
+  for (let i = 0; i < pcm.length; i += hop) {
+    const end = Math.min(pcm.length, i + hop);
+    let energy = 0;
+    for (let j = i; j < end; j++) energy += pcm[j] * pcm[j];
+    const rms = Math.sqrt(energy / (end - i));
+    if (rms >= 0.012) voiced.push(rms);
+  }
+  if (voiced.length < 2) return pcm;
+  voiced.sort((a, b) => a - b);
+  const ref = voiced[Math.min(voiced.length - 1, Math.floor(voiced.length * 0.65))];
+  if (ref >= floorRms) return pcm;
+  const gain = Math.min(maxGain, targetRms / ref),
+    out = new Float32Array(pcm.length);
+  for (let i = 0; i < pcm.length; i++)
+    out[i] = Math.max(-0.97, Math.min(0.97, pcm[i] * gain));
+  return out;
+}
 export function joinPCM(blocks, gap = 0) {
   const length =
     blocks.reduce((n, b) => n + b.length, 0) +
