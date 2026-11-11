@@ -1,4 +1,4 @@
-import { i18n } from "./i18n.mjs?v=2.3.1";
+import { i18n } from "./i18n.mjs?v=2.4.0";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
@@ -21,7 +21,7 @@ import {
   encodeMP3,
 } from "./audio.mjs?v=2.1.2";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.3.1";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.0";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -85,6 +85,8 @@ export function createBrowserAPI({
   locks = globalThis.navigator?.locks,
   legacy = false,
   catalogURL = CATALOG_URL,
+  bundledCatalogURL = "",
+  seedStarterChannels = false,
 } = {}) {
   const vault = newVault(),
     jobs = new Map(),
@@ -95,7 +97,8 @@ export function createBrowserAPI({
     urls = new Map();
   let account = "";
   const stagedImports = new Map();
-  let catalogEntries = [];
+  let catalogEntries = [],
+    bundledEntries = null;
   let importRevision = 0;
   const pageController = new AbortController();
   const cloud = (snap, path, body, options) =>
@@ -641,7 +644,48 @@ export function createBrowserAPI({
     }
     return { imports, puts, count };
   }
+  function buildChannelShow(decoded, timestamp = now()) {
+    const { manifest, contentId } = decoded;
+    const origin = { ...manifest.attribution, channel_id: manifest.channel.id, content_id: contentId };
+    const show = {
+      id: "show_" + uuid().replaceAll("-", ""), title: manifest.channel.title,
+      language: manifest.channel.language, difficulty: manifest.channel.difficulty,
+      wish: "", length: "SHORT", host_voice: "Kore", guest_voice: "Puck", music_style: "none",
+      revision: 0, created_at: timestamp, updated_at: timestamp, materials: [], provenance: origin,
+      description: manifest.channel.description, episodes: [],
+    };
+    const puts = [];
+    for (const item of manifest.episodes) {
+      const id = "ep_" + uuid().replaceAll("-", ""), ep = cleanImportedEpisode({ ...item, status: "ready" }, id, show);
+      ep.provenance = item.origin || manifest.channel.origin || origin;
+      show.episodes.push(ep);
+      puts.push(["audio:" + id, new Blob([decoded.files[item.audio.path]], { type: "audio/wav" })]);
+    }
+    return { show, puts, contentId };
+  }
+  function matchesCatalogEntry(manifest, entry) {
+    return (
+      manifest.channel.id === entry.id &&
+      manifest.channel.title === entry.title &&
+      manifest.channel.language === entry.language &&
+      manifest.channel.difficulty === entry.difficulty &&
+      manifest.channel.description === entry.description &&
+      manifest.episodes.length === entry.episodes &&
+      JSON.stringify(manifest.attribution) === JSON.stringify(entry.attribution)
+    );
+  }
+  async function readCatalogAt(url, signal) {
+    const response = await fetcher(url, { signal, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store" });
+    const bytes = await readBounded(response, 1024 * 1024, signal);
+    return parseCatalog(JSON.parse(new TextDecoder().decode(bytes)), url);
+  }
+  async function loadBundledEntries(signal) {
+    if (!bundledCatalogURL) return [];
+    if (!bundledEntries) bundledEntries = await readCatalogAt(bundledCatalogURL, signal);
+    return bundledEntries;
+  }
   async function importBackup(buffer) {
+    await ready;
     const { imports, puts, count } = await decodeBackup(buffer);
     await library.mutate("shows", (old) => ({
       puts: [["shows", [...imports, ...(old || [])]], ...puts],
@@ -654,22 +698,8 @@ export function createBrowserAPI({
     await ready;
     let stage, preview;
     if (isChannelPackage(buffer)) {
-      const decoded = await decodeChannel(buffer), { manifest, contentId } = decoded;
-      const origin = { ...manifest.attribution, channel_id: manifest.channel.id, content_id: contentId };
-      const show = {
-        id: "show_" + uuid().replaceAll("-", ""), title: manifest.channel.title,
-        language: manifest.channel.language, difficulty: manifest.channel.difficulty,
-        wish: "", length: "SHORT", host_voice: "Kore", guest_voice: "Puck", music_style: "none",
-        revision: 0, created_at: now(), updated_at: now(), materials: [], provenance: origin,
-        description: manifest.channel.description, episodes: [],
-      };
-      const puts = [];
-      for (const item of manifest.episodes) {
-        const id = "ep_" + uuid().replaceAll("-", ""), ep = cleanImportedEpisode({ ...item, status: "ready" }, id, show);
-        ep.provenance = item.origin || manifest.channel.origin || origin;
-        show.episodes.push(ep);
-        puts.push(["audio:" + id, new Blob([decoded.files[item.audio.path]], { type: "audio/wav" })]);
-      }
+      const decoded = await decodeChannel(buffer), { manifest } = decoded;
+      const { show, puts, contentId } = buildChannelShow(decoded);
       const existing = (await list()).find(s => s.provenance?.content_id === contentId);
       const prior = (await list()).some(s => s.provenance?.channel_id === manifest.channel.id);
       stage = { imports: [show], puts, count: show.episodes.length, contentId };
@@ -702,19 +732,38 @@ export function createBrowserAPI({
   async function catalog() {
     const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 20000);
     try {
-      const response = await fetcher(catalogURL, { signal: controller.signal, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store" });
-      const bytes = await readBounded(response, 1024 * 1024, controller.signal);
-      const entries = parseCatalog(JSON.parse(new TextDecoder().decode(bytes)), catalogURL);
+      const entries = await readCatalogAt(catalogURL, controller.signal);
       catalogEntries = entries;
       return entries;
     } catch (e) {
+      if (bundledCatalogURL && bundledCatalogURL !== catalogURL) {
+        try {
+          const fallback = await loadBundledEntries();
+          catalogEntries = fallback;
+          return fallback;
+        } catch { /* Fall through to standard catalog error. */ }
+      }
       throw error(e.name === "AbortError" ? "目录连接超时，请稍后刷新。" : "无法刷新资源目录。已保存的节目仍可离线收听。");
     } finally { clearTimeout(timer); }
   }
   async function prepareCatalog(id, signal) {
     const entry = catalogEntries.find(e => e.id === id);
     if (!entry) throw error("请先刷新资源目录。");
-    const response = await fetcher(entry.url, { signal, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store" });
+    let sourceURL = entry.url;
+    if (bundledCatalogURL && bundledCatalogURL !== catalogURL) {
+      try {
+        const local = (await loadBundledEntries(signal)).find(b => b.id === entry.id && b.sha256 === entry.sha256 && b.bytes === entry.bytes);
+        if (local) sourceURL = local.url;
+      } catch { /* Fall back to remote catalog package URL. */ }
+    }
+    let response;
+    try {
+      response = await fetcher(sourceURL, { signal, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store" });
+      if (!response.ok && sourceURL !== entry.url) throw new Error("Bundled fallback miss");
+    } catch (e) {
+      if (e.name === "AbortError" || sourceURL === entry.url) throw e;
+      response = await fetcher(entry.url, { signal, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store" });
+    }
     const bytes = await readBounded(response, SHARE_LIMIT, signal);
     if (signal?.aborted) throw new DOMException("Cancelled", "AbortError");
     if (bytes.byteLength !== entry.bytes || await sha256(bytes) !== entry.sha256) throw error("目录文件校验失败，未导入任何节目。");
@@ -724,6 +773,39 @@ export function createBrowserAPI({
     }
     if (signal?.aborted) { stagedImports.delete(preview.token); throw new DOMException("Cancelled", "AbortError"); }
     return preview;
+  }
+  async function seedStarters() {
+    if (!seedStarterChannels || !bundledCatalogURL || (await library.get("starter-seeded"))) return;
+    if ((await list()).length > 0) {
+      await library.write([["starter-seeded", true]]);
+      return;
+    }
+    try {
+      const entries = await loadBundledEntries();
+      if (!entries.length) {
+        await library.write([["starter-seeded", true]]);
+        return;
+      }
+      const baseTime = Date.now(), stagedShows = [], stagedPuts = [];
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        const response = await fetcher(entry.url, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", cache: "no-store" });
+        const bytes = await readBounded(response, SHARE_LIMIT);
+        if (bytes.byteLength !== entry.bytes || (await sha256(bytes)) !== entry.sha256) throw error("目录文件校验失败，未导入任何节目。");
+        const decoded = await decodeChannel(bytes);
+        if (!matchesCatalogEntry(decoded.manifest, entry)) throw error("目录资料与分享包不一致，未导入任何节目。");
+        const { show, puts } = buildChannelShow(decoded, new Date(baseTime - i * 1000).toISOString());
+        stagedShows.push(show);
+        stagedPuts.push(...puts);
+      }
+      await library.mutate("shows", (raw) =>
+        raw?.length
+          ? { puts: [["starter-seeded", true]] }
+          : { puts: [["shows", stagedShows], ["starter-seeded", true], ...stagedPuts] },
+      );
+    } catch {
+      /* Never block startup if bundled catalog fetch is unavailable; retry only while library stays empty. */
+    }
   }
   async function migrateLocal() {
     if (!legacy || (await library.get("legacy-copied"))) return;
@@ -838,6 +920,7 @@ export function createBrowserAPI({
   const ready = (async () => {
     await library.ready;
     await migrateLocal();
+    await seedStarters();
     await reconcile();
   })();
   async function dispatch(path, config = {}) {

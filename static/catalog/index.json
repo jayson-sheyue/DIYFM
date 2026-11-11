@@ -1,5 +1,38 @@
 {
   "format": "diyfm-catalog",
   "version": 1,
-  "channels": []
+  "channels": [
+    {
+      "id": "show_starter_en",
+      "title": "Starter · English Letters",
+      "language": "en",
+      "difficulty": "beginner",
+      "description": "Warm beginner English dialogue around a fictional listener letter, with full transcript and everyday expressions — ready to play offline without an API key.",
+      "attribution": {
+        "author": "DIYFM Sample Studio",
+        "source_url": "https://github.com/jayson-sheyue/DIYFM",
+        "license": "Bundled starter sample (fictional listener letter, AI-synthesized voices & music). Free for personal listening and sharing with attribution."
+      },
+      "episodes": 1,
+      "package": "packages/81ff2872833b24a0ab3881530d1e30b1eab10ab7f05f7cc5d28be0114c839118.zip",
+      "bytes": 6702556,
+      "sha256": "81ff2872833b24a0ab3881530d1e30b1eab10ab7f05f7cc5d28be0114c839118"
+    },
+    {
+      "id": "show_starter_ja",
+      "title": "Starter · 日本語のお便り",
+      "language": "ja",
+      "difficulty": "basic",
+      "description": "やさしい日本語で聴く架空のお便りラジオ。箱根の温泉旅館での小さな勘違いと入浴マナーを、台本・表現メモ付きで収録。 / Basic Japanese fictional-letter sample with transcript and expressions.",
+      "attribution": {
+        "author": "DIYFM Sample Studio",
+        "source_url": "https://github.com/jayson-sheyue/DIYFM",
+        "license": "Bundled starter sample (fictional listener letter, AI-synthesized voices & music). Free for personal listening and sharing with attribution."
+      },
+      "episodes": 1,
+      "package": "packages/070b32b30b685bffb300d00cc4daeaf270953248793005e9d3df5a755b121c67.zip",
+      "bytes": 6866688,
+      "sha256": "070b32b30b685bffb300d00cc4daeaf270953248793005e9d3df5a755b121c67"
+    }
+  ]
 }

@@ -20,13 +20,17 @@ Importing the same normalized channel package again opens the saved copy, includ
 
 Imported credits and descriptions survive whole-library backup/restore. Existing backups without credits still work. Old DIYFM versions cannot import the new channel-package format; use 2.3 or later on all receiving devices, or retain a whole-library backup for older clients.
 
-## Discover curated channels
+## Discover curated channels & built-in starters
 
 **Discover** reads a data-only catalog from the official GitHub Pages site. Filter by English or Japanese, inspect credits and usage terms, and choose **Preview** or **Add to library**. The latter is a one-click download/check/save action; it needs no key. Downloads can be cancelled before saving. A failed network or integrity check leaves the library unchanged. Refresh failures keep any already-loaded entries visible with an error, and locally saved programs remain usable offline.
 
-The catalog initially contains **no public episodes**. Local synthetic QA fixtures and private user libraries are not published as examples. The curator explicitly selects and reviews each package before adding it. A phone or computer does not automatically share downloaded content.
+Starting in **v2.4.0**, the curated catalog ships two reviewed starter packages (`show_starter_en` — *Starter · English Letters*, and `show_starter_ja` — *Starter · 日本語のお便り*) containing fictional listener letters, AI-synthesized voices/music, transcripts and expressions, with all private inputs and internal tokens stripped. Both packages are also bundled inside the Android and macOS installers:
 
-Native clients fetch the current official catalog online rather than embedding all its audio in the installer. The website uses its own `/catalog/index.json`, including when hosted under `/DIYFM/`. No third-party catalog subscriptions are exposed in this first release. Catalog/package requests omit credentials and referrers, reject redirects, and accept packages only from the catalog's own `packages/` directory. Native CSP permits only the existing Google API plus this exact official catalog path; management/file bridges retain their original local-origin restrictions.
+- **Brand-new install:** When the local library is empty and has never been seeded (`starter-seeded` not set), DIYFM verifies and seeds the bundled starter channels once so listeners can press Play immediately offline without an API key.
+- **No resurrection & safe upgrades:** Deleting one or both starter channels never re-adds them on reload/restart. Upgrading an existing installation that already has saved channels sets `starter-seeded` without injecting starter channels into the user's library.
+- **Offline native fallback:** Native clients check the live GitHub Pages catalog first when online (and reuse verified local bundle bytes when a listed package's SHA-256 matches the bundled copy), and fall back to the bundled local catalog when offline so deleted starter channels can still be previewed or re-added without a network connection.
+
+Local synthetic QA fixtures and private user libraries are never published. Catalog/package requests omit credentials and referrers, reject redirects, and accept packages only from the catalog's own `packages/` directory. Native CSP permits only the existing Google API plus the official catalog path and local bundle origin; management/file bridges retain their original local-origin restrictions.
 
 ## Curator publishing workflow
 
@@ -49,6 +53,6 @@ To unlist a channel, remove its entry from `static/catalog/index.json`, validate
 
 Each ZIP has `channel.json` (`format: diyfm-channel`, `version: 1`) and exactly the referenced `audio/<episode-id>.wav` files. The manifest has an allowlisted public channel record, attribution, and episode records with audio byte counts and SHA-256 values. No remote scripts, arbitrary filesystem paths or external audio URLs are accepted. A canonical manifest hash identifies the imported snapshot; archive hashes separately verify catalog downloads. Credits can still be false and a valid hash does not make arbitrary content trustworthy.
 
-The catalog uses `format: diyfm-catalog`, `version: 1` and a `channels` array. Each entry repeats the public channel metadata, attribution, episode count, package path, compressed byte count and SHA-256. Builds validate each listed package against the listing. Audio packages are excluded from native installers; only the web catalog serves them.
+The catalog uses `format: diyfm-catalog`, `version: 1` and a `channels` array. Each entry repeats the public channel metadata, attribution, episode count, package path, compressed byte count and SHA-256. Builds validate each listed package against the listing, and native Mac/Android installers bundle the validated `catalog/` directory for offline first-launch seeding and Discover fallback.
 
 See [verification notes](testing.md) for executed tests and platform limitations. Relevant APIs: [Fetch credentials](https://developer.mozilla.org/en-US/docs/Web/API/Request/credentials), [SubtleCrypto digest](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest), [HTML dialog](https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element), and the bundled [fflate 0.8.2 ZIP implementation](https://github.com/101arrowz/fflate/tree/v0.8.2).

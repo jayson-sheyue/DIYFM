@@ -85,6 +85,11 @@ public class ClientIntegrationTest {
             assertTrue("WebView DOM callback timed out after document commit",gate.await(5,TimeUnit.SECONDS));result=value.get();if(result.contains(BuildConfig.VERSION_NAME)&&result.contains("true"))break;Thread.sleep(100);
         }
         assertTrue(result,result.contains("en"));assertTrue(result,result.contains(BuildConfig.VERSION_NAME));assertTrue(result,result.contains("true"));
+        String starterCheck="window.__starterQA=null;(async()=>{await window.DIYFM.ready;const {shows}=await(await window.DIYFM.fetch('/api/shows')).json();const ids=shows.map(s=>s.provenance?.channel_id).filter(Boolean);window.__starterQA={hasEn:ids.includes('show_starter_en'),hasJa:ids.includes('show_starter_ja')};})().catch(e=>window.__starterQA={error:e.message});";
+        main(()->{web.evaluateJavascript(starterCheck,null);return new JSONObject();});
+        String starterRaw="null";for(int i=0;i<100;i++){starterRaw=readJS(web,"window.__starterQA");if(!starterRaw.equals("null"))break;Thread.sleep(100);}
+        JSONObject starters=new JSONObject(starterRaw);assertFalse(starters.toString(),starters.has("error"));
+        assertTrue(starters.toString(),starters.getBoolean("hasEn"));assertTrue(starters.toString(),starters.getBoolean("hasJa"));
     }
 
     @Test public void channelPackagePreviewCommitAndReexportKeepNativeReadableAudio() throws Exception {
@@ -157,11 +162,11 @@ public class ClientIntegrationTest {
             String data=android.util.Base64.encodeToString(output.toByteArray(),android.util.Base64.NO_WRAP);
             seed="await window.DIYFM.importBackup(Uint8Array.from(atob("+JSONObject.quote(data)+"),c=>c.charCodeAt(0)).buffer);await window.DIYFM.fetch('/api/settings',{method:'PUT',body:JSON.stringify({llm_model:'upgrade-qa-model'})});";
         }
-        String script="window.__upgradeQA=null;(async()=>{await window.DIYFM.ready;"+seed+"const {shows}=await(await window.DIYFM.fetch('/api/shows')).json();const show=shows.find(s=>s.title==='Portrait upgrade QA');const ep=show?.episodes?.find(e=>e.status==='ready');if(!ep?.url)throw Error('Fixture missing');const bytes=await(await fetch(ep.url)).arrayBuffer();const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(n=>n.toString(16).padStart(2,'0')).join('');const config=await(await window.DIYFM.fetch('/api/settings')).json();window.__upgradeQA={hash,model:config.settings.llm_model,title:show.title};})().catch(()=>window.__upgradeQA={error:'Fixture failed'});";
+        String script="window.__upgradeQA=null;(async()=>{await window.DIYFM.ready;"+seed+"const {shows}=await(await window.DIYFM.fetch('/api/shows')).json();const show=shows.find(s=>s.title==='Portrait upgrade QA');const ep=show?.episodes?.find(e=>e.status==='ready');if(!ep?.url)throw Error('Fixture missing');const bytes=await(await fetch(ep.url)).arrayBuffer();const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(n=>n.toString(16).padStart(2,'0')).join('');const config=await(await window.DIYFM.fetch('/api/settings')).json();window.__upgradeQA={hash,model:config.settings.llm_model,title:show.title,count:shows.length};})().catch(()=>window.__upgradeQA={error:'Fixture failed'});";
         main(()->{web.evaluateJavascript(script,null);return new JSONObject();});
         String raw="null";for(int i=0;i<100;i++){raw=readJS(web,"window.__upgradeQA");if(!raw.equals("null"))break;Thread.sleep(100);}
         JSONObject result=new JSONObject(raw);assertFalse(result.toString(),result.has("error"));
-        assertEquals(expectedHash.toString(),result.getString("hash"));assertEquals("upgrade-qa-model",result.getString("model"));assertEquals("Portrait upgrade QA",result.getString("title"));
+        assertEquals(expectedHash.toString(),result.getString("hash"));assertEquals("upgrade-qa-model",result.getString("model"));assertEquals("Portrait upgrade QA",result.getString("title"));assertEquals(1,result.getInt("count"));
         android.util.Log.i("DIYFM_QA","Upgrade fixture "+phase+" passed on "+expectedVersion+": channel, model preference and WAV SHA-256 preserved.");
     }
     void waitDocument(WebView web) throws Exception {

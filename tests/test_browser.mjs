@@ -458,7 +458,7 @@ test("required research without real sources fails before speech or script gener
   assert.equal(calls, 2);
 });
 test("episode metadata language is captured separately from the listening language", async () => {
-  const { i18n } = await import("../static/i18n.mjs?v=2.3.1");
+  const { i18n } = await import("../static/i18n.mjs?v=2.4.0");
   i18n.setLocale("ja");
   let seen;
   const gate = new Promise((resolve) => {

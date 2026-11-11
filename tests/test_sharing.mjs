@@ -176,3 +176,107 @@ test("curator preparation derives listing metadata and build validation catches 
     await writeFile(join(directory, "packages", digest + ".zip"), "broken"); await assert.rejects(validateCatalog(directory), /size mismatch/);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
+
+test("shipped static catalog contains clean English and Japanese starter packages", async () => {
+  assert.equal(await validateCatalog(), 2);
+  const catalogRoot = new URL("../static/catalog/", import.meta.url);
+  const doc = JSON.parse(await readFile(new URL("./index.json", catalogRoot), "utf8"));
+  assert.deepEqual(doc.channels.map(c => c.language), ["en", "ja"]);
+  assert.deepEqual(doc.channels.map(c => c.id), ["show_starter_en", "show_starter_ja"]);
+  for (const ch of doc.channels) {
+    const raw = await readFile(new URL(ch.package, catalogRoot));
+    const files = unzipSync(new Uint8Array(raw));
+    const manifestText = strFromU8(files["channel.json"]);
+    assert.doesNotMatch(manifestText, /vertexaisearch|webeye|AIza|PRIVATE_|host_voice|llm_model/);
+    const { manifest } = await decodeChannel(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
+    assert.equal(manifest.episodes.length, 1);
+    assert.ok(manifest.episodes[0].duration_seconds > 60);
+    assert.match(manifest.episodes[0].script, /Host:/);
+  }
+});
+
+test("starter seeding populates fresh installs once, respects deletions/upgrades, and supports offline native catalog fallback", async () => {
+  const enSource = await source();
+  const jaDb = library(); await jaDb.ready;
+  await jaDb.write([
+    ["shows", [{
+      id: "show_ja_seed", title: "Starter · 日本語のお便り", language: "ja", difficulty: "basic",
+      host_voice: "Kore", guest_voice: "Puck", length: "SHORT", music_style: "none", revision: 0, wish: "",
+      episodes: [{ id: "ep_ja_ready", title: "温泉のお便り", summary: "架空のお便り。", script: "Host: こんばんは。\nGuest: よろしくお願いします。", expressions: ["ホッとする"], status: "ready", duration_seconds: 1, created_at: "2026-11-10T00:00:00Z", music_source: "library" }],
+    }]],
+    ["audio:ep_ja_ready", tone],
+  ]);
+  const jaApi = createBrowserAPI({ library: jaDb, request: () => { throw Error("Unexpected cloud call"); } });
+  await jaApi.ready;
+  const jaBlob = await jaApi.exportChannel("show_ja_seed", { ...credit, description: "Japanese starter channel.", episodeIds: ["ep_ja_ready"] });
+
+  const enBytes = await enSource.blob.arrayBuffer(), jaBytes = await jaBlob.arrayBuffer();
+  const enDecoded = await decodeChannel(enBytes), jaDecoded = await decodeChannel(jaBytes);
+  const enEntry = { ...enDecoded.manifest.channel, attribution: credit, episodes: 1, package: "packages/en.zip", bytes: enBytes.byteLength, sha256: await sha256(enBytes) };
+  const jaEntry = { ...jaDecoded.manifest.channel, attribution: credit, episodes: 1, package: "packages/ja.zip", bytes: jaBytes.byteLength, sha256: await sha256(jaBytes) };
+  const catalogDoc = { format: "diyfm-catalog", version: 1, channels: [enEntry, jaEntry] };
+
+  const localOrigin = "http://127.0.0.1:24618/catalog/index.json";
+  const remoteOrigin = "https://example.org/DIYFM/catalog/index.json";
+  let remoteOnline = false;
+  const remoteHits = [];
+  const bundleFetcher = async (url) => {
+    if (url.startsWith("https://example.org/")) {
+      remoteHits.push(url);
+      if (!remoteOnline) throw new TypeError("Offline");
+      if (url.endsWith("index.json")) return Response.json(catalogDoc);
+      if (url.endsWith("en.zip")) return new Response(enBytes);
+      if (url.endsWith("ja.zip")) return new Response(jaBytes);
+    }
+    if (url === localOrigin) return Response.json(catalogDoc);
+    if (url === "http://127.0.0.1:24618/catalog/packages/en.zip") return new Response(enBytes);
+    if (url === "http://127.0.0.1:24618/catalog/packages/ja.zip") return new Response(jaBytes);
+    return new Response("Not found", { status: 404 });
+  };
+
+  // 1. Parallel tabs on brand-new empty DB seed once in deterministic EN -> JA order without cloud calls.
+  const freshDB = library();
+  const [tabA, tabB] = await Promise.all([
+    target({ library: freshDB, catalogURL: remoteOrigin, bundledCatalogURL: localOrigin, seedStarterChannels: true, fetcher: bundleFetcher, request: () => { throw Error("Unexpected cloud call"); } }),
+    target({ library: freshDB, catalogURL: remoteOrigin, bundledCatalogURL: localOrigin, seedStarterChannels: true, fetcher: bundleFetcher, request: () => { throw Error("Unexpected cloud call"); } }),
+  ]);
+  const seeded = await list(tabA.api);
+  assert.equal(seeded.length, 2);
+  assert.deepEqual(seeded.map(s => s.language), ["en", "ja"]);
+  assert.equal((await list(tabB.api)).length, 2);
+  assert.equal(tabA.api.hasKey(), false);
+
+  // 2. Deleting a starter channel never resurrects it on reload, and deleting all leaves library empty.
+  await tabA.api.fetch(`/api/shows/${seeded[0].id}`, { method: "DELETE" });
+  const reload1 = await target({ library: freshDB, catalogURL: remoteOrigin, bundledCatalogURL: localOrigin, seedStarterChannels: true, fetcher: bundleFetcher });
+  assert.deepEqual((await list(reload1.api)).map(s => s.language), ["ja"]);
+  await reload1.api.fetch(`/api/shows/${seeded[1].id}`, { method: "DELETE" });
+  const reload2 = await target({ library: freshDB, catalogURL: remoteOrigin, bundledCatalogURL: localOrigin, seedStarterChannels: true, fetcher: bundleFetcher });
+  assert.equal((await list(reload2.api)).length, 0);
+
+  // 3. Offline native Discover falls back to bundled catalog so users can re-add deleted samples offline.
+  const offlineCatalog = await reload2.api.catalog();
+  assert.equal(offlineCatalog.length, 2);
+  const previewOffline = await reload2.api.prepareCatalog(enEntry.id);
+  await reload2.api.commitImport(previewOffline.token);
+  assert.deepEqual((await list(reload2.api)).map(s => s.language), ["en"]);
+
+  // 4. Online native Discover fetches remote index.json but reuses verified local bundle bytes for matching packages.
+  remoteOnline = true;
+  remoteHits.length = 0;
+  const onlineCatalog = await reload2.api.catalog();
+  assert.equal(onlineCatalog.length, 2);
+  const previewLocalHit = await reload2.api.prepareCatalog(jaEntry.id);
+  await reload2.api.commitImport(previewLocalHit.token);
+  assert.deepEqual(remoteHits, [remoteOrigin]);
+  assert.equal((await list(reload2.api)).length, 2);
+
+  // 5. Upgrading an existing non-empty user library sets starter-seeded without injecting starter channels.
+  const upgradeDB = library(); await upgradeDB.ready;
+  await upgradeDB.write([["shows", [{ id: "show_user_saved", title: "My existing channel", language: "en", difficulty: "basic", host_voice: "Kore", guest_voice: "Puck", length: "SHORT", music_style: "none", revision: 0, wish: "", updated_at: "2026-11-01T00:00:00Z", episodes: [] }]]]);
+  const upgraded = await target({ library: upgradeDB, catalogURL: remoteOrigin, bundledCatalogURL: localOrigin, seedStarterChannels: true, fetcher: bundleFetcher });
+  const kept = await list(upgraded.api);
+  assert.equal(kept.length, 1);
+  assert.equal(kept[0].title, "My existing channel");
+  assert.equal(await upgradeDB.get("starter-seeded"), true);
+});
