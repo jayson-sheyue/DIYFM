@@ -178,12 +178,13 @@ test("curator preparation derives listing metadata and build validation catches 
 });
 
 test("shipped static catalog contains clean English and Japanese starter packages", async () => {
-  assert.equal(await validateCatalog(), 2);
+  assert.ok(await validateCatalog() >= 2);
   const catalogRoot = new URL("../static/catalog/", import.meta.url);
   const doc = JSON.parse(await readFile(new URL("./index.json", catalogRoot), "utf8"));
-  assert.deepEqual(doc.channels.map(c => c.language), ["en", "ja"]);
-  assert.deepEqual(doc.channels.map(c => c.id), ["show_starter_en", "show_starter_ja"]);
-  for (const ch of doc.channels) {
+  const starters = doc.channels.filter((c) => c.id === "show_starter_en" || c.id === "show_starter_ja");
+  assert.deepEqual(starters.map((c) => c.id), ["show_starter_en", "show_starter_ja"]);
+  assert.deepEqual(starters.map((c) => c.language), ["en", "ja"]);
+  for (const ch of starters) {
     const raw = await readFile(new URL(ch.package, catalogRoot));
     const files = unzipSync(new Uint8Array(raw));
     const manifestText = strFromU8(files["channel.json"]);

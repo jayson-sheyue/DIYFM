@@ -2,6 +2,8 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
+**v2.4.4 unlists the Discover test submission** used to verify \`channel-approved\`, so curated starters are the only catalog entries again. Series creation from 2.4.3 is unchanged.
+
 **v2.4.3 treats each channel as a series:** create a series with a name, one-line pitch and ongoing theme; each new episode must say what it covers in that series, and the library shows episode numbers. Sharing and Discover remain snapshot-based. [Sharing guide](docs/sharing.md).
 
 **v2.4.2 adds channel submissions and an MIT license:** Discover now has **Submit your channel**, which opens a public GitHub form outside the app. After a maintainer with write access listens and adds the `channel-approved` label, Actions validates the ZIP and publishes it to Discover; nothing is listed on submit alone. DIYFM's own source code is now released under the [MIT License](LICENSE). [Sharing and curator guide](docs/sharing.md).

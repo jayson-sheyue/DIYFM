@@ -1,4 +1,4 @@
-# DIYFM v2.4.3 验证记录
+# DIYFM v2.4.4 验证记录
 
 日期：2026-11-06。目标产物：GitHub Pages 项目子路径下的纯静态站点，每位使用者自带 API Key。旧 Python 后端仅保留兼容和迁移用途。
 
@@ -161,3 +161,9 @@ Firefox / Safari 独立系统浏览器、长期容量和真实 Google Key 成功
 
 - New channels require a series name, one-line pitch (`description`) and ongoing theme (`wish`); new episodes require an in-series angle (`episode_wish`). Episode lists show ordinals. Sharing/Discover snapshot behavior is unchanged.
 - Automated checks: series unit tests plus browser/playback/i18n suites covering the new required fields. Final package hashes and Mac install verification are recorded in the v2.4.3 Release after publish.
+- Final artifacts embed revision `4d024ed2ef31`. Release `v2.4.3` asset SHA-256 matched on re-download (`d2134524…` APK, `7c1300a0…` DMG, `2c38f995…` ZIP). `/Applications/DIYFM.app` replaced from the published DMG at 2.4.3 / 4d024ed2ef31. Catalog validation counted 3 curated channels (includes the issue #1 listing committed earlier). No Android device attached for over-install in this round.
+
+## v2.4.4 Unlist Discover test submission (2026-11-16)
+
+- Issue #1 was an end-to-end label-approval test and had been auto-listed; it is removed from `static/catalog/` so public Discover again ships only the two starter packages. The catalog unit test now asserts starters are present rather than requiring the catalog length to be exactly two.
+- Final 2.4.4 package hashes and Mac install verification are recorded in the v2.4.4 Release after publish.

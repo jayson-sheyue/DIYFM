@@ -1,4 +1,4 @@
-import { i18n } from "./i18n.mjs?v=2.4.3";
+import { i18n } from "./i18n.mjs?v=2.4.4";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
@@ -8,8 +8,8 @@ import {
   googleRequest,
   speech,
   music,
-} from "./gemini.mjs?v=2.4.3";
-import { generate, speechTurns } from "./harness.mjs?v=2.4.3";
+} from "./gemini.mjs?v=2.4.4";
+import { generate, speechTurns } from "./harness.mjs?v=2.4.4";
 import {
   RATE,
   partsBlob,
@@ -21,9 +21,9 @@ import {
   wavBlob,
   base64Bytes,
   encodeMP3,
-} from "./audio.mjs?v=2.4.3";
+} from "./audio.mjs?v=2.4.4";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.3";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.4";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -289,7 +289,7 @@ export function createBrowserAPI({
               checkpoint,
               resume || {},
               (s, p, o) =>
-                import("./gemini.mjs?v=2.4.3").then((m) =>
+                import("./gemini.mjs?v=2.4.4").then((m) =>
                   m.textResult(s, p, { ...o, request: cloud }),
                 ),
             );

@@ -2,6 +2,8 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
+**v2.4.4 下架了用于验证 \`channel-approved\` 的测试精选条目**，目录恢复为仅含内置 Starter。2.4.3 的系列栏目创作逻辑不变。
+
 **v2.4.3 把频道做成系列栏目：** 开设栏目需填写名称、一句话定位与主题口味；每一期须写清「在系列里讲什么」，列表显示第 N 期。分享与精选仍是整包快照。[分享与目录维护指南](docs/sharing.md)。
 
 **v2.4.2 新增频道投稿入口，并采用 MIT 协议：** 「精选」页新增「投稿你的频道」，会在应用外打开公开的 GitHub 投稿表单。投稿本身不会上架；维护者试听后打上 `channel-approved` 标签，Actions 会校验 ZIP 并发布到精选。DIYFM 自身源码现以 [MIT 协议](LICENSE) 发布。[分享与目录维护指南](docs/sharing.md)。
