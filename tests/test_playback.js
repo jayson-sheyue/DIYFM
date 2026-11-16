@@ -41,6 +41,8 @@ function setup(initialStorage = {}, translation, backend) {
           return Promise.resolve();
         },
         classList: { toggle() {} },
+        append() {},
+        appendChild() {},
       });
     return elements.get(id);
   };
@@ -51,6 +53,20 @@ function setup(initialStorage = {}, translation, backend) {
       body: { dataset: {}, classList: { toggle() {} } },
       documentElement: { lang: "en" },
       getElementById: element,
+      createElement: (tag) => ({
+        tagName: String(tag).toUpperCase(),
+        className: "",
+        id: "",
+        type: "",
+        textContent: "",
+        disabled: false,
+        hidden: false,
+        onclick: null,
+        classList: { toggle() {} },
+        setAttribute() {},
+        append() {},
+        appendChild() {},
+      }),
       querySelector: () => null,
       querySelectorAll: () => [],
       addEventListener() {},

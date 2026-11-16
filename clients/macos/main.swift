@@ -58,7 +58,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         windowsMenuItem.title = text("Window", "ウインドウ", "窗口"); windows.title = windowsMenuItem.title; windows.items[0].title = text("Show DIYFM", "DIYFMを表示", "显示 DIYFM")
     }
     @objc func about() { NSApp.orderFrontStandardAboutPanel(options: [.applicationName: "DIYFM", .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "", .credits: NSAttributedString(string: "Letter Radio · English / 日本語 / 中文\nLocal library · Bring your own Google AI Studio key")]) }
-    @objc func updates() { NSWorkspace.shared.open(URL(string: "https://github.com/jayson-sheyue/DIYFM/releases")!) }
+    @objc func updates() { openUpdates(nil) }
+    func openUpdates(_ raw: String?) {
+        let fallback = URL(string: "https://github.com/jayson-sheyue/DIYFM/releases")!
+        guard let raw, let url = URL(string: raw), url.scheme == "https", url.host == "github.com", url.user == nil, url.password == nil,
+              url.query == nil, url.fragment == nil else { NSWorkspace.shared.open(fallback); return }
+        let path = url.path
+        let allowed = path == "/jayson-sheyue/DIYFM/releases" || path.hasPrefix("/jayson-sheyue/DIYFM/releases/")
+        NSWorkspace.shared.open(allowed ? url : fallback)
+    }
     func windowShouldClose(_ sender: NSWindow) -> Bool { sender.orderOut(nil); return false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { window.makeKeyAndOrderFront(nil); return true }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -73,7 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         let failed: (Error) -> Void = { _ in DispatchQueue.main.async { replyHandler(nil, "The action could not be completed. Your programs are safe.") } }
         if command == "app.info" { replyHandler(["platform": "macOS", "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "", "generation": player.revision, "state": player.state()], nil); return }
         if command == "app.busy" { busy = data["busy"] as? Bool ?? false; let next = data["locale"] as? String ?? "en"; if next != language { language = next; localizeMenus() }; replyHandler([:], nil); return }
-        if command == "app.updates" { updates(); replyHandler([:], nil); return }
+        if command == "app.updates" { openUpdates(data["url"] as? String); replyHandler([:], nil); return }
         if command.hasPrefix("player.") { do {replyHandler(try player.route(command, data: data, files: files), nil)} catch {failed(error)}; return }
         if command == "media.prune" { let keep = player.activeKeys; io.async { self.files.prune(keep: keep); DispatchQueue.main.async { replyHandler([:], nil) } }; return }
         if command == "file.begin", data["kind"] as? String == "export" {

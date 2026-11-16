@@ -408,6 +408,7 @@ export async function createNativeClient(bridge = detectTransport()) {
       activeAudio?.waiting
         ? Promise.resolve()
         : bridge.request("media.prune").catch(() => {}),
-    updates: () => bridge.request("app.updates"),
+    updates: (url) =>
+      bridge.request("app.updates", url ? { url: String(url) } : {}),
   };
 }

@@ -1,7 +1,12 @@
 import { rm, mkdir, cp, writeFile, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { validateCatalog } from "./catalog.mjs";
+import { parseReleases, RELEASES_URL } from "../static/updates.mjs";
 await validateCatalog();
+parseReleases(
+  JSON.parse(await readFile("static/releases/index.json", "utf8")),
+  RELEASES_URL,
+);
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist");
 await cp("static", "dist", { recursive: true });

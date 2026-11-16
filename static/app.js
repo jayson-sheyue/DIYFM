@@ -1823,27 +1823,118 @@ Promise.all([api("/api/presets"), api("/api/shows"), api("/api/settings")])
   })
   .catch((e) => notice(e.message));
 
-if (nativeClient) {
-  document.documentElement.classList.add("native-client");
-  const nativeInfo = document.createElement("p");
-  nativeInfo.className = "hint";
-  nativeInfo.textContent = `DIYFM ${nativeClient.info.version} · ${nativeClient.info.platform}`;
-  const updateButton = document.createElement("button");
-  updateButton.type = "button";
-  updateButton.className = "quiet";
-  updateButton.textContent = tr("下载客户端更新");
-  updateButton.onclick = () =>
-    nativeClient
-      .updates()
-      .catch(() => notice(tr("客户端操作未完成，原节目仍保留。请重试。")));
-  $("settings-view").append(nativeInfo, updateButton);
-  setInterval(() => {
-    audio.poll();
-    nativeClient.setBusy(runtime.isBusy() || sharingUI?.isBusy());
-  }, 750);
-  window.addEventListener("focus", () => audio.poll());
-  window.addEventListener("diyfm:locale", () => {
-    audio.paint();
+{
+  const updatesApi = globalThis.DIYFM_UPDATES;
+  const appVersion =
+    nativeClient?.info?.version || updatesApi?.APP_VERSION || "";
+  const versionLine = document.createElement("p");
+  versionLine.className = "hint";
+  versionLine.id = "app-version";
+  versionLine.textContent = nativeClient
+    ? `DIYFM ${appVersion} · ${nativeClient.info.platform}`
+    : `DIYFM ${appVersion}`;
+  $("settings-view").append(versionLine);
+
+  if (nativeClient) {
+    document.documentElement.classList.add("native-client");
+    const updateStatus = document.createElement("p");
+    updateStatus.className = "hint";
+    updateStatus.id = "client-update-status";
+    const updateButton = document.createElement("button");
+    updateButton.type = "button";
+    updateButton.className = "quiet";
     updateButton.textContent = tr("下载客户端更新");
-  });
+    let updateState = {
+      status: "idle",
+      openURL: updatesApi?.RELEASES_PAGE || "",
+    };
+    const paintUpdate = () => {
+      if (updateState.status === "checking") {
+        updateStatus.textContent = tr("正在检查更新");
+        updateButton.textContent = tr("下载客户端更新");
+        updateButton.disabled = true;
+        return;
+      }
+      updateButton.disabled = false;
+      if (updateState.status === "available") {
+        updateStatus.textContent = tr("有可用更新：{0}", [updateState.latest]);
+        updateButton.textContent = tr("下载更新 {0}", [updateState.latest]);
+        return;
+      }
+      if (updateState.status === "current") {
+        updateStatus.textContent = tr("已是最新版本");
+        updateButton.textContent = tr("下载客户端更新");
+        return;
+      }
+      if (updateState.status === "error") {
+        updateStatus.textContent = tr(
+          updateState.message || "无法检查更新，请稍后重试。",
+        );
+        updateButton.textContent = tr("下载客户端更新");
+        return;
+      }
+      updateStatus.textContent = "";
+      updateButton.textContent = tr("下载客户端更新");
+    };
+    const openUpdate = () => {
+      const url = updateState.openURL;
+      const safe =
+        url && updatesApi?.isAllowedUpdateURL?.(url)
+          ? url
+          : updatesApi?.RELEASES_PAGE;
+      return nativeClient
+        .updates(safe)
+        .catch(() => notice(tr("客户端操作未完成，原节目仍保留。请重试。")));
+    };
+    const runUpdateCheck = async ({ announce } = {}) => {
+      if (!updatesApi?.checkClientUpdate) return;
+      updateState = { status: "checking", openURL: updatesApi.RELEASES_PAGE };
+      paintUpdate();
+      try {
+        const result = await updatesApi.checkClientUpdate({
+          currentVersion: nativeClient.info.version,
+          platform: nativeClient.info.platform,
+        });
+        updateState = {
+          status: result.status,
+          latest: result.latest,
+          openURL: result.openURL,
+          asset: result.asset,
+        };
+        paintUpdate();
+        if (announce && result.status === "available") {
+          notice(
+            tr("发现新版本 {0}。打开下载页安装；本机节目库不会自动改写。", [
+              result.latest,
+            ]),
+            "ok",
+          );
+        }
+      } catch (e) {
+        updateState = {
+          status: "error",
+          message: e.message || "无法检查更新，请稍后重试。",
+          openURL: updatesApi.RELEASES_PAGE,
+        };
+        paintUpdate();
+      }
+    };
+    updateButton.onclick = () => {
+      if (updateState.status === "available") openUpdate();
+      else if (updateState.status === "error" || updateState.status === "idle")
+        runUpdateCheck({ announce: true });
+      else openUpdate();
+    };
+    $("settings-view").append(updateStatus, updateButton);
+    runUpdateCheck({ announce: true });
+    setInterval(() => {
+      audio.poll();
+      nativeClient.setBusy(runtime.isBusy() || sharingUI?.isBusy());
+    }, 750);
+    window.addEventListener("focus", () => audio.poll());
+    window.addEventListener("diyfm:locale", () => {
+      audio.paint();
+      paintUpdate();
+    });
+  }
 }

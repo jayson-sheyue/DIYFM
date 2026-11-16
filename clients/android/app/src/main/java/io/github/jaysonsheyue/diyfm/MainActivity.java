@@ -101,6 +101,16 @@ public final class MainActivity extends Activity {
     }
     private String text(String en,String ja,String zh){return language.equals("ja")?ja:language.equals("zh-CN")?zh:en;}
     private void openExternal(Uri uri){try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}catch(Exception ignored){}}
+    private void openUpdates(String raw){
+        Uri fallback=Uri.parse("https://github.com/jayson-sheyue/DIYFM/releases");
+        if(raw==null || raw.isEmpty()){openExternal(fallback);return;}
+        Uri uri=Uri.parse(raw);
+        String path=uri.getPath()==null?"":uri.getPath();
+        boolean allowed="https".equals(uri.getScheme()) && "github.com".equals(uri.getHost())
+            && uri.getUserInfo()==null && uri.getQuery()==null && uri.getFragment()==null
+            && (path.equals("/jayson-sheyue/DIYFM/releases") || path.startsWith("/jayson-sheyue/DIYFM/releases/"));
+        openExternal(allowed?uri:fallback);
+    }
     interface Reply {void send(JSONObject object) throws Exception;}
     private void dispatch(String command,JSONObject data,Reply reply,Runnable fail) {
         Consumer<JSONObject> done=value->runOnUiThread(()->{try{reply.send(value);}catch(Exception ignored){fail.run();}});
@@ -116,7 +126,7 @@ public final class MainActivity extends Activity {
         }
         try {
             if(command.equals("app.busy")){busy=data.optBoolean("busy");language=data.optString("locale","en");done.accept(new JSONObject());return;}
-            if(command.equals("app.updates")){openExternal(Uri.parse("https://github.com/jayson-sheyue/DIYFM/releases"));done.accept(new JSONObject());return;}
+            if(command.equals("app.updates")){openUpdates(data.optString("url",null));done.accept(new JSONObject());return;}
             if(command.equals("file.begin") && data.optString("kind").equals("export")) {
                 if(exportCallback!=null)throw new IllegalStateException();
                 String name=data.getString("name").replaceAll("[\\\\/\\p{Cntrl}]","_");if(name.length()>160)name=name.substring(0,150)+(name.endsWith(".mp3")?".mp3":".zip");

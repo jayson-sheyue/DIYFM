@@ -2,6 +2,8 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
+**v2.4.9 adds soft client updates and shows the version in Settings:** native apps check a Pages releases manifest, offer a browser download when newer, and never auto-install. Web and clients both display `DIYFM x.y.z` under Settings. [Client guide](docs/clients.md).
+
 **v2.4.8 replaces Discover snapshots for the same channel:** re-sharing and re-approving the same `channel.id` updates that curated listing and removes the previous ZIP; already-downloaded local copies stay manual. [Sharing guide](docs/sharing.md).
 
 **v2.4.7 polishes series creation layout:** hero title line-breaks correctly (no literal `<br>`), and language / level / length sit in an even three-column grid with a full-width create button.

@@ -1,5 +1,5 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.8";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.9";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
   "保存与制作说明": { en: "Storage & production", ja: "保存と制作について", "zh-CN": "保存与制作说明" },
@@ -55,6 +55,61 @@ export const MESSAGES = {
     en: "Download app updates",
     ja: "アプリの更新をダウンロード",
     "zh-CN": "下载客户端更新",
+  },
+  正在检查更新: {
+    en: "Checking for updates…",
+    ja: "更新を確認しています…",
+    "zh-CN": "正在检查更新…",
+  },
+  已是最新版本: {
+    en: "You are on the latest version.",
+    ja: "最新バージョンです。",
+    "zh-CN": "已是最新版本。",
+  },
+  "有可用更新：{0}": {
+    en: "Update available: {0}",
+    ja: "更新があります：{0}",
+    "zh-CN": "有可用更新：{0}",
+  },
+  "下载更新 {0}": {
+    en: "Download update {0}",
+    ja: "更新 {0} をダウンロード",
+    "zh-CN": "下载更新 {0}",
+  },
+  "无法检查更新，请稍后重试。": {
+    en: "Could not check for updates. Try again later.",
+    ja: "更新を確認できませんでした。後でもう一度お試しください。",
+    "zh-CN": "无法检查更新，请稍后重试。",
+  },
+  "更新清单格式无效，请稍后重试。": {
+    en: "Invalid update listing. Please try again later.",
+    ja: "更新一覧の形式が無効です。後でもう一度お試しください。",
+    "zh-CN": "更新清单格式无效，请稍后重试。",
+  },
+  "更新下载地址无效。": {
+    en: "Invalid update download address.",
+    ja: "更新のダウンロード先が無効です。",
+    "zh-CN": "更新下载地址无效。",
+  },
+  "更新说明地址无效。": {
+    en: "Invalid release notes address.",
+    ja: "リリースノートのアドレスが無効です。",
+    "zh-CN": "更新说明地址无效。",
+  },
+  "无法检查更新，请检查网络后重试。": {
+    en: "Could not check for updates. Check your network and try again.",
+    ja: "更新を確認できませんでした。ネットワークを確認して再試行してください。",
+    "zh-CN": "无法检查更新，请检查网络后重试。",
+  },
+  "当前平台没有可用的更新包。": {
+    en: "No update package is available for this platform.",
+    ja: "このプラットフォーム向けの更新パッケージはありません。",
+    "zh-CN": "当前平台没有可用的更新包。",
+  },
+  "发现新版本 {0}。打开下载页安装；本机节目库不会自动改写。": {
+    en: "Version {0} is available. Open the download page to install; your local library is not changed automatically.",
+    ja: "バージョン {0} があります。ダウンロードページを開いてインストールしてください。端末内のライブラリは自動では変わりません。",
+    "zh-CN": "发现新版本 {0}。打开下载页安装；本机节目库不会自动改写。",
   },
 
   "正在理解愿望、策划来信": {
