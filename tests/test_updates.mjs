@@ -77,12 +77,12 @@ test("parseReleases accepts only GitHub DIYFM release assets", () => {
   );
 });
 
-test("shipped releases index matches the published 2.4.8 assets", async () => {
+test("shipped releases index matches the published 2.4.9 assets", async () => {
   const raw = JSON.parse(
     await readFile(new URL("../static/releases/index.json", import.meta.url)),
   );
   const parsed = parseReleases(raw, RELEASES_URL);
-  assert.equal(parsed.latest, "2.4.8");
+  assert.equal(parsed.latest, "2.4.9");
   assert.match(parsed.assets.mac_dmg.url, /mac-universal\.dmg$/);
   assert.equal(parsed.assets.android.sha256.length, 64);
 });
