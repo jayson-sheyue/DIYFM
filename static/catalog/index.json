@@ -3,6 +3,22 @@
   "version": 1,
   "channels": [
     {
+      "id": "show_cca239a1afbd4cb9812898756f22e6fb",
+      "title": "英语来信电台",
+      "language": "en",
+      "difficulty": "beginner",
+      "description": "",
+      "attribution": {
+        "author": "Jayson",
+        "source_url": "",
+        "license": "All rights reserved"
+      },
+      "episodes": 1,
+      "package": "packages/d4f146f47d443d6018c2d34006b74fcab0ff8ac011d3cc310ef9d406aaa73afa.zip",
+      "bytes": 7826572,
+      "sha256": "d4f146f47d443d6018c2d34006b74fcab0ff8ac011d3cc310ef9d406aaa73afa"
+    },
+    {
       "id": "show_starter_en",
       "title": "Starter · English Letters",
       "language": "en",
