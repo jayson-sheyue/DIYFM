@@ -2,9 +2,11 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
-**v2.4.4 unlists the Discover test submission** used to verify \`channel-approved\`, so curated starters are the only catalog entries again. Series creation from 2.4.3 is unchanged.
+**v2.4.5 theme-first series:** name the series, pick a theme chip (presets / surprise / custom), then one-tap each new episode. The theme carries forward; per-episode angles are optional. Episode lists still show ordinals. Sharing and Discover remain snapshot-based. [Sharing guide](docs/sharing.md).
 
-**v2.4.3 treats each channel as a series:** create a series with a name, one-line pitch and ongoing theme; each new episode must say what it covers in that series, and the library shows episode numbers. Sharing and Discover remain snapshot-based. [Sharing guide](docs/sharing.md).
+**v2.4.4 unlists the Discover test submission** used to verify \`channel-approved\`, so curated starters are the only catalog entries again.
+
+**v2.4.3 treated each channel as a series** with name, pitch and theme; 2.4.5 simplifies creation to theme chips and one-tap episodes.
 
 **v2.4.2 adds channel submissions and an MIT license:** Discover now has **Submit your channel**, which opens a public GitHub form outside the app. After a maintainer with write access listens and adds the `channel-approved` label, Actions validates the ZIP and publishes it to Discover; nothing is listed on submit alone. DIYFM's own source code is now released under the [MIT License](LICENSE). [Sharing and curator guide](docs/sharing.md).
 
@@ -14,7 +16,7 @@
 
 **v2.3 adds channel sharing:** export selected finished episodes with public credits, preview ZIP imports, and use Discover to add curated channels locally without a key. [Sharing and curator guide](docs/sharing.md).
 
-**Choose English or Japanese, start a series (name, one-line pitch, ongoing theme), then say what this episode covers—and listen to two hosts open a fictional letter.**
+**Choose English or Japanese, start a series with a lasting theme, then one-tap each new episode—and listen to two hosts open a fictional letter.**
 
 DIYFM turns language listening into radio you want to return to: ongoing series episodes, natural conversation and useful expressions recurring in context. It is listening first. You do not need to supply research material, answer quizzes, record your voice, shadow the hosts or maintain a streak.
 
@@ -39,7 +41,7 @@ Developers: `npm run test:mac`, `npm run build:mac`, and (after JDK/SDK setup an
 ## Features
 
 - English or Japanese; Beginner, Elementary or Advanced; approximately 3, 5, 10 or 15 minutes.
-- One lasting channel wish, plus an optional twist for a single episode. No material gathering required.
+- One series theme (presets, surprise, or custom) reused for every episode—one tap to make the next. No material gathering required.
 - Two hosts and an independent fictional letter in each episode, without a long-running cast to remember.
 - Browser-based editorial rules: plan → Google Search verification when needed → write → structural checks and review → two-host speech → background music mixing.
 - Selectable, previewable voices; selectable and regenerable music, including a voice-only option.
@@ -58,9 +60,9 @@ The interface and listening languages are independent: you can use a Japanese in
 1. Open the test site and go to **Settings**. Get your own Gemini API key from Google AI Studio.
 2. Paste it into **Your API key**, then click **Enable key for this page**. The field clears; the UI shows only whether a key is enabled.
 3. Optionally click **Check key**. This reads metadata for the selected text model without generating content. It does not verify speech or music access.
-4. Return to **Listen**, choose the listening language and describe a wish, such as: “Funny misunderstandings between roommates, lighthearted and in easy English.”
+4. Return to **Listen**, name the series, pick a theme chip (or write a custom theme), and choose the listening language—for example Everyday mishaps or a custom “Funny roommate misunderstandings in easy English.”
 5. The defaults are Elementary and about 5 minutes. Expand **Voices & background music** to choose and preview the two hosts and music before your first episode.
-6. Click **Make my first episode**. You may switch views inside the app and check Messages, but keep the webpage open.
+6. Click **Create series & make episode 1**. Later episodes reuse the theme via **Make next episode**. You may switch views inside the app and check Messages, but keep the webpage open.
 7. When ready, play the episode, download its MP3, or open **Script & episode details** for expressions, input and returned search sources.
 
 Refreshing, closing or leaving clears the key, so you will need to enter it again. **Saved channels and audio remain.** Opening the page, reading scripts, replaying and importing/exporting do not call generation models. Production, first previews and explicit regeneration send requests subject to Google's pricing, quota and regional rules.

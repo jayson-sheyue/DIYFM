@@ -1,4 +1,4 @@
-import { i18n } from "./i18n.mjs?v=2.4.4";
+import { i18n } from "./i18n.mjs?v=2.4.5";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
@@ -8,8 +8,8 @@ import {
   googleRequest,
   speech,
   music,
-} from "./gemini.mjs?v=2.4.4";
-import { generate, speechTurns } from "./harness.mjs?v=2.4.4";
+} from "./gemini.mjs?v=2.4.5";
+import { generate, speechTurns } from "./harness.mjs?v=2.4.5";
 import {
   RATE,
   partsBlob,
@@ -21,9 +21,9 @@ import {
   wavBlob,
   base64Bytes,
   encodeMP3,
-} from "./audio.mjs?v=2.4.4";
+} from "./audio.mjs?v=2.4.5";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.4";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.5";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -38,12 +38,20 @@ const json = (value, status = 200) =>
   });
 const safeId = (value) =>
   typeof value === "string" && /^[A-Za-z0-9_-]{1,90}$/.test(value);
+export const SERIES_THEME_IDS = Object.freeze([
+  "daily",
+  "love",
+  "work",
+  "random",
+  "custom",
+]);
 const showFields = [
   "title",
   "language",
   "difficulty",
   "wish",
   "description",
+  "theme_id",
   "length",
   "host_voice",
   "guest_voice",
@@ -51,7 +59,10 @@ const showFields = [
 ];
 const snapshotShow = (show) =>
   Object.fromEntries(
-    showFields.map((k) => [k, k === "description" ? show.description || "" : show[k]]),
+    showFields.map((k) => [
+      k,
+      k === "description" || k === "theme_id" ? show[k] || "" : show[k],
+    ]),
   );
 export function cleanPreferences(input, current = {}) {
   const next = { ...current };
@@ -62,6 +73,7 @@ export function cleanPreferences(input, current = {}) {
     host_voice: PRESETS.voices.map((x) => x.id),
     guest_voice: PRESETS.voices.map((x) => x.id),
     music_style: PRESETS.music.map((x) => x.id),
+    theme_id: SERIES_THEME_IDS,
   };
   for (const k of showFields)
     if (Object.hasOwn(input, k)) {
@@ -76,22 +88,32 @@ export function cleanPreferences(input, current = {}) {
           : input[k].trim();
     }
   if (next.description === undefined) next.description = current.description || "";
+  if (next.theme_id === undefined) next.theme_id = current.theme_id || "";
+  if (!(next.theme_id || "").trim() && (next.wish || "").trim())
+    next.theme_id = "custom";
+  // Keep pitch and theme text aligned for preset/custom one-box themes.
+  if (Object.hasOwn(input, "wish") && !Object.hasOwn(input, "description"))
+    next.description = next.wish;
+  if (!(next.description || "").trim() && (next.wish || "").trim())
+    next.description = next.wish;
   if (next.host_voice === next.guest_voice)
     throw error("两位主持请选择不同声线。");
   return next;
 }
 export function assertSeriesPitch(show) {
   if (!(show.title || "").trim()) throw error("请先给栏目起个名字。");
-  if (!(show.description || "").trim() || show.description.trim().length < 8)
-    throw error("请用一句话写清这个栏目是什么（至少约一句话）。");
+  if (!(show.theme_id || "").trim() || !SERIES_THEME_IDS.includes(show.theme_id))
+    throw error("请先选择栏目主题。");
   if (!(show.wish || "").trim() || show.wish.trim().length < 8)
-    throw error("请写清栏目的人设或主题口味（至少约一句话）。");
+    throw error("请选择或填写栏目主题。");
 }
 export function assertEpisodeAngle(episodeWish, { retry = false } = {}) {
+  // Episodes inherit the series theme; an explicit angle is optional.
   if (retry) return;
-  const text = typeof episodeWish === "string" ? episodeWish.trim() : "";
-  if (!text || text.length < 4) throw error("请写清这一集在系列里想讲什么。");
-  if (text.length > 600) throw error("本期选题请控制在 600 字以内。");
+  if (episodeWish != null && typeof episodeWish !== "string")
+    throw error("本期选题格式无效。");
+  if (typeof episodeWish === "string" && episodeWish.length > 600)
+    throw error("本期选题请控制在 600 字以内。");
 }
 export function createBrowserAPI({
   library = new Library(),
@@ -289,7 +311,7 @@ export function createBrowserAPI({
               checkpoint,
               resume || {},
               (s, p, o) =>
-                import("./gemini.mjs?v=2.4.4").then((m) =>
+                import("./gemini.mjs?v=2.4.5").then((m) =>
                   m.textResult(s, p, { ...o, request: cloud }),
                 ),
             );
@@ -1040,11 +1062,13 @@ export function createBrowserAPI({
           difficulty: "basic",
           wish: "",
           description: "",
+          theme_id: "",
           length: "SHORT",
           host_voice: "Kore",
           guest_voice: "Puck",
           music_style: "morning_acoustic",
         });
+        if (!(show.description || "").trim()) show.description = show.wish;
         assertSeriesPitch(show);
         Object.assign(show, {
           id,

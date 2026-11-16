@@ -1,5 +1,5 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.4";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.5";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
   "保存与制作说明": { en: "Storage & production", ja: "保存と制作について", "zh-CN": "保存与制作说明" },
@@ -157,10 +157,35 @@ export const MESSAGES = {
     ja: "おまかせ",
     "zh-CN": "来点意外",
   },
+  随机: {
+    en: "Surprise",
+    ja: "おまかせ",
+    "zh-CN": "随机",
+  },
+  自定义: {
+    en: "Custom",
+    ja: "カスタム",
+    "zh-CN": "自定义",
+  },
+  栏目主题: {
+    en: "Series theme",
+    ja: "番組テーマ",
+    "zh-CN": "栏目主题",
+  },
+  自定义主题: {
+    en: "Custom theme",
+    ja: "カスタムテーマ",
+    "zh-CN": "自定义主题",
+  },
   "帮我选一个意想不到但容易听懂的生活来信话题。": {
     en: "Choose an unexpected, easy-to-follow letter about everyday life.",
     ja: "意外性があって聞き取りやすい、日常の出来事のお便りを選んでください。",
     "zh-CN": "帮我选一个意想不到但容易听懂的生活来信话题。",
+  },
+  "帮我选一个意想不到但容易听懂的生活来信话题。每一期换新故事，不要重复近期选题。": {
+    en: "Choose an unexpected, easy-to-follow everyday letter. Fresh story each episode—avoid recent topics.",
+    ja: "意外性があって聞き取りやすい日常のお便りを選んで。毎話新しい話で、最近のテーマは繰り返さないで。",
+    "zh-CN": "帮我选一个意想不到但容易听懂的生活来信话题。每一期换新故事，不要重复近期选题。",
   },
   "页面曾刷新，试听等待已结束。再次试听会优先使用本浏览器缓存。": {
     en: "The page was refreshed, so the preview stopped waiting. Try again to reuse this browser's cache.",
@@ -337,6 +362,21 @@ export const MESSAGES = {
     ja: "番組名、一言コンセプト、テーマを決めてから第1話の角度を書きます。言語と声は以降の話にも引き継がれます。",
     "zh-CN": "先定栏目名、一句话定位和主题口味，再写第一期想讲什么。语言与声线会留给后面每一期。",
   },
+  "先定栏目名和主题，再选语言与难度。主题一旦定下，后面每一期都会沿用。": {
+    en: "Name the series and pick a theme, then choose language and level. That theme carries to every later episode.",
+    ja: "番組名とテーマを決めてから、言語とレベルを選びます。テーマは以降の話にも引き継がれます。",
+    "zh-CN": "先定栏目名和主题，再选语言与难度。主题一旦定下，后面每一期都会沿用。",
+  },
+  "主题一旦定下，后面每一期都会沿用；点一下就能制作。": {
+    en: "Once the theme is set, every episode reuses it—one tap to make the next.",
+    ja: "テーマを決めたら以降もそのまま。ワンタップで次の話を作れます。",
+    "zh-CN": "主题一旦定下，后面每一期都会沿用；点一下就能制作。",
+  },
+  "沿用栏目主题一键制作；已生成的节目保存在本浏览器。": {
+    en: "One-tap episodes reuse the series theme; finished shows stay in this browser.",
+    ja: "番組テーマのままワンタップ制作。完成した番組はこのブラウザに残ります。",
+    "zh-CN": "沿用栏目主题一键制作；已生成的节目保存在本浏览器。",
+  },
   栏目名称: { en: "Series name", ja: "番組名", "zh-CN": "栏目名称" },
   "比如：周末小事电台": {
     en: "e.g. Weekend Little Things Radio",
@@ -421,6 +461,16 @@ export const MESSAGES = {
     ja: "先に番組名をつけてください。",
     "zh-CN": "请先给栏目起个名字。",
   },
+  "请先选择栏目主题。": {
+    en: "Please choose a series theme first.",
+    ja: "先に番組テーマを選んでください。",
+    "zh-CN": "请先选择栏目主题。",
+  },
+  "请选择或填写栏目主题。": {
+    en: "Choose or write a series theme.",
+    ja: "番組テーマを選ぶか記入してください。",
+    "zh-CN": "请选择或填写栏目主题。",
+  },
   "请用一句话写清这个栏目是什么（至少约一句话）。": {
     en: "Write a one-line pitch for this series (about one sentence).",
     ja: "この番組が何かを一言で書いてください（だいたい一文）。",
@@ -440,6 +490,11 @@ export const MESSAGES = {
     en: "{0} · {1} · Ongoing series. Production follows the series setup and this episode's angle.",
     ja: "{0} · {1} · 連載番組。番組設定と今話の角度に沿って作ります。",
     "zh-CN": "{0} · {1} · 固定栏目连载。制作时会贴合栏目设定与这一集的角度。",
+  },
+  "{0} · {1} · {2} · 固定栏目连载。每一期都会沿用这个主题。": {
+    en: "{0} · {1} · {2} · Ongoing series. Every episode reuses this theme.",
+    ja: "{0} · {1} · {2} · 連載番組。どの話もこのテーマを引き継ぎます。",
+    "zh-CN": "{0} · {1} · {2} · 固定栏目连载。每一期都会沿用这个主题。",
   },
   "这一集的角度：{0}": {
     en: "Episode angle: {0}",

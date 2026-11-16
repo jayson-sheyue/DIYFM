@@ -1,4 +1,4 @@
-# DIYFM v2.4.4 验证记录
+# DIYFM v2.4.5 验证记录
 
 日期：2026-11-06。目标产物：GitHub Pages 项目子路径下的纯静态站点，每位使用者自带 API Key。旧 Python 后端仅保留兼容和迁移用途。
 
@@ -167,3 +167,10 @@ Firefox / Safari 独立系统浏览器、长期容量和真实 Google Key 成功
 
 - Issue #1 was an end-to-end label-approval test and had been auto-listed; it is removed from `static/catalog/` so public Discover again ships only the two starter packages. The catalog unit test now asserts starters are present rather than requiring the catalog length to be exactly two.
 - Final 2.4.4 package hashes and Mac install verification are recorded in the v2.4.4 Release after publish.
+
+## Theme-first one-tap episodes (A1 / B1) — v2.4.5 (2026-11-16)
+
+- Compose UI: series name + theme chips (`daily` / `love` / `work` / `random` / `custom`). Custom uses one text box (wish = description). Random keeps a fixed surprise-theme wish; the model picks a fresh angle each episode when `episode_wish` is empty.
+- API: `theme_id` required on create; `description` syncs from `wish` when omitted; empty `episode_wish` allowed. Harness plans a new in-theme story when the episode angle is blank. Listen toolbar **制作新一期** starts generation without reopening the angle form.
+- Automated checks before publish: `npm test` (98 Node tests) passed, including `tests/test_series_channel.mjs`, browser/playback and i18n completeness.
+- Final 2.4.5 package hashes and Mac install verification are recorded in the v2.4.5 Release after publish.

@@ -29,6 +29,9 @@ function setup(initialStorage = {}, translation, backend) {
         querySelectorAll() {
           return [];
         },
+        querySelector() {
+          return null;
+        },
         load() {},
         pause() {
           this.paused = true;
@@ -48,6 +51,7 @@ function setup(initialStorage = {}, translation, backend) {
       body: { dataset: {}, classList: { toggle() {} } },
       documentElement: { lang: "en" },
       getElementById: element,
+      querySelector: () => null,
       querySelectorAll: () => [],
       addEventListener() {},
     },
@@ -179,7 +183,7 @@ test("task history sorts local-offset and UTC timestamps by actual time", () => 
 test("new channel draft retains sound choices and exposes them before first generation", () => {
   const { run, elements } = setup();
   run(
-    "state.current=null;state.presets={languages:[{id:'en',label:'英语'}],difficulties:[{id:'basic',label:'基础'}],lengths:[{id:'SHORT',label:'5分钟'}],voices:[{id:'Zephyr',label:'Zephyr'},{id:'Charon',label:'Charon'}],music:[{id:'night_drive',label:'夜间'}]};writeLocal('draft:new',{language:'en',difficulty:'basic',title:'室友趣事电台',description:'两位主持聊合租生活里的小意外',wish:'室友趣事，轻松好笑一点',episode_wish:'这一集讲洗衣机',host_voice:'Zephyr',guest_voice:'Charon',music_style:'night_drive'});renderStudio()",
+    "state.current=null;state.presets={languages:[{id:'en',label:'英语'}],difficulties:[{id:'basic',label:'基础'}],lengths:[{id:'SHORT',label:'5分钟'}],voices:[{id:'Zephyr',label:'Zephyr'},{id:'Charon',label:'Charon'}],music:[{id:'night_drive',label:'夜间'}]};writeLocal('draft:new',{language:'en',difficulty:'basic',title:'室友趣事电台',theme_id:'custom',custom_theme:'室友趣事，轻松好笑一点',description:'室友趣事，轻松好笑一点',wish:'室友趣事，轻松好笑一点',host_voice:'Zephyr',guest_voice:'Charon',music_style:'night_drive'});renderStudio()",
   );
   assert.match(elements.get("studio").innerHTML, /id="first-sound"/);
   assert.match(elements.get("studio").innerHTML, /value="Zephyr" selected/);
@@ -267,7 +271,7 @@ test("deleting a playing episode clears audio, its messages and transcript while
   run(
     "state.shows[0].revision=0;state.shows[0].wish='keep wish';state.shows[0].episodes=[{id:'one',title:'first letter',status:'ready'},{id:'two',title:'second letter',status:'ready'}];state.tasks=[{id:'download_one',kind:'download',episodeId:'one',showId:'channel'},{id:'download_two',kind:'download',episodeId:'two',showId:'channel'}];state.transcripts.set('one','cached script');state.opened.add('one');playback.episodeId='one';audio.src='/api/episodes/one/audio';audio.paused=false",
   );
-  run("$('wish-form').dataset.revision='0';$('wish').value='keep wish'");
+  run("$('wish-form').dataset.revision='0'");
   ctx.fetch = async () => ({
     ok: true,
     json: async () => ({
@@ -478,8 +482,11 @@ test("changing interface language preserves playback, Key, job state, drafts and
     },
   });
   ctx.testPresets = PRESETS;
-  run(`state.presets=testPresets; state.shows[0].title='保留原文'; state.shows[0].language='ja'; state.settingsDirty=true; state.submitting=true;
-    $('language').value='ja'; $('wish').value='  My wish 原文を保つ  '; if($('channel-description')) $('channel-description').value='合租生活の小さなラジオ番組です'; $('episode-wish').value='今回だけ'; $('channel-title').value='保留原文'; $('difficulty').value='basic'; $('length').value='SHORT'; $('set-llm').value='gemini-unsaved'; $('host').value='Kore'; $('guest').value='Puck'; $('music').value='none';
+  ctx.document.querySelector = (sel) =>
+    sel === "[name='series-theme']:checked" ? { value: "custom" } : null;
+  run(`state.presets=testPresets; state.shows[0].title='保留原文'; state.shows[0].language='ja'; state.shows[0].theme_id='custom'; state.settingsDirty=true; state.submitting=true;
+    writeLocal('draft:channel',{language:'ja',theme_id:'custom',custom_theme:'  My wish 原文を保つ  ',wish:'  My wish 原文を保つ  ',description:'  My wish 原文を保つ  ',revision:0});
+    $('language').value='ja'; $('custom-theme').value='  My wish 原文を保つ  '; $('channel-title').value='保留原文'; $('difficulty').value='basic'; $('length').value='SHORT'; $('set-llm').value='gemini-unsaved'; $('host').value='Kore'; $('guest').value='Puck'; $('music').value='none';
     audio.src='blob:saved'; audio.currentTime=9; audio.playbackRate=1.25; audio.paused=false; playback.episodeId='episode'; playback.token=7;`);
   const beforeKey = vault.snapshot(DEFAULT_MODELS).key;
   run("setInterfaceLanguage('ja')");
@@ -493,9 +500,8 @@ test("changing interface language preserves playback, Key, job state, drafts and
   assert.equal(run("state.settingsDirty"), true);
   assert.equal(elements.get("set-llm").value, "gemini-unsaved");
   assert.equal(elements.get("language").value, "ja");
-  assert.equal(run("readLocal('draft:channel',{}).wish"), "  My wish 原文を保つ  ");
-  assert.equal(elements.get("wish").value, "  My wish 原文を保つ  ");
-  assert.equal(run("readLocal('draft:channel',{}).episode_wish"), "今回だけ");
+  assert.equal(run("readLocal('draft:channel',{}).wish"), "My wish 原文を保つ");
+  assert.equal(run("readLocal('draft:channel',{}).theme_id"), "custom");
   assert.equal(run("state.shows[0].title"), "保留原文");
   assert.equal(cleared, 0);
   assert.equal(vault.snapshot(DEFAULT_MODELS).key, beforeKey);

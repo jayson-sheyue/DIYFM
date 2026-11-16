@@ -11,25 +11,25 @@ async function call(api, path, method = "GET", body) {
   return { status: response.status, data: await response.json() };
 }
 
-test("series pitch helpers reject thin channel or episode angles", () => {
-  assert.throws(() => assertSeriesPitch({ title: "", description: "enough text here", wish: "enough text here" }), /栏目起个名字/);
-  assert.throws(() => assertSeriesPitch({ title: "Show", description: "short", wish: "enough text here" }), /栏目是什么/);
-  assert.throws(() => assertSeriesPitch({ title: "Show", description: "enough text here", wish: "short" }), /人设或主题/);
-  assert.doesNotThrow(() => assertSeriesPitch({ title: "Show", description: "Weekend awkward moments radio", wish: "Light Japanese workplace stories" }));
-  assert.throws(() => assertEpisodeAngle(""), /系列里想讲什么/);
-  assert.throws(() => assertEpisodeAngle("ab"), /系列里想讲什么/);
-  assert.doesNotThrow(() => assertEpisodeAngle("Episode one: wrong station", { retry: false }));
+test("series pitch helpers require theme_id and allow empty episode angles", () => {
+  assert.throws(() => assertSeriesPitch({ title: "", theme_id: "daily", wish: "enough text here" }), /栏目起个名字/);
+  assert.throws(() => assertSeriesPitch({ title: "Show", theme_id: "", wish: "enough text here" }), /栏目主题/);
+  assert.throws(() => assertSeriesPitch({ title: "Show", theme_id: "daily", wish: "short" }), /栏目主题/);
+  assert.doesNotThrow(() => assertSeriesPitch({ title: "Show", theme_id: "work", wish: "Light Japanese workplace stories" }));
+  assert.doesNotThrow(() => assertEpisodeAngle(""));
+  assert.doesNotThrow(() => assertEpisodeAngle("Episode one: wrong station"));
   assert.doesNotThrow(() => assertEpisodeAngle("", { retry: true }));
+  assert.throws(() => assertEpisodeAngle("x".repeat(601)), /600/);
 });
 
-test("creating a show requires series name, pitch and theme; episodes require an angle", async () => {
+test("creating a show requires theme; episodes can omit an angle", async () => {
   const api = createBrowserAPI({ library: library(), request: () => { throw Error("no network"); } });
   await api.ready;
   await api.setKey("unit-test-only-key-" + "a".repeat(30));
   assert.equal((await call(api, "/api/shows", "POST", { language: "en", wish: "too" })).status, 400);
   assert.equal((await call(api, "/api/shows", "POST", {
     title: "Campus Radio",
-    description: "Two hosts on campus life",
+    theme_id: "custom",
     wish: "Warm English stories about dorm life",
     language: "en",
     difficulty: "basic",
@@ -37,23 +37,23 @@ test("creating a show requires series name, pitch and theme; episodes require an
     guest_voice: "Puck",
   })).status, 200);
   const show = (await call(api, "/api/shows")).data.shows[0];
-  assert.equal(show.description, "Two hosts on campus life");
-  assert.equal((await call(api, `/api/shows/${show.id}/episodes`, "POST", { request_id: "req_series_1", revision: 0, episode_wish: "" })).status, 400);
-  // Without a real Gemini path the job fails after creation; validation must pass first.
+  assert.equal(show.theme_id, "custom");
+  assert.equal(show.description, "Warm English stories about dorm life");
   const started = await call(api, `/api/shows/${show.id}/episodes`, "POST", {
-    request_id: "req_series_2",
+    request_id: "req_series_1",
     revision: show.revision,
-    episode_wish: "Episode 1 about a lost laundry card",
+    episode_wish: "",
   });
   assert.equal(started.status, 200);
-  assert.equal(started.data.episode.input.episode_wish, "Episode 1 about a lost laundry card");
+  assert.equal(started.data.episode.input.episode_wish, "");
 });
 
-test("cleanPreferences keeps description on patch and i18n covers episode ordinal", () => {
-  const next = cleanPreferences({ description: "A longer series pitch text", wish: "A longer ongoing theme text" }, {
+test("cleanPreferences migrates missing theme_id and syncs description from wish", () => {
+  const next = cleanPreferences({ wish: "A longer ongoing theme text" }, {
     title: "Keep", language: "en", difficulty: "basic", wish: "old", description: "", length: "SHORT", host_voice: "Kore", guest_voice: "Puck", music_style: "none",
   });
-  assert.equal(next.description, "A longer series pitch text");
+  assert.equal(next.theme_id, "custom");
+  assert.equal(next.description, "A longer ongoing theme text");
   const ui = createI18n();
   assert.match(ui.t("第 {0} 期", [3]), /3/);
   ui.setLocale("zh-CN");

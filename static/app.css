@@ -464,6 +464,15 @@ p {
 #wish:focus {
   background: #fff;
 }
+.theme-picker {
+  border: 0;
+  margin: 18px 0 0;
+  padding: 0;
+}
+.theme-picker legend {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
 .topic-chips {
   display: flex;
   gap: 8px;
@@ -481,11 +490,21 @@ p {
   color: var(--muted);
   font-size: 12px;
   min-height: 34px;
+  cursor: pointer;
 }
-.topic-chip:hover {
+.topic-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.topic-chip:hover,
+.theme-option.is-on {
   background: var(--blue-soft);
   border-color: #bdcfed;
   color: var(--blue-ink);
+}
+.custom-theme-label {
+  margin-top: 14px;
 }
 .listening-options {
   display: flex;

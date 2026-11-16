@@ -39,12 +39,32 @@ const LEVEL = localizedLabels({
   basic: "基础",
   advanced: "进阶",
 });
-const TOPICS = [
-  ["生活趣事", "想听日常生活里有点离谱的小事，轻松好笑，但不要幼稚。"],
-  ["恋爱与友情", "想听朋友相处和感情里的小误会，温暖一点，不要说教。"],
-  ["职场见闻", "想听同事之间的尴尬小事，有幽默感，不要职场成功学。"],
-  ["来点意外", "帮我选一个意想不到但容易听懂的生活来信话题。"],
+const SERIES_THEMES = [
+  {
+    id: "daily",
+    label: "生活趣事",
+    text: "想听日常生活里有点离谱的小事，轻松好笑，但不要幼稚。",
+  },
+  {
+    id: "love",
+    label: "恋爱与友情",
+    text: "想听朋友相处和感情里的小误会，温暖一点，不要说教。",
+  },
+  {
+    id: "work",
+    label: "职场见闻",
+    text: "想听同事之间的尴尬小事，有幽默感，不要职场成功学。",
+  },
+  {
+    id: "random",
+    label: "随机",
+    text: "帮我选一个意想不到但容易听懂的生活来信话题。每一期换新故事，不要重复近期选题。",
+  },
+  { id: "custom", label: "自定义", text: "" },
 ];
+const themeById = (id) => SERIES_THEMES.find((t) => t.id === id);
+const themeLabel = (show) =>
+  tr(themeById(show?.theme_id)?.label || "栏目主题");
 function icon(name) {
   const paths = {
     letter:
@@ -202,30 +222,45 @@ function replaceShow(show) {
 function draftKey() {
   return state.current || "new";
 }
+function resolveThemeText(themeId, customText) {
+  const theme = themeById(themeId);
+  if (!theme) return "";
+  if (theme.id === "custom") return (customText || "").trim();
+  return tr(theme.text);
+}
 function formValues() {
   if (!$("wish-form")) return loadDraft(currentShow());
+  const draft = loadDraft(currentShow());
+  const themeId =
+    document.querySelector?.("[name='series-theme']:checked")?.value ||
+    draft.theme_id ||
+    currentShow()?.theme_id ||
+    "";
+  const customText =
+    $("custom-theme")?.value ?? draft.custom_theme ?? "";
+  const wish = resolveThemeText(themeId, customText) || draft.wish || "";
   return {
     title: $("channel-title")?.value.trim() || currentShow()?.title || "",
     language: $("language")?.value || "en",
     difficulty: $("difficulty")?.value || "basic",
-    wish: $("wish")?.value.trim() || "",
-    description: $("channel-description")?.value.trim() || currentShow()?.description || "",
+    theme_id: themeId,
+    wish,
+    description: wish,
     length: $("length")?.value || "SHORT",
     host_voice: $("host")?.value || currentShow()?.host_voice || "Kore",
     guest_voice: $("guest")?.value || currentShow()?.guest_voice || "Puck",
     music_style:
       $("music")?.value || currentShow()?.music_style || "morning_acoustic",
     revision: Number($("wish-form")?.dataset.revision || 0),
+    custom_theme: customText,
   };
 }
 function captureDraft() {
   if (!$("wish-form")) return;
+  const values = formValues();
   writeLocal("draft:" + draftKey(), {
-    ...formValues(),
-    wish: $("wish")?.value || "",
-    description: $("channel-description")?.value || formValues().description || "",
+    ...values,
     ...($("channel-title") ? { title: $("channel-title").value } : {}),
-    episode_wish: $("episode-wish")?.value || "",
   });
 }
 function loadDraft(show) {
@@ -233,14 +268,18 @@ function loadDraft(show) {
     language: show?.language || "en",
     difficulty: show?.difficulty || "basic",
     wish: show?.wish || "",
-    description: show?.description || "",
+    description: show?.description || show?.wish || "",
+    theme_id: show?.theme_id || (show?.wish ? "custom" : ""),
+    custom_theme:
+      (show?.theme_id || (show?.wish ? "custom" : "")) === "custom"
+        ? show?.wish || ""
+        : "",
     length: show?.length || "SHORT",
     title: show?.title || "",
     revision: show?.revision || 0,
     host_voice: show?.host_voice || "Kore",
     guest_voice: show?.guest_voice || "Puck",
     music_style: show?.music_style || "morning_acoustic",
-    episode_wish: "",
     ...(readLocal("draft:" + (show?.id || "new"), null) || {}),
   };
 }
@@ -251,17 +290,25 @@ function episodeOrdinal(show, episodeId) {
   const index = ordered.findIndex((ep) => ep.id === episodeId);
   return index >= 0 ? index + 1 : 0;
 }
-function seriesFormError(values, { episodeWish, retry = false } = {}) {
-  // Retries reuse the failed attempt's saved inputs; do not re-gate on series pitch here.
+function seriesFormError(values, { retry = false } = {}) {
   if (retry) return "";
   if (!(values.title || "").trim()) return tr("请先给栏目起个名字。");
-  if (!(values.description || "").trim() || values.description.trim().length < 8)
-    return tr("请用一句话写清这个栏目是什么（至少约一句话）。");
+  if (!(values.theme_id || "").trim()) return tr("请先选择栏目主题。");
   if (!(values.wish || "").trim() || values.wish.trim().length < 8)
-    return tr("请写清栏目的人设或主题口味（至少约一句话）。");
-  const angle = (episodeWish || "").trim();
-  if (!angle || angle.length < 4) return tr("请写清这一集在系列里想讲什么。");
+    return tr("请选择或填写栏目主题。");
   return "";
+}
+function themePicker(selectedId, customText) {
+  return `<fieldset class="theme-picker"><legend>${escapeHtml(tr("栏目主题"))}</legend>
+    <div class="topic-chips" role="radiogroup" aria-label="${escapeHtml(tr("栏目主题"))}">
+      ${SERIES_THEMES.map(
+        (theme) =>
+          `<label class="topic-chip theme-option ${selectedId === theme.id ? "is-on" : ""}"><input type="radio" name="series-theme" value="${escapeHtml(theme.id)}" ${selectedId === theme.id ? "checked" : ""}>${icon({ daily: "letter", love: "heart", work: "case", random: "spark", custom: "spark" }[theme.id])}${escapeHtml(tr(theme.label))}</label>`,
+      ).join("")}
+    </div>
+    <label for="custom-theme" class="wish-label custom-theme-label" ${selectedId === "custom" ? "" : "hidden"}>${escapeHtml(tr("自定义主题"))}</label>
+    <textarea id="custom-theme" rows="3" maxlength="1200" ${selectedId === "custom" ? "" : "hidden"} placeholder="${escapeHtml(tr("比如：两位主持聊留学生活里的小尴尬，轻松日语。"))}">${escapeHtml(customText || "")}</textarea>
+  </fieldset>`;
 }
 function stopPlayback() {
   ++playback.token;
@@ -484,13 +531,13 @@ function renderStudio() {
   $("studio").innerHTML = `
         <header class="radio-heading ${fresh ? "" : "channel-heading"}"><div>${fresh ? `<p class="eyebrow">${tr("LETTERS, JUST FOR YOUR EARS")}</p>` : ""}
         ${fresh ? trHTML(["<h1>开设一个栏目，<br>一期一期听下去。</h1>"]) : `<h1>${escapeHtml(show.title)}</h1>`}
-        <p class="intro" ${fresh ? "" : 'id="channel-meta"'}>${fresh ? tr("先定栏目名、一句话定位和主题口味，再写第一期想讲什么。语言与声线会留给后面每一期。") : `${LANG[show.language] || tr("英语")} · ${trText`${(show.episodes || []).filter(e => e.status === "ready").length} 集可听`}${show.description ? ` · ${escapeHtml(show.description)}` : ""}`}</p></div>
+        <p class="intro" ${fresh ? "" : 'id="channel-meta"'}>${fresh ? tr("先定栏目名和主题，再选语言与难度。主题一旦定下，后面每一期都会沿用。") : `${LANG[show.language] || tr("英语")} · ${escapeHtml(themeLabel(show))} · ${trText`${(show.episodes || []).filter(e => e.status === "ready").length} 集可听`}`}</p></div>
         <img class="station-art" src="./letter-radio.svg" alt="" width="260" height="188"></header>
         ${
           fresh
             ? ""
             : `<div class="channel-toolbar ${state.tab === "listen" ? "is-library" : "is-editing"}">
-                ${state.tab === "listen" ? `<button type="button" class="quiet" id="open-compose">${icon("spark")}${tr("新一期")}</button>` : `<button type="button" class="quiet" data-tab="listen">← ${tr("返回节目")}</button>`}
+                ${state.tab === "listen" ? `<button type="button" class="quiet" id="make-next">${icon("spark")}${tr("制作新一期")}</button>` : `<button type="button" class="quiet" data-tab="listen">← ${tr("返回节目")}</button>`}
                 <details class="channel-menu"><summary>${tr("频道管理")} <span aria-hidden="true">···</span></summary><div class="channel-menu-items">
                 <button type="button" data-tab="compose">${tr("内容与偏好")}</button>
                 <button type="button" data-tab="voice">${tr("声音设置")}</button>
@@ -528,39 +575,14 @@ function renderStudio() {
                     fresh
                       ? trHTML`<label for="channel-title" class="wish-label">栏目名称</label>
                         <input id="channel-title" maxlength="80" required value="${escapeHtml(d.title || "")}" placeholder="${escapeHtml(tr("比如：周末小事电台"))}" />`
-                      : show?.description
-                        ? `<aside class="series-banner" aria-label="${escapeHtml(tr("栏目设定"))}"><p class="station-tag">${escapeHtml(tr("本栏目"))}</p><p>${escapeHtml(show.description)}</p><p class="hint">${escapeHtml(show.wish || "")}</p></aside>`
-                        : ""
+                      : `<aside class="series-banner" aria-label="${escapeHtml(tr("栏目设定"))}"><p class="station-tag">${escapeHtml(themeLabel(show))}</p><p>${escapeHtml(show.wish || show.description || "")}</p></aside>`
                   }
+                  ${fresh ? themePicker(d.theme_id || "", d.custom_theme || "") : ""}
                   <div class="wish-top">
                     <label for="language">想听什么语言？</label
                     ><select id="language">
                       ${options(state.presets.languages, d.language)}
                     </select>
-                  </div>
-                  ${
-                    fresh || !(show?.description || "").trim()
-                      ? trHTML`<label for="channel-description" class="wish-label">栏目一句话 <span>这个栏目是什么</span></label>
-                        <textarea id="channel-description" rows="2" maxlength="1200" required placeholder="${escapeHtml(tr("比如：两位主持聊留学生活里的小尴尬，轻松日语。"))}">${escapeHtml(d.description || "")}</textarea>`
-                      : ""
-                  }
-                  <label for="wish" class="wish-label"
-                    >${
-                      fresh ? tr("栏目主题与人设") : tr("这个栏目的主题口味")
-                    }</label
-                  >
-                  <textarea
-                    id="wish"
-                    rows="3"
-                    maxlength="1200"
-                    required
-                    placeholder="比如：想听日本职场里的尴尬小事，轻松好笑一点，日语别太难。"
-                  ></textarea>
-                  <div class="topic-chips" aria-label="选题灵感">
-                    ${TOPICS.map(
-                      ([label], i) =>
-                        `<button type="button" class="topic-chip" data-topic="${i}">${icon(["letter", "heart", "case", "spark"][i])}${escapeHtml(tr(label))}</button>`,
-                    ).join("")}
                   </div>
                   <div class="listening-options">
                     <label for="difficulty"
@@ -587,21 +609,12 @@ function renderStudio() {
                       </details>`
                       : ""
                   }
-                  <label for="episode-wish" class="episode-wish-label"
-                    >${tr("这一集在系列里讲什么")} <span>${tr("必填，只影响这一集")}</span></label
-                  ><input
-                    id="episode-wish"
-                    maxlength="600"
-                    required
-                    value="${escapeHtml(d.episode_wish || "")}"
-                    placeholder="${escapeHtml(tr("比如：第一期聊弄错车站后的互助"))}"
-                  />
                   <div class="wish-actions">
                     <p class="hint">
                       ${
                         fresh
-                          ? tr("栏目设定会留给后面每一期；这一集只写本期角度。")
-                          : tr("栏目设定会继承；已生成的节目保存在本浏览器。")
+                          ? tr("主题一旦定下，后面每一期都会沿用；点一下就能制作。")
+                          : tr("沿用栏目主题一键制作；已生成的节目保存在本浏览器。")
                       }
                     </p>
                     <div>
@@ -627,12 +640,7 @@ function renderStudio() {
                             maxlength="80"
                             value="${escapeHtml(d.title)}"
                         /></label>
-                        <label
-                          >栏目一句话<textarea
-                            id="channel-description"
-                            rows="2"
-                            maxlength="1200"
-                          >${escapeHtml(d.description || show?.description || "")}</textarea></label>
+                        ${themePicker(d.theme_id || show?.theme_id || "", d.custom_theme || (show?.theme_id === "custom" ? show?.wish || "" : ""))}
                       </details>`
                   }
                 </form>
@@ -648,7 +656,7 @@ function renderStudio() {
               `
         }</div>`;
   document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => changeChannelTab(b.dataset.tab));
-  if ($("open-compose")) $("open-compose").onclick = () => changeChannelTab("compose");
+  if ($("make-next")) $("make-next").onclick = () => makeEpisode();
   if ($("delete-channel")) $("delete-channel").onclick = () => deleteChannel();
   if ($("share-channel")) $("share-channel").onclick = () => sharingUI?.share();
   if (state.tab === "voice" && show) {
@@ -663,30 +671,35 @@ function renderStudio() {
     renderConflict();
     return;
   }
-  $("wish").value = d.wish;
-  if ($("channel-description") && !$("channel-description").value)
-    $("channel-description").value = d.description || "";
   $("wish-form").onsubmit = (e) => {
     e.preventDefault();
     makeEpisode();
+  };
+  const syncThemeUI = () => {
+    const selected =
+      document.querySelector("[name='series-theme']:checked")?.value || "";
+    document.querySelectorAll(".theme-option").forEach((el) => {
+      el.classList.toggle(
+        "is-on",
+        el.querySelector("input")?.value === selected,
+      );
+    });
+    const custom = selected === "custom";
+    if ($("custom-theme")) $("custom-theme").hidden = !custom;
+    document
+      .querySelector(".custom-theme-label")
+      ?.toggleAttribute("hidden", !custom);
   };
   $("wish-form").addEventListener("input", () => {
     captureDraft();
     renderUnderstanding();
   });
   $("wish-form").addEventListener("change", () => {
+    syncThemeUI();
     captureDraft();
     renderUnderstanding();
   });
-  document.querySelectorAll("[data-topic]").forEach(
-    (b) =>
-      (b.onclick = () => {
-        $("wish").value = tr(TOPICS[Number(b.dataset.topic)][1]);
-        captureDraft();
-        renderUnderstanding();
-        $("wish").focus();
-      }),
-  );
+  syncThemeUI();
   if ($("save-channel")) $("save-channel").onclick = () => saveChannel();
   if (fresh) bindVoiceControls(null);
   renderUnderstanding();
@@ -698,12 +711,8 @@ function renderStudio() {
 function renderUnderstanding() {
   if (!$("understanding")) return;
   const f = formValues();
-  $("wish").placeholder =
-    f.language === "ja"
-      ? tr("比如：想听日本职场里的尴尬小事，轻松好笑一点，日语别太难。")
-      : tr("比如：想听室友之间的生活误会，轻松好笑一点，英语别太难。");
-  $("understanding").textContent =
-    trText`${LANG[f.language]} · ${LEVEL[f.difficulty]} · 固定栏目连载。制作时会贴合栏目设定与这一集的角度。`;
+  const theme = themeById(f.theme_id);
+  $("understanding").textContent = trText`${LANG[f.language]} · ${LEVEL[f.difficulty]} · ${theme ? tr(theme.label) : tr("栏目主题")} · 固定栏目连载。每一期都会沿用这个主题。`;
 }
 function renderStatus() {
   const job = generating(currentShow());
@@ -832,29 +841,27 @@ async function makeEpisode(retryEpisodeId = "", showId = state.current) {
     return;
   captureDraft();
   const drafting = formValues();
-  const episodeWish = retryEpisodeId
-    ? ""
-    : $("episode-wish")?.value.trim() ||
-      readLocal("draft:" + draftKey(), {})?.episode_wish ||
-      "";
+  const existing = showId ? state.shows.find((s) => s.id === showId) : null;
   const gate = seriesFormError(
     {
       ...drafting,
-      ...(showId
+      ...(existing
         ? {
-            title: drafting.title || state.shows.find((s) => s.id === showId)?.title || "",
+            title: drafting.title || existing.title || "",
+            theme_id:
+              drafting.theme_id ||
+              existing.theme_id ||
+              (existing.wish ? "custom" : ""),
+            wish: drafting.wish || existing.wish || "",
             description:
               drafting.description ||
-              state.shows.find((s) => s.id === showId)?.description ||
+              existing.description ||
+              existing.wish ||
               "",
-            wish: drafting.wish || state.shows.find((s) => s.id === showId)?.wish || "",
           }
         : {}),
     },
-    {
-      episodeWish,
-      retry: !!retryEpisodeId,
-    },
+    { retry: !!retryEpisodeId },
   );
   if (gate) {
     notice(gate);
@@ -873,6 +880,7 @@ async function makeEpisode(retryEpisodeId = "", showId = state.current) {
       state.current = id;
       writeLocal("current", id);
       writeLocal("draft:new", null);
+      state.tab = "listen";
       renderStudio();
     } else if (!retryEpisodeId && !readLocal("pending:" + id, null)) {
       if (!(await saveChannel(false, true))) return;
@@ -881,9 +889,7 @@ async function makeEpisode(retryEpisodeId = "", showId = state.current) {
     if (!pending) {
       pending = {
         request_id: uid(),
-        episode_wish: retryEpisodeId
-          ? ""
-          : $("episode-wish")?.value.trim() || episodeWish,
+        episode_wish: "",
         revision: state.shows.find((s) => s.id === id).revision,
         retry_episode_id: retryEpisodeId,
       };
@@ -896,14 +902,9 @@ async function makeEpisode(retryEpisodeId = "", showId = state.current) {
     writeLocal("pending:" + id, null);
     replaceShow(data.show);
     if (state.current === id) {
-      if (
-        !pending.retry_episode_id &&
-        $("episode-wish") &&
-        $("episode-wish").value.trim() === pending.episode_wish
-      )
-        $("episode-wish").value = "";
+      if (!pending.retry_episode_id) state.tab = "listen";
       captureDraft();
-      renderEpisodes();
+      renderStudio();
       if (data.episode.status === "failed")
         notice(data.episode.error || tr("上次请求已结束，可再次制作。"));
     }
@@ -1035,12 +1036,11 @@ function renderEpisodes() {
   const mount = $("episode-mount"),
     show = currentShow();
   if (show && $("channel-meta")) {
-    const bits = [
+    $("channel-meta").textContent = [
       LANG[show.language] || tr("英语"),
+      themeLabel(show),
       trText`${(show.episodes || []).filter((e) => e.status === "ready").length} 集可听`,
-    ];
-    if (show.description) bits.push(show.description);
-    $("channel-meta").textContent = bits.join(" · ");
+    ].join(" · ");
   }
   if (!mount || !show) return;
   const eps = (show.episodes || []).filter(

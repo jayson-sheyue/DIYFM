@@ -201,7 +201,7 @@ export async function generate(
         await request(
           snapshot,
           base +
-            `这是一个固定栏目的连载。先策划本期：必须贴合 channel_pitch / channel_wish，落实 this_episode_in_series，并避免复用近期故事。输出 JSON：{"interpretation":"One sentence in ${metadataLanguage} explaining the topic, tone and listening support","topic":"具体选题","angle":"具体冲突与讨论角度","structure":["开头","读信情节","讨论","回扣"],"expressions":["2至4个目标语口语表达，不加括号或读音"],"needs_search":false,"search_queries":["涉及现实知识时的1至2个窄问题"],"listening_support":"用情境与简单复述帮助理解","voice_direction":"简短英文语气与语速说明"}。纯生活虚构不必搜索；涉及真实习俗、制度、科学或时事，或用户想了解真实知识时必须搜索。`,
+            `这是一个固定栏目的连载。先策划本期：必须贴合 channel_pitch / channel_wish；若 this_episode_in_series 为空，请在栏目主题内自动选一个新故事角度；避免复用近期故事。输出 JSON：{"interpretation":"One sentence in ${metadataLanguage} explaining the topic, tone and listening support","topic":"具体选题","angle":"具体冲突与讨论角度","structure":["开头","读信情节","讨论","回扣"],"expressions":["2至4个目标语口语表达，不加括号或读音"],"needs_search":false,"search_queries":["涉及现实知识时的1至2个窄问题"],"listening_support":"用情境与简单复述帮助理解","voice_direction":"简短英文语气与语速说明"}。纯生活虚构不必搜索；涉及真实习俗、制度、科学或时事，或用户想了解真实知识时必须搜索。`,
         )
       ).text,
     );
