@@ -1,5 +1,5 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.6";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.7";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
   "保存与制作说明": { en: "Storage & production", ja: "保存と制作について", "zh-CN": "保存与制作说明" },
@@ -381,6 +381,21 @@ export const MESSAGES = {
     en: "Start a series,<br>episode by episode.",
     ja: "連載チャンネルを開き、<br>一話ずつ聴いていこう。",
     "zh-CN": "开设一个栏目，<br>一期一期听下去。",
+  },
+  "开设一个栏目，": {
+    en: "Start a series,",
+    ja: "連載チャンネルを開き、",
+    "zh-CN": "开设一个栏目，",
+  },
+  "一期一期听下去。": {
+    en: "episode by episode.",
+    ja: "一話ずつ聴いていこう。",
+    "zh-CN": "一期一期听下去。",
+  },
+  收听选项: {
+    en: "Listening options",
+    ja: "聴取オプション",
+    "zh-CN": "收听选项",
   },
   "先定栏目名、一句话定位和主题口味，再写第一期想讲什么。语言与声线会留给后面每一期。": {
     en: "Name the series, write a one-line pitch and its taste, then say what episode one covers. Language and voices carry to later episodes.",

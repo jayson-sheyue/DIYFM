@@ -185,7 +185,13 @@ test("new channel draft retains sound choices and exposes them before first gene
   run(
     "state.current=null;state.presets={languages:[{id:'en',label:'英语'}],difficulties:[{id:'basic',label:'基础'}],lengths:[{id:'SHORT',label:'5分钟'}],voices:[{id:'Zephyr',label:'Zephyr'},{id:'Charon',label:'Charon'}],music:[{id:'night_drive',label:'夜间'}]};writeLocal('draft:new',{language:'en',difficulty:'basic',title:'室友趣事电台',theme_id:'custom',custom_theme:'室友趣事，轻松好笑一点',description:'室友趣事，轻松好笑一点',wish:'室友趣事，轻松好笑一点',host_voice:'Zephyr',guest_voice:'Charon',music_style:'night_drive'});renderStudio()",
   );
-  assert.match(elements.get("studio").innerHTML, /id="first-sound"/);
+  const studio = elements.get("studio").innerHTML;
+  assert.match(studio, /series-hero-title/);
+  assert.match(studio, /title-line/);
+  assert.doesNotMatch(studio, /&lt;br&gt;|<br>/);
+  assert.match(studio, /series-options/);
+  assert.match(studio, /开设栏目并制作第一期|Create series/);
+  assert.match(studio, /id="first-sound"/);
   assert.match(elements.get("studio").innerHTML, /value="Zephyr" selected/);
   assert.match(elements.get("studio").innerHTML, /value="Charon" selected/);
   assert.match(

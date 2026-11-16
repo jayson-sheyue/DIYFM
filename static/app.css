@@ -464,20 +464,29 @@ p {
 #wish:focus {
   background: #fff;
 }
+.series-hero-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.08em;
+}
+.series-hero-title .title-line {
+  display: block;
+}
 .theme-picker {
   border: 0;
-  margin: 18px 0 0;
+  margin: 22px 0 0;
   padding: 0;
 }
 .theme-picker legend {
-  font-weight: 600;
-  margin-bottom: 10px;
+  font-weight: 650;
+  margin-bottom: 12px;
 }
 .topic-chips {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: 4px;
 }
 .topic-chip {
   display: inline-flex;
@@ -485,11 +494,11 @@ p {
   gap: 6px;
   border: 1px solid var(--line);
   border-radius: 20px;
-  padding: 6px 12px;
+  padding: 8px 14px;
   background: #fff;
   color: var(--muted);
-  font-size: 12px;
-  min-height: 34px;
+  font-size: 13px;
+  min-height: 38px;
   cursor: pointer;
 }
 .topic-chip input {
@@ -505,6 +514,31 @@ p {
 }
 .custom-theme-label {
   margin-top: 14px;
+}
+.series-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 20px;
+  margin-top: 26px;
+}
+.series-options label {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 500;
+  min-width: 0;
+}
+.series-options label > span {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.series-options select {
+  width: 100%;
+  font-size: 14px;
+  min-height: 42px;
 }
 .listening-options {
   display: flex;
@@ -527,7 +561,7 @@ p {
   font-size: 12px;
   line-height: 1.8;
   color: var(--muted);
-  margin: 15px 0 0;
+  margin: 18px 0 0;
 }
 .wish-actions {
   display: flex;
@@ -548,6 +582,18 @@ p {
 }
 .wish-actions .primary {
   min-width: 132px;
+}
+.wish-actions-create {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+}
+.wish-actions-create .hint {
+  max-width: none;
+}
+.wish-actions-create .primary {
+  width: 100%;
+  min-height: 48px;
 }
 .quiet-notes {
   display: flex;
@@ -1246,7 +1292,10 @@ p {
   .wish-top select { flex: 1; width: 100%; min-width: 100px; }
   #wish { min-height: 120px; font-size: 15px; }
   .topic-chips { gap: 8px; }
-  .topic-chip { padding: 7px 10px; font-size: 12px; }
+  .topic-chip { padding: 8px 12px; font-size: 12px; min-height: 48px; }
+  .series-options { grid-template-columns: 1fr; gap: 14px; margin-top: 22px; }
+  .series-options label > span { font-size: 13px; }
+  .series-options select { min-height: 48px; font-size: 14px; }
   .listening-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-top: 20px; }
   .listening-options label { display: flex; flex-direction: column; align-items: stretch; gap: 6px; font-size: 12px; }
   .listening-options select { width: 100%; min-width: 0; padding: 8px; font-size: 14px; }
@@ -1255,6 +1304,7 @@ p {
   .wish-actions > div { display: flex; flex-wrap: wrap; gap: 10px; }
   .wish-actions button { flex: 1 1 120px; min-width: 0; padding: 10px; font-size: 13px; }
   .wish-actions .primary { min-width: 0; }
+  .wish-actions-create .primary { width: 100%; min-height: 48px; }
   .quiet-notes { gap: 8px 16px; font-size: 10px; }
   .episode-section { margin-top: 0; }
   .section-heading { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }

@@ -2,9 +2,9 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
-**v2.4.6 locks series preferences:** theme-first chips and one-tap episodes; theme, language, level and voices cannot change after creation. Per-episode angles stay optional. Sharing and Discover remain snapshot-based. [Sharing guide](docs/sharing.md).
+**v2.4.7 polishes series creation layout:** hero title line-breaks correctly (no literal `<br>`), and language / level / length sit in an even three-column grid with a full-width create button.
 
-**v2.4.5 introduced theme-first one-tap series** (presets / surprise / custom).
+**v2.4.6 locks series preferences:** theme-first chips and one-tap episodes; theme, language, level and voices cannot change after creation. Per-episode angles stay optional. Sharing and Discover remain snapshot-based. [Sharing guide](docs/sharing.md).
 
 **v2.4.4 unlists the Discover test submission** used to verify \`channel-approved\`, so curated starters are the only catalog entries again.
 

@@ -530,7 +530,7 @@ function renderStudio() {
     fresh = !show;
   $("studio").innerHTML = `
         <header class="radio-heading ${fresh ? "" : "channel-heading"}"><div>${fresh ? `<p class="eyebrow">${tr("LETTERS, JUST FOR YOUR EARS")}</p>` : ""}
-        ${fresh ? trHTML(["<h1>开设一个栏目，<br>一期一期听下去。</h1>"]) : `<h1>${escapeHtml(show.title)}</h1>`}
+        ${fresh ? `<h1 class="series-hero-title"><span class="title-line">${escapeHtml(tr("开设一个栏目，"))}</span><span class="title-line">${escapeHtml(tr("一期一期听下去。"))}</span></h1>` : `<h1>${escapeHtml(show.title)}</h1>`}
         <p class="intro" ${fresh ? "" : 'id="channel-meta"'}>${fresh ? tr("先定栏目名和主题，再选语言与难度。主题一旦定下，后面每一期都会沿用。") : `${LANG[show.language] || tr("英语")} · ${escapeHtml(themeLabel(show))} · ${trText`${(show.episodes || []).filter(e => e.status === "ready").length} 集可听`}`}</p></div>
         <img class="station-art" src="./letter-radio.svg" alt="" width="260" height="188"></header>
         ${
@@ -578,22 +578,22 @@ function renderStudio() {
                   ${trHTML`<label for="channel-title" class="wish-label">栏目名称</label>
                         <input id="channel-title" maxlength="80" required value="${escapeHtml(d.title || "")}" placeholder="${escapeHtml(tr("比如：周末小事电台"))}" />`}
                   ${themePicker(d.theme_id || "", d.custom_theme || "")}
-                  <div class="wish-top">
-                    <label for="language">想听什么语言？</label
-                    ><select id="language">
-                      ${options(state.presets.languages, d.language)}
-                    </select>
-                  </div>
-                  <div class="listening-options">
+                  <div class="series-options" role="group" aria-label="${escapeHtml(tr("收听选项"))}">
+                    <label for="language"
+                      ><span>想听什么语言？</span
+                      ><select id="language">
+                        ${options(state.presets.languages, d.language)}
+                      </select></label
+                    >
                     <label for="difficulty"
-                      >收听难度
-                      <select id="difficulty">
+                      ><span>收听难度</span
+                      ><select id="difficulty">
                         ${options(state.presets.difficulties, d.difficulty)}
                       </select></label
                     >
                     <label for="length"
-                      >大约听多久
-                      <select id="length">
+                      ><span>大约听多久</span
+                      ><select id="length">
                         ${options(state.presets.lengths, d.length)}
                       </select></label
                     >
@@ -605,15 +605,13 @@ function renderStudio() {
                         </summary>
                         ${voiceFields(d)}
                       </details>`}
-                  <div class="wish-actions">
+                  <div class="wish-actions wish-actions-create">
                     <p class="hint">
                       ${tr("主题、语言、难度与声音一经开设就固定；点一下制作第一期。")}
                     </p>
-                    <div>
-                      <button class="primary" id="make" type="submit">
-                        ${tr("开设栏目并制作第一期")}
-                      </button>
-                    </div>
+                    <button class="primary" id="make" type="submit">
+                      ${tr("开设栏目并制作第一期")}
+                    </button>
                   </div>
                 </form>
                 ${trHTML`<div class="quiet-notes">
@@ -744,7 +742,7 @@ function renderStatus() {
         ? tr("正在制作…")
         : currentShow()
           ? tr("制作新一期")
-          : tr("开始收听");
+          : tr("开设栏目并制作第一期");
   }
   if ($("make-locked")) {
     $("make-locked").disabled =
