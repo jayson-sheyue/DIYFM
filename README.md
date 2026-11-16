@@ -2,11 +2,11 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
-**v2.4.5 theme-first series:** name the series, pick a theme chip (presets / surprise / custom), then one-tap each new episode. The theme carries forward; per-episode angles are optional. Episode lists still show ordinals. Sharing and Discover remain snapshot-based. [Sharing guide](docs/sharing.md).
+**v2.4.6 locks series preferences:** theme-first chips and one-tap episodes; theme, language, level and voices cannot change after creation. Per-episode angles stay optional. Sharing and Discover remain snapshot-based. [Sharing guide](docs/sharing.md).
+
+**v2.4.5 introduced theme-first one-tap series** (presets / surprise / custom).
 
 **v2.4.4 unlists the Discover test submission** used to verify \`channel-approved\`, so curated starters are the only catalog entries again.
-
-**v2.4.3 treated each channel as a series** with name, pitch and theme; 2.4.5 simplifies creation to theme chips and one-tap episodes.
 
 **v2.4.2 adds channel submissions and an MIT license:** Discover now has **Submit your channel**, which opens a public GitHub form outside the app. After a maintainer with write access listens and adds the `channel-approved` label, Actions validates the ZIP and publishes it to Discover; nothing is listed on submit alone. DIYFM's own source code is now released under the [MIT License](LICENSE). [Sharing and curator guide](docs/sharing.md).
 

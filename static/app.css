@@ -634,6 +634,33 @@ p {
 .series-banner .station-tag {
   margin: 0;
 }
+.series-locked h2 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+.locked-facts {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0 0;
+}
+.locked-facts div {
+  display: grid;
+  gap: 2px;
+}
+.locked-facts dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.locked-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+.voice-row select:disabled {
+  opacity: 0.9;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 70%, var(--wash));
+}
 .episode-wish-label {
   display: block;
   margin: 22px 0 8px;

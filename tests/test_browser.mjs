@@ -18,8 +18,8 @@ import {
   trimSilencePCM,
   normalizeTurnPCM,
   RATE,
-} from "../static/audio.mjs?v=2.4.5";
-import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.4.5";
+} from "../static/audio.mjs?v=2.4.6";
+import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.4.6";
 import {
   zipSync,
   strToU8,
@@ -56,27 +56,30 @@ const content = {
   sources: [],
 };
 async function fixture(overrides = {}) {
-  const library = makeLibrary(),
-    api = createBrowserAPI({
-      library,
-      editor: async () => structuredClone(content),
-      synthesize: async () => [audioPart],
-      makeMusic: async () => ({
-        mime: "audio/wav",
-        data: Buffer.from(
-          await wavBlob(new Float32Array(2400)).arrayBuffer(),
-        ).toString("base64"),
-      }),
-      ...overrides,
-    });
+  const { show: showPrefs, ...apiOverrides } = overrides;
+  const library = makeLibrary();
+  const api = createBrowserAPI({
+    library,
+    editor: async () => structuredClone(content),
+    synthesize: async () => [audioPart],
+    makeMusic: async () => ({
+      mime: "audio/wav",
+      data: Buffer.from(
+        await wavBlob(new Float32Array(2400)).arrayBuffer(),
+      ).toString("base64"),
+    }),
+    ...apiOverrides,
+  });
   await api.ready;
   await api.setKey(KEY);
   const show = (
     await call(api, "/api/shows", "POST", {
       title: "室友趣事电台",
+      theme_id: "custom",
       description: "两位主持聊合租生活里的小意外",
       wish: "室友趣事，轻松好笑一点",
       music_style: "none",
+      ...showPrefs,
     })
   ).data.show;
   return { library, api, show };
@@ -299,10 +302,13 @@ test("browser generation snapshots preferences, skips duplicate submission and s
     input,
   );
   await call(api, `/api/shows/${show.id}/episodes`, "POST", input);
-  await call(api, `/api/shows/${show.id}`, "PATCH", {
-    wish: "后来修改",
-    revision: 0,
-  });
+  assert.equal(
+    (await call(api, `/api/shows/${show.id}`, "PATCH", {
+      wish: "后来修改",
+      revision: 0,
+    })).status,
+    400,
+  );
   await api.clearKey();
   unblock();
   const { ep } = await finished(api, show.id);
@@ -337,15 +343,18 @@ test("failed synthesis keeps reviewed script; retry uses original wish and does 
   });
   const original = await finished(api, show.id);
   assert.equal(original.ep.status, "failed");
-  await call(api, `/api/shows/${show.id}`, "PATCH", {
-    wish: "另一个愿望",
-    revision: 0,
-  });
+  assert.equal(
+    (await call(api, `/api/shows/${show.id}`, "PATCH", {
+      wish: "另一个愿望",
+      revision: 0,
+    })).status,
+    400,
+  );
   failed = false;
   await call(api, `/api/shows/${show.id}/episodes`, "POST", {
     request_id: "retry_attempt",
     retry_episode_id: original.ep.id,
-    revision: 1,
+    revision: 0,
   });
   const retry = await finished(api, show.id);
   assert.equal(retry.ep.status, "ready");
@@ -480,7 +489,7 @@ test("required research without real sources fails before speech or script gener
   assert.equal(calls, 2);
 });
 test("episode metadata language is captured separately from the listening language", async () => {
-  const { i18n } = await import("../static/i18n.mjs?v=2.4.5");
+  const { i18n } = await import("../static/i18n.mjs?v=2.4.6");
   i18n.setLocale("ja");
   let seen;
   const gate = new Promise((resolve) => {
@@ -568,6 +577,7 @@ test("MP3 export encodes the mixed master, replaces unverified cache and follows
   let encoded,
     calls = 0;
   const { api, library, show } = await fixture({
+    show: { music_style: "focus_lofi" },
     synthesize: async () => [await tonePart(tonePCM(880, 3, 0.25))],
     makeMusic: async () => tonePart(tonePCM(220, 1, 0.25)),
     mp3: async (pcm) => {
@@ -575,10 +585,6 @@ test("MP3 export encodes the mixed master, replaces unverified cache and follows
       calls++;
       return new Blob(["encoded-mixed-" + calls], { type: "audio/mpeg" });
     },
-  });
-  await call(api, `/api/shows/${show.id}`, "PATCH", {
-    music_style: "focus_lofi",
-    revision: 0,
   });
   await call(api, `/api/shows/${show.id}/episodes`, "POST", {
     request_id: "mixed-mp3-regression",

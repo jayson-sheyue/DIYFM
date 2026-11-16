@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { indexedDB } from "fake-indexeddb";
 import { Library } from "../static/library.mjs";
-import { createBrowserAPI, assertSeriesPitch, assertEpisodeAngle, cleanPreferences } from "../static/browser-api.mjs";
+import { createBrowserAPI, assertSeriesPitch, assertEpisodeAngle, assertSeriesPreferencesLocked, cleanPreferences } from "../static/browser-api.mjs";
 import { createI18n } from "../static/i18n.mjs";
 
 const library = () => new Library({ indexedDB, name: "series-" + crypto.randomUUID() });
@@ -60,4 +60,35 @@ test("cleanPreferences migrates missing theme_id and syncs description from wish
   assert.equal(ui.t("第 {0} 期", [2]), "第 2 期");
   ui.setLocale("ja");
   assert.equal(ui.t("第 {0} 期", [1]), "第1話");
+});
+
+test("series preferences stay locked after create", async () => {
+  const current = {
+    title: "Campus Radio",
+    theme_id: "custom",
+    wish: "Warm English stories about dorm life",
+    description: "Warm English stories about dorm life",
+    language: "en",
+    difficulty: "basic",
+    length: "SHORT",
+    host_voice: "Kore",
+    guest_voice: "Puck",
+    music_style: "none",
+  };
+  assert.doesNotThrow(() => assertSeriesPreferencesLocked({ wish: current.wish }, current));
+  assert.throws(() => assertSeriesPreferencesLocked({ wish: "A different lasting theme text" }, current), /不可修改/);
+  const api = createBrowserAPI({ library: library(), request: () => { throw Error("no network"); } });
+  await api.ready;
+  await api.setKey("unit-test-only-key-" + "a".repeat(30));
+  const created = await call(api, "/api/shows", "POST", {
+    ...current,
+  });
+  assert.equal(created.status, 200);
+  const locked = await call(api, `/api/shows/${created.data.show.id}`, "PATCH", {
+    difficulty: "advanced",
+    revision: 0,
+  });
+  assert.equal(locked.status, 400);
+  assert.match(locked.data.message, /不可修改/);
+  assert.equal((await call(api, "/api/shows")).data.shows[0].difficulty, "basic");
 });

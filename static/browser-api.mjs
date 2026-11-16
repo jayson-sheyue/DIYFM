@@ -1,4 +1,4 @@
-import { i18n } from "./i18n.mjs?v=2.4.5";
+import { i18n } from "./i18n.mjs?v=2.4.6";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
@@ -8,8 +8,8 @@ import {
   googleRequest,
   speech,
   music,
-} from "./gemini.mjs?v=2.4.5";
-import { generate, speechTurns } from "./harness.mjs?v=2.4.5";
+} from "./gemini.mjs?v=2.4.6";
+import { generate, speechTurns } from "./harness.mjs?v=2.4.6";
 import {
   RATE,
   partsBlob,
@@ -21,9 +21,9 @@ import {
   wavBlob,
   base64Bytes,
   encodeMP3,
-} from "./audio.mjs?v=2.4.5";
+} from "./audio.mjs?v=2.4.6";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.5";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.6";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -106,6 +106,16 @@ export function assertSeriesPitch(show) {
     throw error("请先选择栏目主题。");
   if (!(show.wish || "").trim() || show.wish.trim().length < 8)
     throw error("请选择或填写栏目主题。");
+}
+export function assertSeriesPreferencesLocked(input, current) {
+  for (const k of showFields) {
+    if (!Object.hasOwn(input, k)) continue;
+    const next =
+      typeof input[k] === "string" ? input[k].trim() : input[k];
+    const prev = current[k] || "";
+    if (String(next) !== String(prev))
+      throw error("栏目设定在开设后不可修改。");
+  }
 }
 export function assertEpisodeAngle(episodeWish, { retry = false } = {}) {
   // Episodes inherit the series theme; an explicit angle is optional.
@@ -311,7 +321,7 @@ export function createBrowserAPI({
               checkpoint,
               resume || {},
               (s, p, o) =>
-                import("./gemini.mjs?v=2.4.5").then((m) =>
+                import("./gemini.mjs?v=2.4.6").then((m) =>
                   m.textResult(s, p, { ...o, request: cloud }),
                 ),
             );
@@ -1110,6 +1120,9 @@ export function createBrowserAPI({
         return json({ ok: true });
       }
       if (method === "PATCH") {
+        const current = (await list()).find((s) => s.id === id);
+        if (!current) throw error("频道不存在。", 404);
+        assertSeriesPreferencesLocked(input, current);
         let conflict;
         const show = await mutateShow(id, (s) => {
           if (
@@ -1119,7 +1132,7 @@ export function createBrowserAPI({
             conflict = structuredClone(s);
             return;
           }
-          Object.assign(s, cleanPreferences(input, s));
+          // Preferences are locked after create; PATCH only bumps revision when fields match.
           s.revision++;
           s.updated_at = now();
         });

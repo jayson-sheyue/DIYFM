@@ -1,5 +1,5 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.5";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.6";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
   "保存与制作说明": { en: "Storage & production", ja: "保存と制作について", "zh-CN": "保存与制作说明" },
@@ -176,6 +176,31 @@ export const MESSAGES = {
     en: "Custom theme",
     ja: "カスタムテーマ",
     "zh-CN": "自定义主题",
+  },
+  "开设时已确定，后续每一期沿用，不能再改。": {
+    en: "Set when the series was created. Later episodes reuse it and cannot change it.",
+    ja: "開設時に確定済み。以降の話もそのまま使い、変更できません。",
+    "zh-CN": "开设时已确定，后续每一期沿用，不能再改。",
+  },
+  "主题、语言、难度与声音一经开设就固定；点一下制作第一期。": {
+    en: "Theme, language, level and voices lock after creation—tap to make episode 1.",
+    ja: "テーマ・言語・レベル・声は開設後に固定。タップで第1話を作ります。",
+    "zh-CN": "主题、语言、难度与声音一经开设就固定；点一下制作第一期。",
+  },
+  "声线与底乐在开设时已固定。仍可试听当前选择；重新生成试听不会改动栏目设定。": {
+    en: "Voices and BGM locked at creation. You can still preview; regenerating a preview does not change the series.",
+    ja: "声とBGMは開設時に固定。試聴はできますが、作り直しても番組設定は変わりません。",
+    "zh-CN": "声线与底乐在开设时已固定。仍可试听当前选择；重新生成试听不会改动栏目设定。",
+  },
+  "栏目设定在开设后不可修改。": {
+    en: "Series preferences cannot be changed after creation.",
+    ja: "番組設定は開設後に変更できません。",
+    "zh-CN": "栏目设定在开设后不可修改。",
+  },
+  "试听使用栏目的{0}，切页会停止播放。": {
+    en: "Previews use the series' {0}; switching pages stops playback.",
+    ja: "試聴はこの番組の{0}を使います。画面を切り替えると再生は止まります。",
+    "zh-CN": "试听使用栏目的{0}，切页会停止播放。",
   },
   "帮我选一个意想不到但容易听懂的生活来信话题。": {
     en: "Choose an unexpected, easy-to-follow letter about everyday life.",

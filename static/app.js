@@ -539,8 +539,8 @@ function renderStudio() {
             : `<div class="channel-toolbar ${state.tab === "listen" ? "is-library" : "is-editing"}">
                 ${state.tab === "listen" ? `<button type="button" class="quiet" id="make-next">${icon("spark")}${tr("制作新一期")}</button>` : `<button type="button" class="quiet" data-tab="listen">← ${tr("返回节目")}</button>`}
                 <details class="channel-menu"><summary>${tr("频道管理")} <span aria-hidden="true">···</span></summary><div class="channel-menu-items">
-                <button type="button" data-tab="compose">${tr("内容与偏好")}</button>
-                <button type="button" data-tab="voice">${tr("声音设置")}</button>
+                <button type="button" data-tab="compose">${tr("栏目设定")}</button>
+                <button type="button" data-tab="voice">${tr("声音与底乐")}</button>
                 <button type="button" id="share-channel" ${(show.episodes || []).some(e => e.status === "ready") ? "" : "disabled"}>${tr("分享频道")}</button>
                 <button type="button" class="danger" id="delete-channel">${icon("trash")}${tr("删除频道")}</button>
                 </div></details>
@@ -551,33 +551,33 @@ function renderStudio() {
                     data-tab="compose"
                     class="${state.tab === "compose" ? "is-on" : ""}"
                   >
-                    内容与偏好</button
+                    栏目设定</button
                   ><button
                     type="button"
                     data-tab="voice"
                     class="${state.tab === "voice" ? "is-on" : ""}"
                   >
-                    声音设置
+                    声音与底乐
                   </button>
                 </nav>`}`
         }
         ${show?.provenance ? `<details class="channel-source"><summary>${tr("来源与使用条款")} · ${escapeHtml(show.provenance.author)}</summary>${sourceCredit(show.provenance)}</details>` : ""}
         <div id="channel-body">${
-          show && state.tab !== "compose"
-            ? (state.tab === "listen" ? `<section class="episode-section"><div class="section-heading"><h2>${tr("栏目里的来信")}</h2><label class="mode-control"><span>${tr("播放模式")}</span><select id="channel-playback-mode" data-playback-mode>${playbackModeOptions()}</select></label></div><div id="episode-mount"></div></section>` : "")
+          show && state.tab === "listen"
+            ? `<section class="episode-section"><div class="section-heading"><h2>${tr("栏目里的来信")}</h2><label class="mode-control"><span>${tr("播放模式")}</span><select id="channel-playback-mode" data-playback-mode>${playbackModeOptions()}</select></label></div><div id="episode-mount"></div></section>`
+            : show && state.tab === "compose"
+              ? lockedSeriesSummary(show)
+              : show
+                ? ""
             : trHTML`
                 <form
                   id="wish-form"
                   class="wish-card"
                   data-revision="${d.revision}"
                 >
-                  ${
-                    fresh
-                      ? trHTML`<label for="channel-title" class="wish-label">栏目名称</label>
-                        <input id="channel-title" maxlength="80" required value="${escapeHtml(d.title || "")}" placeholder="${escapeHtml(tr("比如：周末小事电台"))}" />`
-                      : `<aside class="series-banner" aria-label="${escapeHtml(tr("栏目设定"))}"><p class="station-tag">${escapeHtml(themeLabel(show))}</p><p>${escapeHtml(show.wish || show.description || "")}</p></aside>`
-                  }
-                  ${fresh ? themePicker(d.theme_id || "", d.custom_theme || "") : ""}
+                  ${trHTML`<label for="channel-title" class="wish-label">栏目名称</label>
+                        <input id="channel-title" maxlength="80" required value="${escapeHtml(d.title || "")}" placeholder="${escapeHtml(tr("比如：周末小事电台"))}" />`}
+                  ${themePicker(d.theme_id || "", d.custom_theme || "")}
                   <div class="wish-top">
                     <label for="language">想听什么语言？</label
                     ><select id="language">
@@ -599,60 +599,28 @@ function renderStudio() {
                     >
                   </div>
                   <p class="understanding" id="understanding"></p>
-                  ${
-                    fresh
-                      ? trHTML`<details class="first-sound" id="first-sound">
+                  ${trHTML`<details class="first-sound" id="first-sound">
                         <summary>
                           声音与底乐 <span>首次制作前也可以选择、试听</span>
                         </summary>
                         ${voiceFields(d)}
-                      </details>`
-                      : ""
-                  }
+                      </details>`}
                   <div class="wish-actions">
                     <p class="hint">
-                      ${
-                        fresh
-                          ? tr("主题一旦定下，后面每一期都会沿用；点一下就能制作。")
-                          : tr("沿用栏目主题一键制作；已生成的节目保存在本浏览器。")
-                      }
+                      ${tr("主题、语言、难度与声音一经开设就固定；点一下制作第一期。")}
                     </p>
                     <div>
-                      ${
-                        fresh
-                          ? ""
-                          : trHTML([
-                              '<button class="quiet" type="button" id="save-channel">保存偏好</button>',
-                            ])
-                      }<button class="primary" id="make" type="submit">
-                        ${fresh ? tr("开设栏目并制作第一期") : tr("制作新一期")}
+                      <button class="primary" id="make" type="submit">
+                        ${tr("开设栏目并制作第一期")}
                       </button>
                     </div>
                   </div>
-                  ${
-                    fresh
-                      ? ""
-                      : trHTML`<details class="channel-management">
-                        <summary>修改栏目资料</summary>
-                        <label
-                          >栏目名称<input
-                            id="channel-title"
-                            maxlength="80"
-                            value="${escapeHtml(d.title)}"
-                        /></label>
-                        ${themePicker(d.theme_id || show?.theme_id || "", d.custom_theme || (show?.theme_id === "custom" ? show?.wish || "" : ""))}
-                      </details>`
-                  }
                 </form>
-                ${
-                  fresh
-                    ? trHTML`<div class="quiet-notes">
+                ${trHTML`<div class="quiet-notes">
                       <span>${icon("letter")}固定栏目连载</span
                       ><span>${icon("headphones")}按难度编排</span
                       ><span>${icon("spark")}自动保存 · 可下载</span>
-                    </div>`
-                    : "" /* Episodes have their own listening page. */
-                }
+                    </div>`}
               `
         }</div>`;
   document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => changeChannelTab(b.dataset.tab));
@@ -667,6 +635,12 @@ function renderStudio() {
   if (show && state.tab === "listen") {
     syncPlaybackMode();
     renderEpisodes();
+    renderStatus();
+    renderConflict();
+    return;
+  }
+  if (show && state.tab === "compose") {
+    if ($("make-locked")) $("make-locked").onclick = () => makeEpisode();
     renderStatus();
     renderConflict();
     return;
@@ -700,13 +674,33 @@ function renderStudio() {
     renderUnderstanding();
   });
   syncThemeUI();
-  if ($("save-channel")) $("save-channel").onclick = () => saveChannel();
-  if (fresh) bindVoiceControls(null);
+  bindVoiceControls(null);
   renderUnderstanding();
   syncPlaybackMode();
   renderEpisodes();
   renderStatus();
   renderConflict();
+}
+function presetLabel(list, id, fallback = id) {
+  const hit = (list || []).find((x) => x.id === id);
+  return hit ? tr(hit.label) : fallback || id || "";
+}
+function lockedSeriesSummary(show) {
+  return `<section class="wish-card series-locked" aria-label="${escapeHtml(tr("栏目设定"))}">
+    <h2>${escapeHtml(tr("栏目设定"))}</h2>
+    <p class="hint">${escapeHtml(tr("开设时已确定，后续每一期沿用，不能再改。"))}</p>
+    <aside class="series-banner"><p class="station-tag">${escapeHtml(themeLabel(show))}</p><p>${escapeHtml(show.wish || show.description || "")}</p></aside>
+    <dl class="locked-facts">
+      <div><dt>${escapeHtml(tr("栏目名称"))}</dt><dd>${escapeHtml(show.title || "")}</dd></div>
+      <div><dt>${escapeHtml(tr("想听什么语言？"))}</dt><dd>${escapeHtml(LANG[show.language] || show.language || "")}</dd></div>
+      <div><dt>${escapeHtml(tr("收听难度"))}</dt><dd>${escapeHtml(LEVEL[show.difficulty] || show.difficulty || "")}</dd></div>
+      <div><dt>${escapeHtml(tr("大约听多久"))}</dt><dd>${escapeHtml(presetLabel(state.presets?.lengths, show.length))}</dd></div>
+    </dl>
+    <div class="wish-actions">
+      <p class="hint">${escapeHtml(tr("沿用栏目主题一键制作；已生成的节目保存在本浏览器。"))}</p>
+      <div><button class="primary" type="button" id="make-locked">${escapeHtml(tr("制作新一期"))}</button></div>
+    </div>
+  </section>`;
 }
 function renderUnderstanding() {
   if (!$("understanding")) return;
@@ -752,9 +746,19 @@ function renderStatus() {
           ? tr("制作新一期")
           : tr("开始收听");
   }
-  if ($("save-channel"))
-    $("save-channel").disabled =
-      state.saving || state.submitting || state.deleting.size > 0;
+  if ($("make-locked")) {
+    $("make-locked").disabled =
+      state.submitting ||
+      state.saving ||
+      state.deleting.size > 0 ||
+      !!job ||
+      !!state.conflict;
+    $("make-locked").textContent = state.submitting
+      ? tr("正在开始…")
+      : job
+        ? tr("正在制作…")
+        : tr("制作新一期");
+  }
   if ($("delete-channel")) {
     $("delete-channel").disabled =
       state.deleting.size > 0 || state.saving || state.submitting || !!job;
@@ -769,12 +773,10 @@ function renderConflict() {
     bar = $("conflict-bar");
   bar.hidden = !c;
   if (!c) return;
-  bar.innerHTML = trHTML`<p>${escapeHtml(tr(c.message))} 当前输入仍保留。</p>
+  bar.innerHTML = trHTML`<p>${escapeHtml(tr(c.message))}</p>
     <div class="fold-actions">
       <button type="button" class="quiet" id="reload-channel">
-        重新载入已保存版本</button
-      ><button type="button" class="quiet" id="overwrite-channel">
-        用当前输入覆盖
+        重新载入已保存版本
       </button>
     </div>`;
   $("reload-channel").onclick = () => {
@@ -783,47 +785,6 @@ function renderConflict() {
     state.conflict = null;
     renderStudio();
   };
-  $("overwrite-channel").onclick = () => saveChannel(true);
-}
-async function saveChannel(overwrite = false, quiet = false) {
-  const show = currentShow();
-  if (!show || state.saving || state.deleting.size) return false;
-  const id = show.id,
-    values = formValues();
-  captureDraft();
-  state.saving = true;
-  renderStatus();
-  try {
-    const revision = overwrite ? state.conflict.show.revision : values.revision;
-    const { show: saved } = await api(
-      `/api/shows/${id}`,
-      jsonRequest("PATCH", { ...values, revision }),
-    );
-    replaceShow(saved);
-    state.conflict = null;
-    const draft = readLocal("draft:" + id, values);
-    draft.revision = saved.revision;
-    writeLocal("draft:" + id, draft);
-    if (state.current === id && $("wish-form"))
-      $("wish-form").dataset.revision = saved.revision;
-    if (state.current === id) {
-      const title = document.querySelector(".radio-heading h1");
-      if (title) title.textContent = saved.title;
-      if (!quiet) notice(tr("频道偏好已保存。"), "ok");
-    }
-    renderConflict();
-    return true;
-  } catch (e) {
-    if (e.status === 409 && e.show && state.current === id) {
-      state.conflict = { message: e.message, show: e.show };
-      renderConflict();
-    }
-    if (state.current === id) notice(e.message);
-    return false;
-  } finally {
-    state.saving = false;
-    renderStatus();
-  }
 }
 async function makeEpisode(retryEpisodeId = "", showId = state.current) {
   if (runtime && !runtime.hasKey()) {
@@ -882,8 +843,6 @@ async function makeEpisode(retryEpisodeId = "", showId = state.current) {
       writeLocal("draft:new", null);
       state.tab = "listen";
       renderStudio();
-    } else if (!retryEpisodeId && !readLocal("pending:" + id, null)) {
-      if (!(await saveChannel(false, true))) return;
     }
     let pending = readLocal("pending:" + id, null);
     if (!pending) {
@@ -1229,10 +1188,11 @@ function persistTasks() {
   writeLocal("tasks", state.tasks);
   renderInbox();
 }
-function voiceFields(show) {
+function voiceFields(show, { locked = false } = {}) {
+  const selectAttrs = locked ? "disabled" : "";
   return trHTML` <div class="voice-row">
       <label
-        >主持一<select id="host">
+        >主持一<select id="host" ${selectAttrs}>
           ${options(state.presets.voices, show.host_voice)}
         </select></label
       ><button type="button" class="quiet" data-preview="host">试听</button
@@ -1242,7 +1202,7 @@ function voiceFields(show) {
     </div>
     <div class="voice-row">
       <label
-        >主持二<select id="guest">
+        >主持二<select id="guest" ${selectAttrs}>
           ${options(state.presets.voices, show.guest_voice)}
         </select></label
       ><button type="button" class="quiet" data-preview="guest">试听</button
@@ -1252,7 +1212,7 @@ function voiceFields(show) {
     </div>
     <div class="voice-row">
       <label
-        >背景音乐<select id="music">
+        >背景音乐<select id="music" ${selectAttrs}>
           ${options(state.presets.music, show.music_style)}
         </select></label
       ><button type="button" class="quiet" id="preview-music">试听</button
@@ -1261,74 +1221,40 @@ function voiceFields(show) {
       </button>
     </div>
     <p class="hint">
-      相同模型、声线和语言会复用 7
-      天内的试听。重新生成会再次请求服务；失败时旧试听仍保留。
+      ${
+        locked
+          ? tr("声线与底乐在开设时已固定。仍可试听当前选择；重新生成试听不会改动栏目设定。")
+          : tr("相同模型、声线和语言会复用 7 天内的试听。重新生成会再次请求服务；失败时旧试听仍保留。")
+      }
     </p>`;
 }
 function renderVoice(show) {
-  $("channel-body").innerHTML = trHTML`<section class="wish-card voice-card">
-    <h2>给频道选一种声音</h2>
+  $("channel-body").innerHTML = trHTML`<section class="wish-card voice-card series-locked">
+    <h2>声音与底乐</h2>
     <p class="intro">
-      试听使用频道的${
-        LANG[show.language]
-      }，切页会停止播放，已发出的生成仍会继续。修改只影响后续制作，正在制作的一集使用开始时的选择。
+      ${tr("开设时已确定，后续每一期沿用，不能再改。")} ${trText`试听使用栏目的${LANG[show.language]}，切页会停止播放。`}
     </p>
-    ${voiceFields(show)}
+    ${voiceFields(show, { locked: true })}
   </section>`;
-  bindVoiceControls(show);
+  bindVoiceControls(null, { locked: true });
 }
-function bindVoiceControls(show) {
-  document
-    .querySelectorAll(".voice-row select")
-    .forEach((el) => (el.disabled = state.saving));
-  for (const [id, field] of [
-    ["host", "host_voice"],
-    ["guest", "guest_voice"],
-    ["music", "music_style"],
-  ])
-    $(id).onchange = () => {
-      if (show) saveVoice(show.id, field, $(id).value);
-      else captureDraft();
-    };
+function bindVoiceControls(show, { locked = false } = {}) {
+  if (!locked) {
+    for (const id of ["host", "guest", "music"])
+      if ($(id))
+        $(id).onchange = () => {
+          if (show) return;
+          captureDraft();
+        };
+  }
   document
     .querySelectorAll("[data-preview]")
     .forEach((b) => (b.onclick = () => previewVoice(b.dataset.preview, false)));
   document
     .querySelectorAll("[data-force]")
     .forEach((b) => (b.onclick = () => previewVoice(b.dataset.force, true)));
-  $("preview-music").onclick = previewMusic;
-  $("regenerate-music").onclick = regenerateMusic;
-}
-async function saveVoice(id, field, value) {
-  const show = state.shows.find((s) => s.id === id);
-  if (state.saving) return;
-  state.saving = true;
-  document
-    .querySelectorAll(".voice-row select")
-    .forEach((el) => (el.disabled = true));
-  try {
-    const data = await api(
-      `/api/shows/${id}`,
-      jsonRequest("PATCH", { [field]: value, revision: show.revision }),
-    );
-    replaceShow(data.show);
-    const draft = readLocal("draft:" + id, null);
-    if (draft) {
-      draft.revision = data.show.revision;
-      writeLocal("draft:" + id, draft);
-    }
-  } catch (e) {
-    if (e.show) replaceShow(e.show);
-    notice(e.message);
-    if (state.current === id && state.tab === "voice")
-      renderVoice(currentShow());
-  } finally {
-    state.saving = false;
-    document
-      .querySelectorAll(".voice-row select")
-      .forEach((el) => (el.disabled = false));
-    renderStatus();
-  }
+  if ($("preview-music")) $("preview-music").onclick = previewMusic;
+  if ($("regenerate-music")) $("regenerate-music").onclick = regenerateMusic;
 }
 async function previewVoice(role, force) {
   const show = currentShow() || loadDraft(null);
@@ -1598,7 +1524,6 @@ function setInterfaceLanguage(language) {
   if (!i18n || !["en", "ja", "zh-CN"].includes(language)) return;
   captureDraft();
   const firstSoundOpen = $("first-sound")?.open;
-  const managementOpen = document.querySelector?.(".channel-management")?.open;
   i18n.setLocale(language);
   i18n.apply(document);
   window.dispatchEvent?.(new Event("diyfm:locale"));
@@ -1606,8 +1531,6 @@ function setInterfaceLanguage(language) {
   if (state.presets) {
     renderStudio();
     if ($("first-sound")) $("first-sound").open = !!firstSoundOpen;
-    const management = document.querySelector?.(".channel-management");
-    if (management) management.open = !!managementOpen;
   }
   // Repaint labels only; do not save/reload settings, change the media source, or reset the Key.
   if (state.settings) {
