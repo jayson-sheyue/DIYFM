@@ -1,4 +1,4 @@
-# DIYFM v2.4.7 验证记录
+# DIYFM v2.4.8 验证记录
 
 日期：2026-11-06。目标产物：GitHub Pages 项目子路径下的纯静态站点，每位使用者自带 API Key。旧 Python 后端仅保留兼容和迁移用途。
 
@@ -187,3 +187,9 @@ Firefox / Safari 独立系统浏览器、长期容量和真实 Google Key 成功
 - Language / difficulty / length use an equal three-column `.series-options` grid; create CTA is full-width under the hint.
 - Primary button label stays「开设栏目并制作第一期」for new series (no longer overwritten to「开始收听」).
 - Automated checks: `npm test` (99 Node tests). Final 2.4.7 package hashes are recorded in the v2.4.7 Release after publish.
+
+## Same-channel Discover snapshot replace — v2.4.8 (2026-11-16)
+
+- Re-listing the same `channel.id` with a revised ZIP replaces the Discover catalog entry and deletes the previous unreferenced package file; approval via `channel-approved` is unchanged.
+- Submit form, Discover hint and curator success comment explain replace vs new listing; already-downloaded local copies stay manual.
+- Automated checks: catalog replace + orphan ZIP prune in `test_sharing.mjs`; list-submission success wording in `test_list_submission.mjs`; i18n prompt coverage in `test_sharing_ui.mjs`. `npm test` (99 Node tests). Final 2.4.8 package hashes are recorded in the v2.4.8 Release after publish.

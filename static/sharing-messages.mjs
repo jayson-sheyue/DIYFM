@@ -246,6 +246,11 @@ export const SHARING_MESSAGES = {
     "ja": "チャンネルの「チャンネルを共有」で共有パッケージを保存し、GitHubで投稿してください。投稿は公開され、GitHubアカウントが必要です。メンテナーの審査後に掲載されます。",
     "zh-CN": "先用频道的「分享频道」保存分享包，再到 GitHub 提交。投稿公开可见，需要 GitHub 账号；维护者人工审核后才会上架。"
   },
+  "先用频道的「分享频道」保存分享包，再到 GitHub 提交。投稿公开可见，需要 GitHub 账号；维护者人工审核后才会上架。同一栏目再次分享投稿并审核通过后，会替换精选里的旧快照；已下载到本机的不会自动更新。": {
+    "en": "Save a package with Share channel, then submit it on GitHub. Submissions are public and need a GitHub account; a maintainer reviews each listing. Re-sharing the same channel and getting approval replaces that Discover snapshot; copies already on your device are not updated automatically.",
+    "ja": "「チャンネルを共有」でパッケージを保存し、GitHubで投稿してください。投稿は公開され、GitHubアカウントが必要です。メンテナー審査後に掲載されます。同じチャンネルを再共有して承認されるとDiscoverの旧スナップショットは置き換わりますが、端末に保存済みのコピーは自動更新されません。",
+    "zh-CN": "先用频道的「分享频道」保存分享包，再到 GitHub 提交。投稿公开可见，需要 GitHub 账号；维护者人工审核后才会上架。同一栏目再次分享投稿并审核通过后，会替换精选里的旧快照；已下载到本机的不会自动更新。"
+  },
   "投稿你的频道": {
     "en": "Submit your channel",
     "ja": "チャンネルを投稿",

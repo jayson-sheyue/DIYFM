@@ -38,15 +38,23 @@ export function redactUrl(value) {
 }
 
 export function successComment(result) {
+  const action = result.replaced
+    ? `Updated Discover listing for **${result.channel.title}** (\`${result.channel.id}\`) — same channel id replaced the previous snapshot.`
+    : `Listed **${result.channel.title}** (\`${result.channel.id}\`) for Discover.`;
   return [
-    `Listed **${result.channel.title}** (\`${result.channel.id}\`) for Discover.`,
+    action,
     ``,
     `- Package SHA-256: \`${result.digest}\``,
+    ...(result.replaced && result.previousDigest
+      ? [`- Previous package SHA-256: \`${result.previousDigest}\``]
+      : []),
+    `- Episodes in package: ${result.episodes ?? result.channel?.episodes ?? "?"}`,
     `- Language: \`${result.channel.language}\``,
     `- Credit in package: ${result.attribution.author}`,
     `- Source URL used: ${result.packageUrl}`,
     ``,
-    `Discover updates when this workflow finishes deploying Pages. To retry later, remove \`${APPROVED_LABEL}\` and add it again.`,
+    `Discover updates when this workflow finishes deploying Pages. Already-downloaded local copies are not overwritten; listeners add the new snapshot explicitly if they want the new episodes.`,
+    `To retry later, remove \`${APPROVED_LABEL}\` and add it again.`,
   ].join("\n");
 }
 
@@ -139,10 +147,19 @@ export async function listApprovedSubmission({
   const file = join(dir, "channel.zip");
   try {
     await writeFile(file, bytes);
-    const digest = await addPackage(file, catalogDir);
+    const listed = await addPackage(file, catalogDir);
+    const digest = typeof listed === "string" ? listed : listed.digest;
+    const replaced = typeof listed === "object" && !!listed.replaced;
+    const previousDigest = typeof listed === "object" ? listed.previousDigest || "" : "";
+    const episodes = typeof listed === "object" && listed.episodes != null
+      ? listed.episodes
+      : manifest.episodes.length;
     await validate(catalogDir);
     return {
       digest,
+      replaced,
+      previousDigest,
+      episodes,
       channel: manifest.channel,
       attribution: manifest.attribution,
       packageUrl: redactUrl(packageUrl),

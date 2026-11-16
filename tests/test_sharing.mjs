@@ -6,7 +6,7 @@ import { createBrowserAPI } from "../static/browser-api.mjs";
 import { encodeChannel, decodeChannel, parseCatalog, readBounded, sha256, SHARE_LIMIT } from "../static/sharing.mjs";
 import { wavBlob, RATE } from "../static/audio.mjs";
 import { unzipSync, zipSync, strFromU8, strToU8 } from "../static/vendor/fflate.mjs";
-import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { addCatalogPackage, validateCatalog } from "../scripts/catalog.mjs";
@@ -168,12 +168,32 @@ test("curator preparation derives listing metadata and build validation catches 
   try {
     await writeFile(join(directory, "index.json"), JSON.stringify({ format: "diyfm-catalog", version: 1, channels: [] }));
     const s = await source(), file = join(directory, "input.zip"); await writeFile(file, new Uint8Array(await s.blob.arrayBuffer()));
-    const digest = await addCatalogPackage(file, directory);
+    const first = await addCatalogPackage(file, directory);
+    assert.equal(first.replaced, false);
     assert.equal(await validateCatalog(directory), 1);
     const doc = JSON.parse(await readFile(join(directory, "index.json")));
-    assert.equal(doc.channels[0].attribution.author, credit.author); assert.equal(doc.channels[0].sha256, digest);
-    await addCatalogPackage(file, directory); assert.equal(await validateCatalog(directory), 1);
-    await writeFile(join(directory, "packages", digest + ".zip"), "broken"); await assert.rejects(validateCatalog(directory), /size mismatch/);
+    assert.equal(doc.channels[0].attribution.author, credit.author); assert.equal(doc.channels[0].sha256, first.digest);
+    const again = await addCatalogPackage(file, directory);
+    assert.equal(again.replaced, false);
+    assert.equal(again.digest, first.digest);
+    assert.equal(await validateCatalog(directory), 1);
+    // Same channel id with a revised package replaces the Discover listing and drops the old ZIP.
+    const revised = rewrite(await s.blob.arrayBuffer(), (manifest) => {
+      manifest.channel.description = "Updated public description with a second listening pass.";
+    });
+    const revisedFile = join(directory, "revised.zip");
+    await writeFile(revisedFile, new Uint8Array(revised));
+    const updated = await addCatalogPackage(revisedFile, directory);
+    assert.equal(updated.replaced, true);
+    assert.equal(updated.previousDigest, first.digest);
+    assert.notEqual(updated.digest, first.digest);
+    assert.equal(await validateCatalog(directory), 1);
+    const after = JSON.parse(await readFile(join(directory, "index.json")));
+    assert.equal(after.channels.length, 1);
+    assert.equal(after.channels[0].id, "show_source");
+    assert.equal(after.channels[0].sha256, updated.digest);
+    await assert.rejects(stat(join(directory, "packages", first.digest + ".zip")), /ENOENT/);
+    await writeFile(join(directory, "packages", updated.digest + ".zip"), "broken"); await assert.rejects(validateCatalog(directory), /size mismatch/);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
 

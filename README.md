@@ -2,6 +2,8 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
+**v2.4.8 replaces Discover snapshots for the same channel:** re-sharing and re-approving the same `channel.id` updates that curated listing and removes the previous ZIP; already-downloaded local copies stay manual. [Sharing guide](docs/sharing.md).
+
 **v2.4.7 polishes series creation layout:** hero title line-breaks correctly (no literal `<br>`), and language / level / length sit in an even three-column grid with a full-width create button.
 
 **v2.4.6 locks series preferences:** theme-first chips and one-tap episodes; theme, language, level and voices cannot change after creation. Per-episode angles stay optional. Sharing and Discover remain snapshot-based. [Sharing guide](docs/sharing.md).

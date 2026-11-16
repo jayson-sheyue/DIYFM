@@ -113,11 +113,17 @@ test("listApprovedSubmission validates the ZIP and updates a catalog directory",
   });
   assert.equal(result.channel.id, "show_list_me");
   assert.equal(result.channel.title, "List me");
+  assert.equal(result.replaced, false);
   assert.match(result.digest, /^[a-f0-9]{64}$/);
   assert.equal(await validateCatalog(catalogDir), 1);
   const index = JSON.parse(await readFile(join(catalogDir, "index.json"), "utf8"));
   assert.equal(index.channels[0].sha256, result.digest);
   assert.match(successComment(result), new RegExp(APPROVED_LABEL));
+  assert.match(successComment(result), /Listed/);
+  assert.match(
+    successComment({ ...result, replaced: true, previousDigest: "abc", episodes: 2 }),
+    /Updated Discover listing|replaced the previous snapshot/,
+  );
   assert.match(failureComment("boom"), /boom/);
   await rm(catalogDir, { recursive: true, force: true });
 });

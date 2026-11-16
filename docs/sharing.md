@@ -39,6 +39,7 @@ Listeners cannot publish to the catalog from inside the application; there is st
 - **Submissions are public.** The issue and anything attached to it can be read and downloaded by anyone before any review, so include only content you may distribute and nothing private.
 - Attach the ZIP to the form if it is 25 MB or smaller, GitHub's limit for issue attachments. For a larger package, up to the 100 MiB format limit, provide an HTTPS download link instead. Creator credit and usage terms are already inside the package from **Share channel**; the form does not ask for them again.
 - A maintainer listens to the audio and reads credits and usage terms from the package before listing anything. A submission may be declined.
+- **Same-channel updates:** Re-export the same DIYFM channel (stable `channel.id`) with the episodes you want listed, submit again, and after `channel-approved` the catalog **replaces** that channel’s previous Discover snapshot. Listeners still see one curated card; people who already added an older snapshot keep that local copy until they import the new package explicitly.
 
 ## Curator publishing workflow
 
@@ -53,7 +54,7 @@ Listeners cannot publish to the catalog from inside the application; there is st
    npm run build
    ```
 
-   Review `static/catalog/index.json` and `static/catalog/packages/`, then commit and push `main`. The script derives listing metadata from the validated package and names it by its SHA-256. Adding a revised package for the same source channel replaces that channel's catalog listing; existing local snapshots are retained.
+   Review `static/catalog/index.json` and `static/catalog/packages/`, then commit and push `main`. The script derives listing metadata from the validated package and names it by its SHA-256. Adding a revised package for the same `channel.id` replaces that channel's catalog listing and removes the previous unreferenced ZIP; existing local listener snapshots are retained. The `channel-approved` Action comments whether the run was a new listing or an update.
 4. After Pages updates, check **Preview** / **Add to library** on the site or a native client. Keep the catalog small and curated to stay within the static host's repository/bandwidth limits.
 
 To unlist a channel, remove its entry from `static/catalog/index.json`, validate and publish. Already-downloaded copies cannot be remotely recalled. Unreferenced old packages can be removed in a separate reviewed change; keep a private archival copy if needed.
