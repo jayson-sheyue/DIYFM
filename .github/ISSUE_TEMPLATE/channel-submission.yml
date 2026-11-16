@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for sharing. A maintainer listens to every submission before anything appears in **Discover**. Nothing is listed automatically.
+        Thanks for sharing. Nothing appears in **Discover** until a maintainer with write access adds the `channel-approved` label after listening. That label runs an Action that validates the ZIP and publishes the catalog.
 
         1. In DIYFM, open your channel → **Channel options → Share channel** → save the **channel package** ZIP (not a whole-library backup).
         2. Attach that ZIP below (or paste an HTTPS download link if it is larger than 25 MB).
@@ -14,9 +14,9 @@ body:
 
         **This issue and attachments are public.** Share only content you may distribute.
 
-        中文：在 DIYFM 里用「频道管理 → 分享频道」保存分享包（不要用整库备份），把 ZIP 贴到下面即可。署名和使用条款已在分享包里，这里不用再填。本页和附件公开可见；维护者听过并审核后才会上架。
+        中文：在 DIYFM 里用「频道管理 → 分享频道」保存分享包（不要用整库备份），把 ZIP 贴到下面即可。署名和使用条款已在分享包里，这里不用再填。本页和附件公开可见。维护者试听后打上 `channel-approved` 标签才会自动校验并上架精选。
 
-        日本語：DIYFMで「チャンネル管理 → チャンネルを共有」から共有パッケージ（ライブラリ全体のバックアップではない）を保存し、下にZIPを添付してください。署名と利用条件はパッケージ内にあるため、ここでの再入力は不要です。投稿と添付は公開され、メンテナーの審査後に掲載されます。
+        日本語：DIYFMで「チャンネル管理 → チャンネルを共有」から共有パッケージ（ライブラリ全体のバックアップではない）を保存し、下にZIPを添付してください。署名と利用条件はパッケージ内にあるため、ここでの再入力は不要です。投稿と添付は公開されます。メンテナーが試聴後に `channel-approved` ラベルを付けると、検証のうえ自動掲載されます。
   - type: input
     id: title
     attributes:

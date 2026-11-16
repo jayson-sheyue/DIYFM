@@ -2,7 +2,7 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
-**v2.4.2 adds channel submissions and an MIT license:** Discover now has **Submit your channel**, which opens a public GitHub form outside the app. A maintainer reviews each submission before listing it; nothing is uploaded or listed automatically. DIYFM's own source code is now released under the [MIT License](LICENSE). [Sharing and curator guide](docs/sharing.md).
+**v2.4.2 adds channel submissions and an MIT license:** Discover now has **Submit your channel**, which opens a public GitHub form outside the app. After a maintainer with write access listens and adds the `channel-approved` label, Actions validates the ZIP and publishes it to Discover; nothing is listed on submit alone. DIYFM's own source code is now released under the [MIT License](LICENSE). [Sharing and curator guide](docs/sharing.md).
 
 **v2.4.1 fixes multi-speaker voice collapse:** every `Host` and `Guest` turn is now synthesized with isolated single-speaker `voiceConfig` (`host_voice` vs `guest_voice`), per-turn silence trimming, loudness balancing, bounded `429`/`503` retry backoff, and turn-level resume checkpoints — eliminating cases where Gemini multi-speaker TTS read almost an entire episode in a single voice. Both bundled starter channels (**Starter · English Letters** and **Starter · 日本語のお便り**) have also been re-synthesized with verified distinct two-host voices.
 

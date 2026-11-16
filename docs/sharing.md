@@ -38,12 +38,13 @@ Listeners cannot publish to the catalog from inside the application; there is st
 
 - **Submissions are public.** The issue and anything attached to it can be read and downloaded by anyone before any review, so include only content you may distribute and nothing private.
 - Attach the ZIP to the form if it is 25 MB or smaller, GitHub's limit for issue attachments. For a larger package, up to the 100 MiB format limit, provide an HTTPS download link instead. Creator credit and usage terms are already inside the package from **Share channel**; the form does not ask for them again.
-- A maintainer listens to the audio and reads credits and usage terms from the package before listing anything. A submission may be declined, and a channel appears in Discover only after the reviewed catalog is published.
+- A maintainer listens to the audio and reads credits and usage terms from the package before listing anything. A submission may be declined.
 
 ## Curator publishing workflow
 
 1. Start from a **channel package**, not a whole-library backup, received through the [submission form](https://github.com/jayson-sheyue/DIYFM/issues/new?template=channel-submission.yml) or directly from the creator. Download an attached package from the issue, or from the HTTPS link it gives. Obtain permission, inspect credits and any BGM/source restrictions, and listen to the finished audio. Clearly disclose AI synthesis and fictional material as appropriate.
-2. In a checkout of this repository, prepare the local catalog entry:
+2. **Preferred:** on the submission issue, add the `channel-approved` label (requires repository write access). The [List approved channel](../.github/workflows/list-channel.yml) workflow downloads the ZIP, validates it with the same rules as `scripts/catalog.mjs`, commits `static/catalog/` to `main`, deploys Pages in the same run (because `GITHUB_TOKEN` pushes do not re-trigger the Pages workflow), comments on the issue, and adds `channel-listed`. Remove `channel-approved` and add it again to retry.
+3. **Manual fallback** (offline package, or when you prefer a local review commit):
 
    ```bash
    node scripts/catalog.mjs add /absolute/path/to/diyfm-channel.zip
@@ -52,8 +53,8 @@ Listeners cannot publish to the catalog from inside the application; there is st
    npm run build
    ```
 
-3. Review the changes to `static/catalog/index.json` and the package under `static/catalog/packages/`. The script does not commit, upload or publish. It derives listing metadata from the validated package and names it by its SHA-256. Adding a revised package for the same source channel replaces that channel's catalog listing; existing local snapshots are retained.
-4. Commit and publish the approved files through the existing main/Pages workflow. Test Preview and Add to library from the deployed catalog and a native client. Keep the catalog small and curated to stay within the static host's repository/bandwidth limits.
+   Review `static/catalog/index.json` and `static/catalog/packages/`, then commit and push `main`. The script derives listing metadata from the validated package and names it by its SHA-256. Adding a revised package for the same source channel replaces that channel's catalog listing; existing local snapshots are retained.
+4. After Pages updates, check **Preview** / **Add to library** on the site or a native client. Keep the catalog small and curated to stay within the static host's repository/bandwidth limits.
 
 To unlist a channel, remove its entry from `static/catalog/index.json`, validate and publish. Already-downloaded copies cannot be remotely recalled. Unreferenced old packages can be removed in a separate reviewed change; keep a private archival copy if needed.
 

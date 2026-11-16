@@ -1,0 +1,80 @@
+name: List approved channel
+on:
+  issues:
+    types: [labeled]
+permissions:
+  contents: write
+  issues: write
+concurrency:
+  group: list-channel-${{ github.event.issue.number }}
+  cancel-in-progress: false
+jobs:
+  list:
+    if: github.event.label.name == 'channel-approved'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Download, validate and stage the package
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ACTOR: ${{ github.event.sender.login }}
+          LIST_RESULT_PATH: list-result.json
+        run: node scripts/list-submission.mjs
+      - name: Commit catalog on main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add static/catalog/index.json static/catalog/packages
+          if git diff --cached --quiet; then
+            echo "Catalog already contained this package; nothing to commit."
+          else
+            git commit -m "List channel from issue #${{ github.event.issue.number }}"
+            git push origin HEAD:main
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: list-result
+          path: list-result.json
+      # GITHUB_TOKEN pushes do not re-trigger pages.yml; build the site here for deploy.
+      - run: npm run vendor
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: list
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+      issues: write
+      contents: read
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/download-artifact@v4
+        with:
+          name: list-result
+      - name: Comment success on the issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          LIST_RESULT_PATH: list-result.json
+        run: node scripts/list-submission.mjs --comment-success
