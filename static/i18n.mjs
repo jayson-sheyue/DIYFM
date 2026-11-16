@@ -1,4 +1,4 @@
-import { MESSAGES } from "./messages.mjs?v=2.4.2";
+import { MESSAGES } from "./messages.mjs?v=2.4.3";
 export const LOCALES = Object.freeze(["en", "ja", "zh-CN"]);
 export const LOCALE_STORAGE = "diyfm:ui-language";
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -15,6 +15,7 @@ const keyOf = (parts) =>
 // Only these UI parameters are themselves localized labels. User titles and wishes stay verbatim.
 const labelParameters = new Set([
   "{0} · {1} · 虚构来信电台。制作时会根据你的愿望编排故事。",
+  "{0} · {1} · 固定栏目连载。制作时会贴合栏目设定与这一集的角度。",
   "{0}。可以在应用内换页，进度与结果都在「消息」中。请保持此网页打开。",
   "{0} · {1}试听",
   "{0} · 声线试听",
@@ -22,6 +23,7 @@ const labelParameters = new Set([
 const numericParameters = new Set([
   "{0}分{1}秒",
   "{0} 集可听",
+  "第 {0} 期",
   "请求失败（{0}）",
   "已导入 {0} 个频道、{1} 条记录。已有频道和模型设置保留。",
 ]);

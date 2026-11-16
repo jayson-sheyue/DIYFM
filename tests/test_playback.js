@@ -179,7 +179,7 @@ test("task history sorts local-offset and UTC timestamps by actual time", () => 
 test("new channel draft retains sound choices and exposes them before first generation", () => {
   const { run, elements } = setup();
   run(
-    "state.current=null;state.presets={languages:[{id:'en',label:'英语'}],difficulties:[{id:'basic',label:'基础'}],lengths:[{id:'SHORT',label:'5分钟'}],voices:[{id:'Zephyr',label:'Zephyr'},{id:'Charon',label:'Charon'}],music:[{id:'night_drive',label:'夜间'}]};writeLocal('draft:new',{language:'en',difficulty:'basic',wish:'室友趣事',host_voice:'Zephyr',guest_voice:'Charon',music_style:'night_drive'});renderStudio()",
+    "state.current=null;state.presets={languages:[{id:'en',label:'英语'}],difficulties:[{id:'basic',label:'基础'}],lengths:[{id:'SHORT',label:'5分钟'}],voices:[{id:'Zephyr',label:'Zephyr'},{id:'Charon',label:'Charon'}],music:[{id:'night_drive',label:'夜间'}]};writeLocal('draft:new',{language:'en',difficulty:'basic',title:'室友趣事电台',description:'两位主持聊合租生活里的小意外',wish:'室友趣事，轻松好笑一点',episode_wish:'这一集讲洗衣机',host_voice:'Zephyr',guest_voice:'Charon',music_style:'night_drive'});renderStudio()",
   );
   assert.match(elements.get("studio").innerHTML, /id="first-sound"/);
   assert.match(elements.get("studio").innerHTML, /value="Zephyr" selected/);
@@ -479,7 +479,7 @@ test("changing interface language preserves playback, Key, job state, drafts and
   });
   ctx.testPresets = PRESETS;
   run(`state.presets=testPresets; state.shows[0].title='保留原文'; state.shows[0].language='ja'; state.settingsDirty=true; state.submitting=true;
-    $('language').value='ja'; $('wish').value='  My wish 原文を保つ  '; $('episode-wish').value='今回だけ'; $('channel-title').value='保留原文'; $('difficulty').value='basic'; $('length').value='SHORT'; $('set-llm').value='gemini-unsaved'; $('host').value='Kore'; $('guest').value='Puck'; $('music').value='none';
+    $('language').value='ja'; $('wish').value='  My wish 原文を保つ  '; if($('channel-description')) $('channel-description').value='合租生活の小さなラジオ番組です'; $('episode-wish').value='今回だけ'; $('channel-title').value='保留原文'; $('difficulty').value='basic'; $('length').value='SHORT'; $('set-llm').value='gemini-unsaved'; $('host').value='Kore'; $('guest').value='Puck'; $('music').value='none';
     audio.src='blob:saved'; audio.currentTime=9; audio.playbackRate=1.25; audio.paused=false; playback.episodeId='episode'; playback.token=7;`);
   const beforeKey = vault.snapshot(DEFAULT_MODELS).key;
   run("setInterfaceLanguage('ja')");

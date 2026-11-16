@@ -602,6 +602,19 @@ p {
   color: var(--blue);
   font-weight: 650;
 }
+.series-banner {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--paper) 70%, var(--wash));
+}
+.series-banner p {
+  margin: 0.35em 0 0;
+}
+.series-banner .station-tag {
+  margin: 0;
+}
 .episode-wish-label {
   display: block;
   margin: 22px 0 8px;

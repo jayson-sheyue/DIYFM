@@ -18,8 +18,8 @@ import {
   trimSilencePCM,
   normalizeTurnPCM,
   RATE,
-} from "../static/audio.mjs?v=2.4.2";
-import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.4.2";
+} from "../static/audio.mjs?v=2.4.3";
+import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.4.3";
 import {
   zipSync,
   strToU8,
@@ -73,12 +73,20 @@ async function fixture(overrides = {}) {
   await api.setKey(KEY);
   const show = (
     await call(api, "/api/shows", "POST", {
-      wish: "室友趣事",
+      title: "室友趣事电台",
+      description: "两位主持聊合租生活里的小意外",
+      wish: "室友趣事，轻松好笑一点",
       music_style: "none",
     })
   ).data.show;
   return { library, api, show };
 }
+const episodeBody = (extra = {}) => ({
+  request_id: "episode_" + Math.random().toString(36).slice(2, 10),
+  episode_wish: "这一集讲合租里的一件小事",
+  revision: 0,
+  ...extra,
+});
 async function finished(api, id) {
   const deadline = Date.now() + 3000;
   while (Date.now() < deadline) {
@@ -283,7 +291,7 @@ test("browser generation snapshots preferences, skips duplicate submission and s
       return structuredClone(content);
     },
   });
-  const input = { request_id: "controlled_request", revision: 0 };
+  const input = { request_id: "controlled_request", revision: 0, episode_wish: "这一集讲合租里的一件小事" };
   const first = await call(
     api,
     `/api/shows/${show.id}/episodes`,
@@ -301,7 +309,7 @@ test("browser generation snapshots preferences, skips duplicate submission and s
   assert.equal(ep.id, first.data.episode.id);
   assert.equal(ep.status, "ready");
   assert.equal(editorCalls, 1);
-  assert.equal(snapshot.wish, "室友趣事");
+  assert.equal(snapshot.wish, "室友趣事，轻松好笑一点");
   assert.equal(snapshot.key, KEY);
   assert.equal(ep.has_script, true);
   assert.ok(
@@ -325,6 +333,7 @@ test("failed synthesis keeps reviewed script; retry uses original wish and does 
   });
   await call(api, `/api/shows/${show.id}/episodes`, "POST", {
     request_id: "first_attempt",
+    episode_wish: "这一集讲合租里的一件小事",
   });
   const original = await finished(api, show.id);
   assert.equal(original.ep.status, "failed");
@@ -341,16 +350,21 @@ test("failed synthesis keeps reviewed script; retry uses original wish and does 
   const retry = await finished(api, show.id);
   assert.equal(retry.ep.status, "ready");
   assert.equal(edits, 1);
-  assert.equal(retry.ep.input.wish, "室友趣事");
+  assert.equal(retry.ep.input.wish, "室友趣事，轻松好笑一点");
   assert.equal(retry.ep.title, "测试来信");
 });
 test("single episode deletion removes its media and progress, channel preferences and others survive", async () => {
   const { api, library, show } = await fixture();
   await call(api, `/api/shows/${show.id}/episodes`, "POST", {
     request_id: "saved_audio",
+    episode_wish: "这一集讲合租里的一件小事",
   });
   const { ep } = await finished(api, show.id);
-  const other = (await call(api, "/api/shows", "POST", { wish: "保留" })).data
+  const other = (await call(api, "/api/shows", "POST", {
+    title: "保留栏目",
+    description: "用于删除测试的第二个栏目简介",
+    wish: "保留主题口味，随便聊聊日常",
+  })).data
     .show;
   const result = await call(
     api,
@@ -358,7 +372,7 @@ test("single episode deletion removes its media and progress, channel preference
     "DELETE",
   );
   assert.equal(result.status, 200);
-  assert.equal(result.data.show.wish, "室友趣事");
+  assert.equal(result.data.show.wish, "室友趣事，轻松好笑一点");
   assert.equal(await library.get("audio:" + ep.id), undefined);
   assert.ok(
     !(await library.entries()).some(([k]) =>
@@ -382,6 +396,7 @@ test("backup imports merge with new IDs, keep settings and key separate, reject 
   const { api, show, library } = await fixture();
   await call(api, `/api/shows/${show.id}/episodes`, "POST", {
     request_id: "backup_audio",
+    episode_wish: "这一集讲合租里的一件小事",
   });
   await finished(api, show.id);
   const r = await api.fetch("/api/backup"),
@@ -465,7 +480,7 @@ test("required research without real sources fails before speech or script gener
   assert.equal(calls, 2);
 });
 test("episode metadata language is captured separately from the listening language", async () => {
-  const { i18n } = await import("../static/i18n.mjs?v=2.4.2");
+  const { i18n } = await import("../static/i18n.mjs?v=2.4.3");
   i18n.setLocale("ja");
   let seen;
   const gate = new Promise((resolve) => {
@@ -482,6 +497,7 @@ test("episode metadata language is captured separately from the listening langua
     });
     await call(api, `/api/shows/${show.id}/episodes`, "POST", {
       request_id: "metadata-locale-01",
+      episode_wish: "这一集讲合租里的一件小事",
     });
     i18n.setLocale("zh-CN");
     seen();
@@ -566,6 +582,7 @@ test("MP3 export encodes the mixed master, replaces unverified cache and follows
   });
   await call(api, `/api/shows/${show.id}/episodes`, "POST", {
     request_id: "mixed-mp3-regression",
+    episode_wish: "这一集讲合租里的一件小事",
   });
   const { ep } = await finished(api, show.id);
   assert.equal(ep.music_source, "library");
@@ -607,6 +624,7 @@ test("concurrent MP3 downloads share encoding but provide independently readable
   });
   await call(api, `/api/shows/${show.id}/episodes`, "POST", {
     request_id: "parallel-export",
+    episode_wish: "这一集讲合租里的一件小事",
   });
   const { ep } = await finished(api, show.id);
   const one = api.fetch(`/api/episodes/${ep.id}/download`),
@@ -630,6 +648,7 @@ test("failed MP3 replacement preserves old files but never serves an invalidated
   });
   await call(api, `/api/shows/${show.id}/episodes`, "POST", {
     request_id: "failed-export",
+    episode_wish: "这一集讲合租里的一件小事",
   });
   const { ep } = await finished(api, show.id);
   assert.equal(
@@ -706,7 +725,9 @@ test("episode synthesis isolates Host and Guest into single-speaker requests on 
   await api.setKey(KEY);
   const show = (
     await call(api, "/api/shows", "POST", {
-      wish: "温泉旅行",
+      title: "温泉旅行电台",
+      description: "两位主持聊温泉旅行里的误会",
+      wish: "温泉旅行，轻松口语",
       host_voice: "Zephyr",
       guest_voice: "Charon",
       music_style: "none",
@@ -714,6 +735,7 @@ test("episode synthesis isolates Host and Guest into single-speaker requests on 
   ).data.show;
   await call(api, `/api/shows/${show.id}/episodes`, "POST", {
     request_id: "strict-two-voices",
+    episode_wish: "第一期讲拿错浴衣",
   });
   const { ep } = await finished(api, show.id);
   assert.equal(ep.status, "ready");
@@ -800,6 +822,7 @@ test("per-turn synthesis retries transient 429 errors, checkpoints turns and ign
   });
   await call(api, `/api/shows/${show.id}/episodes`, "POST", {
     request_id: "checkpoint-first",
+    episode_wish: "这一集讲合租里的一件小事",
   });
   const first = await finished(api, show.id);
   assert.equal(first.ep.status, "failed");

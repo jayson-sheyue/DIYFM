@@ -1,12 +1,12 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.2";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.3";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
   "保存与制作说明": { en: "Storage & production", ja: "保存と制作について", "zh-CN": "保存与制作说明" },
   "模型设置": { en: "Model settings", ja: "モデル設定", "zh-CN": "模型设置" },
   "新一期": { en: "New episode", ja: "新しいエピソード", "zh-CN": "新一期" },
   "选择频道": {"en": "Choose channel", "ja": "チャンネルを選択", "zh-CN": "选择频道"},
-  "新建频道": {"en": "New channel", "ja": "新しいチャンネル", "zh-CN": "新建频道"},
+  "新建频道": {"en": "New series", "ja": "新しい番組", "zh-CN": "开设栏目"},
   "返回节目": {"en": "Back to episodes", "ja": "エピソードに戻る", "zh-CN": "返回节目"},
   "内容与偏好": {"en": "Content & preferences", "ja": "内容と好み", "zh-CN": "内容与偏好"},
   "频道管理": {"en": "Channel options", "ja": "チャンネル管理", "zh-CN": "频道管理"},
@@ -248,9 +248,9 @@ export const MESSAGES = {
     "zh-CN": "{0} 集可听",
   },
   "你的频道会保存在这里。": {
-    en: "Your channels will appear here.",
-    ja: "作成したチャンネルがここに表示されます。",
-    "zh-CN": "你的频道会保存在这里。",
+    en: "Your series will appear here.",
+    ja: "作成した番組がここに表示されます。",
+    "zh-CN": "你的栏目会保存在这里。",
   },
   "听一封来信，": {
     en: "Listen to a letter.",
@@ -326,6 +326,125 @@ export const MESSAGES = {
     en: "What is this channel about?",
     ja: "このチャンネルではどんな話を聞きますか？",
     "zh-CN": "这个频道，想听点什么？",
+  },
+  "开设一个栏目，<br>一期一期听下去。": {
+    en: "Start a series,<br>episode by episode.",
+    ja: "連載チャンネルを開き、<br>一話ずつ聴いていこう。",
+    "zh-CN": "开设一个栏目，<br>一期一期听下去。",
+  },
+  "先定栏目名、一句话定位和主题口味，再写第一期想讲什么。语言与声线会留给后面每一期。": {
+    en: "Name the series, write a one-line pitch and its taste, then say what episode one covers. Language and voices carry to later episodes.",
+    ja: "番組名、一言コンセプト、テーマを決めてから第1話の角度を書きます。言語と声は以降の話にも引き継がれます。",
+    "zh-CN": "先定栏目名、一句话定位和主题口味，再写第一期想讲什么。语言与声线会留给后面每一期。",
+  },
+  栏目名称: { en: "Series name", ja: "番組名", "zh-CN": "栏目名称" },
+  "比如：周末小事电台": {
+    en: "e.g. Weekend Little Things Radio",
+    ja: "例：週末の小さな話ラジオ",
+    "zh-CN": "比如：周末小事电台",
+  },
+  栏目设定: { en: "Series setup", ja: "番組設定", "zh-CN": "栏目设定" },
+  本栏目: { en: "This series", ja: "この番組", "zh-CN": "本栏目" },
+  "栏目一句话": { en: "One-line pitch", ja: "一言コンセプト", "zh-CN": "栏目一句话" },
+  "这个栏目是什么": {
+    en: "What this series is",
+    ja: "この番組は何か",
+    "zh-CN": "这个栏目是什么",
+  },
+  "比如：两位主持聊留学生活里的小尴尬，轻松日语。": {
+    en: "e.g. Two hosts on small study-abroad awkward moments, easy Japanese.",
+    ja: "例：留学生活の小さな気まずさを、やさしい日本語で二人で話す。",
+    "zh-CN": "比如：两位主持聊留学生活里的小尴尬，轻松日语。",
+  },
+  栏目主题与人设: {
+    en: "Series theme & hosts' vibe",
+    ja: "テーマとキャラ",
+    "zh-CN": "栏目主题与人设",
+  },
+  "这个栏目的主题口味": {
+    en: "This series' ongoing taste",
+    ja: "この番組の継続テーマ",
+    "zh-CN": "这个栏目的主题口味",
+  },
+  "这一集在系列里讲什么": {
+    en: "What this episode covers in the series",
+    ja: "今話はシリーズのどこを話すか",
+    "zh-CN": "这一集在系列里讲什么",
+  },
+  "必填，只影响这一集": {
+    en: "Required · this episode only",
+    ja: "必須・今回のみ",
+    "zh-CN": "必填，只影响这一集",
+  },
+  "比如：第一期聊弄错车站后的互助": {
+    en: "e.g. Episode 1: help after getting off at the wrong station",
+    ja: "例：第1話は乗り間違えたあとの助け合い",
+    "zh-CN": "比如：第一期聊弄错车站后的互助",
+  },
+  "栏目设定会留给后面每一期；这一集只写本期角度。": {
+    en: "Series setup carries forward; this field is only for this episode's angle.",
+    ja: "番組設定は以降も引き継ぎ、ここは今話の角度だけです。",
+    "zh-CN": "栏目设定会留给后面每一期；这一集只写本期角度。",
+  },
+  "栏目设定会继承；已生成的节目保存在本浏览器。": {
+    en: "Series setup is inherited; finished episodes stay in this browser.",
+    ja: "番組設定は引き継がれ、完成した番組はこのブラウザに残ります。",
+    "zh-CN": "栏目设定会继承；已生成的节目保存在本浏览器。",
+  },
+  开设栏目并制作第一期: {
+    en: "Create series & make episode 1",
+    ja: "番組を開設して第1話を作る",
+    "zh-CN": "开设栏目并制作第一期",
+  },
+  修改栏目资料: {
+    en: "Edit series details",
+    ja: "番組情報を編集",
+    "zh-CN": "修改栏目资料",
+  },
+  固定栏目连载: {
+    en: "Ongoing series episodes",
+    ja: "連載番組",
+    "zh-CN": "固定栏目连载",
+  },
+  栏目里的来信: {
+    en: "Letters in this series",
+    ja: "この番組のお便り",
+    "zh-CN": "栏目里的来信",
+  },
+  "第 {0} 期": {
+    en: "Episode {0}",
+    ja: "第{0}話",
+    "zh-CN": "第 {0} 期",
+  },
+  "请先给栏目起个名字。": {
+    en: "Please name the series first.",
+    ja: "先に番組名をつけてください。",
+    "zh-CN": "请先给栏目起个名字。",
+  },
+  "请用一句话写清这个栏目是什么（至少约一句话）。": {
+    en: "Write a one-line pitch for this series (about one sentence).",
+    ja: "この番組が何かを一言で書いてください（だいたい一文）。",
+    "zh-CN": "请用一句话写清这个栏目是什么（至少约一句话）。",
+  },
+  "请写清栏目的人设或主题口味（至少约一句话）。": {
+    en: "Describe the series theme or host vibe (about one sentence).",
+    ja: "番組のテーマやキャラを書いてください（だいたい一文）。",
+    "zh-CN": "请写清栏目的人设或主题口味（至少约一句话）。",
+  },
+  "请写清这一集在系列里想讲什么。": {
+    en: "Say what this episode covers within the series.",
+    ja: "今話がシリーズのどこを話すか書いてください。",
+    "zh-CN": "请写清这一集在系列里想讲什么。",
+  },
+  "{0} · {1} · 固定栏目连载。制作时会贴合栏目设定与这一集的角度。": {
+    en: "{0} · {1} · Ongoing series. Production follows the series setup and this episode's angle.",
+    ja: "{0} · {1} · 連載番組。番組設定と今話の角度に沿って作ります。",
+    "zh-CN": "{0} · {1} · 固定栏目连载。制作时会贴合栏目设定与这一集的角度。",
+  },
+  "这一集的角度：{0}": {
+    en: "Episode angle: {0}",
+    ja: "今話の角度：{0}",
+    "zh-CN": "这一集的角度：{0}",
   },
   声音与底乐: {
     en: "Voices & background music",
@@ -1596,9 +1715,9 @@ export const MESSAGES = {
     "zh-CN": "节目",
   },
   "＋ 新建频道": {
-    en: "＋ New channel",
-    ja: "＋ 新しいチャンネル",
-    "zh-CN": "＋ 新建频道",
+    en: "＋ New series",
+    ja: "＋ 新しい番組",
+    "zh-CN": "＋ 开设栏目",
   },
   "英语 · 日语": {
     en: "English · Japanese",

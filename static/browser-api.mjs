@@ -1,4 +1,4 @@
-import { i18n } from "./i18n.mjs?v=2.4.2";
+import { i18n } from "./i18n.mjs?v=2.4.3";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
@@ -8,8 +8,8 @@ import {
   googleRequest,
   speech,
   music,
-} from "./gemini.mjs?v=2.4.2";
-import { generate, speechTurns } from "./harness.mjs?v=2.4.2";
+} from "./gemini.mjs?v=2.4.3";
+import { generate, speechTurns } from "./harness.mjs?v=2.4.3";
 import {
   RATE,
   partsBlob,
@@ -21,9 +21,9 @@ import {
   wavBlob,
   base64Bytes,
   encodeMP3,
-} from "./audio.mjs?v=2.4.2";
+} from "./audio.mjs?v=2.4.3";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.2";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.3";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -43,13 +43,16 @@ const showFields = [
   "language",
   "difficulty",
   "wish",
+  "description",
   "length",
   "host_voice",
   "guest_voice",
   "music_style",
 ];
 const snapshotShow = (show) =>
-  Object.fromEntries(showFields.map((k) => [k, show[k]]));
+  Object.fromEntries(
+    showFields.map((k) => [k, k === "description" ? show.description || "" : show[k]]),
+  );
 export function cleanPreferences(input, current = {}) {
   const next = { ...current };
   const enums = {
@@ -65,16 +68,30 @@ export function cleanPreferences(input, current = {}) {
       if (typeof input[k] !== "string") throw error("频道输入格式不正确。");
       if (enums[k] && !enums[k].includes(input[k]))
         throw error("未知的频道选项。");
-      if (k === "wish" && input[k].length > 1200)
-        throw error("收听愿望请控制在 1200 字以内。");
+      if ((k === "wish" || k === "description") && input[k].length > 1200)
+        throw error(k === "description" ? "栏目简介请控制在 1200 字以内。" : "栏目主题请控制在 1200 字以内。");
       next[k] =
         k === "title"
-          ? input[k].trim().slice(0, 80) || current.title || "未命名频道"
+          ? input[k].trim().slice(0, 80) || current.title || "未命名栏目"
           : input[k].trim();
     }
+  if (next.description === undefined) next.description = current.description || "";
   if (next.host_voice === next.guest_voice)
     throw error("两位主持请选择不同声线。");
   return next;
+}
+export function assertSeriesPitch(show) {
+  if (!(show.title || "").trim()) throw error("请先给栏目起个名字。");
+  if (!(show.description || "").trim() || show.description.trim().length < 8)
+    throw error("请用一句话写清这个栏目是什么（至少约一句话）。");
+  if (!(show.wish || "").trim() || show.wish.trim().length < 8)
+    throw error("请写清栏目的人设或主题口味（至少约一句话）。");
+}
+export function assertEpisodeAngle(episodeWish, { retry = false } = {}) {
+  if (retry) return;
+  const text = typeof episodeWish === "string" ? episodeWish.trim() : "";
+  if (!text || text.length < 4) throw error("请写清这一集在系列里想讲什么。");
+  if (text.length > 600) throw error("本期选题请控制在 600 字以内。");
 }
 export function createBrowserAPI({
   library = new Library(),
@@ -272,7 +289,7 @@ export function createBrowserAPI({
               checkpoint,
               resume || {},
               (s, p, o) =>
-                import("./gemini.mjs?v=2.4.2").then((m) =>
+                import("./gemini.mjs?v=2.4.3").then((m) =>
                   m.textResult(s, p, { ...o, request: cloud }),
                 ),
             );
@@ -405,16 +422,22 @@ export function createBrowserAPI({
         (typeof input.episode_wish !== "string" ||
           input.episode_wish.length > 600)
       )
-        throw error("本期愿望请控制在 600 字以内。");
+        throw error("本期选题请控制在 600 字以内。");
       if (input.retry_episode_id) {
         old = show.episodes.find(
           (e) => e.id === input.retry_episode_id && e.status === "failed",
         );
         if (!old) throw error("重试记录不存在。", 404);
       }
+      // New episodes need a series pitch; retries keep the original failed attempt's inputs.
+      if (!old) assertSeriesPitch(show);
+      assertEpisodeAngle(old?.input?.episode_wish || input.episode_wish || "", {
+        retry: !!old,
+      });
       const preferences = old?.input || snapshotShow(show);
       showSnapshot = {
         ...preferences,
+        description: preferences.description || show.description || "",
         metadata_language: old?.input?.metadata_language || i18n.locale(),
         episode_wish: old?.input?.episode_wish || input.episode_wish || "",
         episodes: structuredClone(show.episodes),
@@ -1012,17 +1035,17 @@ export function createBrowserAPI({
       if (method === "POST") {
         const id = "show_" + uuid().replaceAll("-", "");
         const show = cleanPreferences(input, {
-          title: i18n.t(
-            input.language === "ja" ? "日语来信电台" : "英语来信电台",
-          ),
+          title: "",
           language: "en",
           difficulty: "basic",
           wish: "",
+          description: "",
           length: "SHORT",
           host_voice: "Kore",
           guest_voice: "Puck",
           music_style: "morning_acoustic",
         });
+        assertSeriesPitch(show);
         Object.assign(show, {
           id,
           revision: 0,

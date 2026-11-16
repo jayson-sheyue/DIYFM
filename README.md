@@ -2,6 +2,8 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
+**v2.4.3 treats each channel as a series:** create a series with a name, one-line pitch and ongoing theme; each new episode must say what it covers in that series, and the library shows episode numbers. Sharing and Discover remain snapshot-based. [Sharing guide](docs/sharing.md).
+
 **v2.4.2 adds channel submissions and an MIT license:** Discover now has **Submit your channel**, which opens a public GitHub form outside the app. After a maintainer with write access listens and adds the `channel-approved` label, Actions validates the ZIP and publishes it to Discover; nothing is listed on submit alone. DIYFM's own source code is now released under the [MIT License](LICENSE). [Sharing and curator guide](docs/sharing.md).
 
 **v2.4.1 fixes multi-speaker voice collapse:** every `Host` and `Guest` turn is now synthesized with isolated single-speaker `voiceConfig` (`host_voice` vs `guest_voice`), per-turn silence trimming, loudness balancing, bounded `429`/`503` retry backoff, and turn-level resume checkpoints — eliminating cases where Gemini multi-speaker TTS read almost an entire episode in a single voice. Both bundled starter channels (**Starter · English Letters** and **Starter · 日本語のお便り**) have also been re-synthesized with verified distinct two-host voices.
@@ -10,9 +12,9 @@
 
 **v2.3 adds channel sharing:** export selected finished episodes with public credits, preview ZIP imports, and use Discover to add curated channels locally without a key. [Sharing and curator guide](docs/sharing.md).
 
-**Choose English or Japanese, tell us what you feel like hearing, and listen to two hosts open a fictional letter.**
+**Choose English or Japanese, start a series (name, one-line pitch, ongoing theme), then say what this episode covers—and listen to two hosts open a fictional letter.**
 
-DIYFM turns language listening into radio you want to return to: self-contained stories, natural conversation and useful expressions recurring in context. It is listening first. You do not need to supply research material, answer quizzes, record your voice, shadow the hosts or maintain a streak.
+DIYFM turns language listening into radio you want to return to: ongoing series episodes, natural conversation and useful expressions recurring in context. It is listening first. You do not need to supply research material, answer quizzes, record your voice, shadow the hosts or maintain a streak.
 
 [Open the public test site](https://jayson-sheyue.github.io/DIYFM/) · [Get a Google AI Studio key](https://aistudio.google.com/apikey) · [API references](docs/api-references.md) · [Verification record](docs/testing.md)
 

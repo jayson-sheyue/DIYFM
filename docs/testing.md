@@ -1,4 +1,4 @@
-# DIYFM v2.4.2 验证记录
+# DIYFM v2.4.3 验证记录
 
 日期：2026-11-06。目标产物：GitHub Pages 项目子路径下的纯静态站点，每位使用者自带 API Key。旧 Python 后端仅保留兼容和迁移用途。
 
@@ -154,3 +154,10 @@ Firefox / Safari 独立系统浏览器、长期容量和真实 Google Key 成功
 - Final artifacts were built from clean commit `eacab95d8a2d` and embed that revision. Public Release `v2.4.2` assets re-downloaded with matching SHA-256 (`bacada26…` APK, `671ac12c…` DMG, `c4e32973…` ZIP). The APK and Mac bundle both contain `SUBMIT_URL` pointing at `channel-submission.yml`; neither package embeds the Android publisher keystore. Pages deploy for that push succeeded, and `https://jayson-sheyue.github.io/DIYFM/sharing-ui.mjs?v=2.4.2` serves the submission prompt. The issue-form URL returns GitHub's sign-in redirect when unauthenticated, as expected for a public form on the default branch. `/Applications/DIYFM.app` was replaced from the published DMG (previous 2.4.1 app archived under the ignored Application Support backup directory); the running process is `/Applications/DIYFM.app/Contents/MacOS/DIYFM` at version `2.4.2` / revision `eacab95d8a2d`. No Android device or emulator was attached for an over-install check in this round.
 - Follow-up (same day): the issue form dropped the redundant required **Creator credit** and **Usage terms** fields; those values stay inside the shared ZIP. Labels and help text are bilingual/trilingual plain language. No client rebuild: GitHub serves the template from `main`.
 - Follow-up: maintainer label `channel-approved` runs `.github/workflows/list-channel.yml`, which validates the issue ZIP via `scripts/list-submission.mjs`, commits `static/catalog/` to `main`, deploys Pages in-workflow (token pushes do not re-trigger `pages.yml`), and comments on the issue. Unit tests cover URL extraction, permission gating, HTTPS download rules and a local catalog update.
+- Series-radio creation boundary (option A): new channels require a series name, one-line pitch (`description`) and ongoing theme (`wish`); new episodes require `episode_wish` as the in-series angle. Episode lists show ordinals. Sharing/Discover snapshot behavior is unchanged in this slice.
+
+
+## v2.4.3 Series-radio creation boundary (2026-11-16)
+
+- New channels require a series name, one-line pitch (`description`) and ongoing theme (`wish`); new episodes require an in-series angle (`episode_wish`). Episode lists show ordinals. Sharing/Discover snapshot behavior is unchanged.
+- Automated checks: series unit tests plus browser/playback/i18n suites covering the new required fields. Final package hashes and Mac install verification are recorded in the v2.4.3 Release after publish.
