@@ -3,6 +3,22 @@
   "version": 1,
   "channels": [
     {
+      "id": "show_008bbed045b347f495b3f91a24d8aa85",
+      "title": "职场3分钟",
+      "language": "en",
+      "difficulty": "beginner",
+      "description": "想听同事之间的尴尬小事，有幽默感，不要职场成功学。",
+      "attribution": {
+        "author": "JaysonNov16",
+        "source_url": "",
+        "license": "All rights reserved"
+      },
+      "episodes": 2,
+      "package": "packages/1c31c52af12f25bc49f0c7013e46d27d97ed5eed5266ab7d674b19a44de48d63.zip",
+      "bytes": 18814048,
+      "sha256": "1c31c52af12f25bc49f0c7013e46d27d97ed5eed5266ab7d674b19a44de48d63"
+    },
+    {
       "id": "show_starter_en",
       "title": "Starter · English Letters",
       "language": "en",
