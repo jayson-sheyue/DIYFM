@@ -236,6 +236,21 @@ export const SHARING_MESSAGES = {
     "ja": "友人の共有パッケージを読み込み、プレビュー後に端末へ保存することもできます。",
     "zh-CN": "也可以导入朋友分享的频道包，确认预览后保存到本机。"
   },
+  "想让自己的频道出现在这里？": {
+    "en": "Want your channel listed here?",
+    "ja": "自分のチャンネルを掲載しませんか？",
+    "zh-CN": "想让自己的频道出现在这里？"
+  },
+  "先用频道的「分享频道」保存分享包，再到 GitHub 提交。投稿公开可见，需要 GitHub 账号；维护者人工审核后才会上架。": {
+    "en": "Save a package with Share channel in your channel, then submit it on GitHub. Submissions are public and need a GitHub account; a maintainer reviews each one before it is listed.",
+    "ja": "チャンネルの「チャンネルを共有」で共有パッケージを保存し、GitHubで投稿してください。投稿は公開され、GitHubアカウントが必要です。メンテナーの審査後に掲載されます。",
+    "zh-CN": "先用频道的「分享频道」保存分享包，再到 GitHub 提交。投稿公开可见，需要 GitHub 账号；维护者人工审核后才会上架。"
+  },
+  "投稿你的频道": {
+    "en": "Submit your channel",
+    "ja": "チャンネルを投稿",
+    "zh-CN": "投稿你的频道"
+  },
   "资源下载超时，请稍后重试。": {
     "en": "Download timed out. Please try again.",
     "ja": "ダウンロードがタイムアウトしました。再試行してください。",

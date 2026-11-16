@@ -1433,6 +1433,12 @@ p {
 .resource-card h2 { font-size: 22px; margin: 12px 0; }
 .resource-card > p { line-height: 1.7; }
 .resource-actions { margin-top: 22px; }
+.resource-submit { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 24px; padding: 18px 24px; border: 1px dashed var(--line); border-radius: 18px; }
+.resource-submit > div { flex: 1 1 280px; min-width: 0; }
+.resource-submit h2 { font-size: 16px; margin: 0; }
+.resource-submit .hint { margin-top: 4px; }
+.resource-submit a { display: inline-flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; }
+.resource-submit a:focus-visible { outline: 3px solid #8ab0f4; outline-offset: 3px; }
 .sharing-error { color: #a12920; padding: 12px 0; overflow-wrap: anywhere; }
 #sharing-dialog { width: min(680px, calc(100vw - 32px)); max-height: min(850px, calc(100dvh - 32px)); padding: 0; border: 1px solid var(--line); border-radius: 20px; color: var(--ink); background: #fff; box-shadow: 0 24px 80px #17244333; overflow: hidden; }
 #sharing-dialog[open] { display: flex; flex-direction: column; }
@@ -1464,6 +1470,8 @@ p {
   .resource-toolbar { gap: 8px; }
   .resource-toolbar label { flex: 1; }
   .resource-toolbar button, .resource-actions button, #sharing-dialog button, #share-channel { min-height: 48px; white-space: normal; }
+  .resource-submit { padding: 16px; }
+  .resource-submit a { flex: 1 1 100%; min-height: 48px; white-space: normal; }
   .sharing-head, .sharing-footer, .sharing-body { padding: 16px; }
   .sharing-head h2 { font-size: 19px; }
   #share-form input, #share-form textarea { font-size: 16px; }

@@ -1,7 +1,8 @@
 {
   "name": "diyfm",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "private": true,
+  "license": "MIT",
   "description": "A private-by-default, bring-your-own-key language radio for GitHub Pages",
   "scripts": {
     "test": "node --test tests/*.js tests/*.mjs",

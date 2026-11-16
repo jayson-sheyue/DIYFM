@@ -11,6 +11,13 @@ dist/
 !.env.example
 *credentials*.json
 *secrets*.json
+client_secret*.json
+*state*.json
+cookies*.json
+.adk/
+*.db
+*.pem
+*.p12
 .coverage
 .pytest_cache/
 coverage/

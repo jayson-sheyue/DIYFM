@@ -1,0 +1,70 @@
+name: Submit a channel for Discover
+description: Propose a finished DIYFM channel package for the curated catalog. / 精选频道投稿 / おすすめチャンネルへの投稿
+title: "[Channel] "
+labels: ["channel-submission"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing your channel. A maintainer listens to every submission and checks its credits before it is listed, so nothing appears in **Discover** automatically and a submission may be declined.
+
+        - Create the file in DIYFM 2.3 or later: open your channel, choose **Channel options → Share channel**, and save the **channel package** ZIP. A whole-library backup cannot be listed.
+        - **This issue and everything attached to it are public.** Share only content you have the right to distribute, and leave out anything private.
+        - 中文：请先在频道的「频道管理 → 分享频道」保存频道分享包（不是整库备份）。本页面和附件公开可见；维护者人工审核通过后才会上架。
+        - 日本語：チャンネルの「チャンネル管理 → チャンネルを共有」で共有パッケージを保存してください（ライブラリ全体のバックアップは不可）。この投稿と添付ファイルは公開され、メンテナーの審査後に掲載されます。
+  - type: input
+    id: title
+    attributes:
+      label: Channel title
+      description: As shown in the package preview.
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Listening language
+      options:
+        - English
+        - Japanese / 日本語
+    validations:
+      required: true
+  - type: textarea
+    id: package
+    attributes:
+      label: Channel package
+      description: Drag the ZIP into this box to attach it (GitHub accepts ZIP attachments up to 25 MB). For a larger package, up to the 100 MiB format limit, paste an HTTPS download link instead.
+      placeholder: Drop diyfm-channel-….zip here, or paste an HTTPS download link.
+    validations:
+      required: true
+  - type: input
+    id: credit
+    attributes:
+      label: Creator credit
+      description: The public credit entered when the package was saved.
+    validations:
+      required: true
+  - type: input
+    id: terms
+    attributes:
+      label: Usage terms
+      description: The usage terms or license entered when the package was saved.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes for the reviewer
+      description: Optional. Sources, background music origin, what is fictional, or anything else that helps the review.
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have the right to distribute everything in this package, including scripts, voices, background music and referenced sources.
+          required: true
+        - label: AI-synthesized audio and fictional stories are clearly disclosed in the channel description or credits.
+          required: true
+        - label: The package contains no private or personal information, and I understand this submission is public.
+          required: true
+        - label: I understand that listing is at the maintainers' discretion and that copies already downloaded by listeners cannot be recalled.
+          required: true

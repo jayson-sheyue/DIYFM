@@ -32,9 +32,17 @@ Starting in **v2.4.0**, the curated catalog ships two reviewed starter packages 
 
 Local synthetic QA fixtures and private user libraries are never published. Catalog/package requests omit credentials and referrers, reject redirects, and accept packages only from the catalog's own `packages/` directory. Native CSP permits only the existing Google API plus the official catalog path and local bundle origin; management/file bridges retain their original local-origin restrictions.
 
+## Submit a channel for Discover
+
+Listeners cannot publish to the catalog from inside the application; there is still no account, upload service or automatic listing. To propose a channel, save a channel package as described above, then choose **Discover → Submit your channel**. The link opens the repository's [channel submission form](https://github.com/jayson-sheyue/DIYFM/issues/new?template=channel-submission.yml) in your browser, outside DIYFM, and needs a GitHub account.
+
+- **Submissions are public.** The issue and anything attached to it can be read and downloaded by anyone before any review, so include only content you may distribute and nothing private.
+- Attach the ZIP to the form if it is 25 MB or smaller, GitHub's limit for issue attachments. For a larger package, up to the 100 MiB format limit, provide an HTTPS download link instead.
+- A maintainer listens to the audio and checks credits and usage terms before listing anything. A submission may be declined, and a channel appears in Discover only after the reviewed catalog is published.
+
 ## Curator publishing workflow
 
-1. Ask the creator for a **channel package**, not a whole-library backup. Obtain permission, inspect credits and any BGM/source restrictions, and listen to the finished audio. Clearly disclose AI synthesis and fictional material as appropriate.
+1. Start from a **channel package**, not a whole-library backup, received through the [submission form](https://github.com/jayson-sheyue/DIYFM/issues/new?template=channel-submission.yml) or directly from the creator. Download an attached package from the issue, or from the HTTPS link it gives. Obtain permission, inspect credits and any BGM/source restrictions, and listen to the finished audio. Clearly disclose AI synthesis and fictional material as appropriate.
 2. In a checkout of this repository, prepare the local catalog entry:
 
    ```bash
