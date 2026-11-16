@@ -37,8 +37,8 @@ Local synthetic QA fixtures and private user libraries are never published. Cata
 Listeners cannot publish to the catalog from inside the application; there is still no account, upload service or automatic listing. To propose a channel, save a channel package as described above, then choose **Discover → Submit your channel**. The link opens the repository's [channel submission form](https://github.com/jayson-sheyue/DIYFM/issues/new?template=channel-submission.yml) in your browser, outside DIYFM, and needs a GitHub account.
 
 - **Submissions are public.** The issue and anything attached to it can be read and downloaded by anyone before any review, so include only content you may distribute and nothing private.
-- Attach the ZIP to the form if it is 25 MB or smaller, GitHub's limit for issue attachments. For a larger package, up to the 100 MiB format limit, provide an HTTPS download link instead.
-- A maintainer listens to the audio and checks credits and usage terms before listing anything. A submission may be declined, and a channel appears in Discover only after the reviewed catalog is published.
+- Attach the ZIP to the form if it is 25 MB or smaller, GitHub's limit for issue attachments. For a larger package, up to the 100 MiB format limit, provide an HTTPS download link instead. Creator credit and usage terms are already inside the package from **Share channel**; the form does not ask for them again.
+- A maintainer listens to the audio and reads credits and usage terms from the package before listing anything. A submission may be declined, and a channel appears in Discover only after the reviewed catalog is published.
 
 ## Curator publishing workflow
 

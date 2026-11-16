@@ -6,23 +6,28 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for sharing your channel. A maintainer listens to every submission and checks its credits before it is listed, so nothing appears in **Discover** automatically and a submission may be declined.
+        Thanks for sharing. A maintainer listens to every submission before anything appears in **Discover**. Nothing is listed automatically.
 
-        - Create the file in DIYFM 2.3 or later: open your channel, choose **Channel options → Share channel**, and save the **channel package** ZIP. A whole-library backup cannot be listed.
-        - **This issue and everything attached to it are public.** Share only content you have the right to distribute, and leave out anything private.
-        - 中文：请先在频道的「频道管理 → 分享频道」保存频道分享包（不是整库备份）。本页面和附件公开可见；维护者人工审核通过后才会上架。
-        - 日本語：チャンネルの「チャンネル管理 → チャンネルを共有」で共有パッケージを保存してください（ライブラリ全体のバックアップは不可）。この投稿と添付ファイルは公開され、メンテナーの審査後に掲載されます。
+        1. In DIYFM, open your channel → **Channel options → Share channel** → save the **channel package** ZIP (not a whole-library backup).
+        2. Attach that ZIP below (or paste an HTTPS download link if it is larger than 25 MB).
+        3. Credits and usage terms are already inside the ZIP from the share step — you do **not** need to type them again here.
+
+        **This issue and attachments are public.** Share only content you may distribute.
+
+        中文：在 DIYFM 里用「频道管理 → 分享频道」保存分享包（不要用整库备份），把 ZIP 贴到下面即可。署名和使用条款已在分享包里，这里不用再填。本页和附件公开可见；维护者听过并审核后才会上架。
+
+        日本語：DIYFMで「チャンネル管理 → チャンネルを共有」から共有パッケージ（ライブラリ全体のバックアップではない）を保存し、下にZIPを添付してください。署名と利用条件はパッケージ内にあるため、ここでの再入力は不要です。投稿と添付は公開され、メンテナーの審査後に掲載されます。
   - type: input
     id: title
     attributes:
-      label: Channel title
-      description: As shown in the package preview.
+      label: Channel title / 频道名称 / チャンネル名
+      description: The name listeners will see. / 听众看到的名称。 / リスナーに見える名前。
     validations:
       required: true
   - type: dropdown
     id: language
     attributes:
-      label: Listening language
+      label: Listening language / 收听语言 / 聴取言語
       options:
         - English
         - Japanese / 日本語
@@ -31,40 +36,26 @@ body:
   - type: textarea
     id: package
     attributes:
-      label: Channel package
-      description: Drag the ZIP into this box to attach it (GitHub accepts ZIP attachments up to 25 MB). For a larger package, up to the 100 MiB format limit, paste an HTTPS download link instead.
-      placeholder: Drop diyfm-channel-….zip here, or paste an HTTPS download link.
-    validations:
-      required: true
-  - type: input
-    id: credit
-    attributes:
-      label: Creator credit
-      description: The public credit entered when the package was saved.
-    validations:
-      required: true
-  - type: input
-    id: terms
-    attributes:
-      label: Usage terms
-      description: The usage terms or license entered when the package was saved.
+      label: Channel package / 频道分享包 / 共有パッケージ
+      description: Drag the ZIP here (GitHub accepts attachments up to 25 MB). Larger packages, up to the 100 MiB format limit, may use an HTTPS download link instead. / 把 ZIP 拖到这里（GitHub 附件上限 25 MB；更大可用 HTTPS 链接，格式上限 100 MiB）。 / ZIPをここにドラッグ（GitHub添付は25MBまで。それ以上はHTTPSリンク、形式上限は100MiB）。
+      placeholder: diyfm-channel-….zip or https://…
     validations:
       required: true
   - type: textarea
     id: notes
     attributes:
-      label: Notes for the reviewer
-      description: Optional. Sources, background music origin, what is fictional, or anything else that helps the review.
+      label: Notes for the reviewer (optional) / 给审核的备注（可选） / 審査向けメモ（任意）
+      description: Anything helpful — BGM source, what is fictional, AI disclosure already in the package, etc. / 背景音乐来源、哪些是虚构、包内是否已说明 AI 合成等。 / BGMの出典、フィクションの範囲、パッケージ内のAI合成の記載など。
   - type: checkboxes
     id: confirm
     attributes:
-      label: Before submitting
+      label: Before submitting / 提交前确认 / 投稿前の確認
       options:
-        - label: I have the right to distribute everything in this package, including scripts, voices, background music and referenced sources.
+        - label: I may distribute everything in this package (scripts, voices, music, referenced sources). / 我有权分发包内全部内容。 / パッケージ内の全内容を配布する権利があります。
           required: true
-        - label: AI-synthesized audio and fictional stories are clearly disclosed in the channel description or credits.
+        - label: AI-made audio and fictional stories are clearly disclosed in the channel description or credits inside the package. / 包内简介或署名已说明 AI 合成与虚构内容。 / パッケージ内の説明またはクレジットでAI合成とフィクションを明示しています。
           required: true
-        - label: The package contains no private or personal information, and I understand this submission is public.
+        - label: There is no private or personal information in the package, and I understand this submission is public. / 包内无私人信息，且我理解本投稿公开可见。 / 個人情報は含まれず、この投稿が公開されることを理解しています。
           required: true
-        - label: I understand that listing is at the maintainers' discretion and that copies already downloaded by listeners cannot be recalled.
+        - label: I understand listing is at the maintainers' discretion, and already-downloaded copies cannot be recalled. / 是否上架由维护者决定；已下载的副本无法远程撤回。 / 掲載はメンテナーの判断であり、既にダウンロードされたコピーは撤回できません。
           required: true

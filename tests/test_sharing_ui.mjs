@@ -23,6 +23,10 @@ test("Discover's submission link opens the issue form that the repository actual
   assert.match(form, /^description: \S/m);
   assert.match(form, /^body:$/m);
   assert.match(form, /public/i);
+  // Credits and usage terms already live in the ZIP from Share channel; do not re-ask for them on the form.
+  assert.doesNotMatch(form, /^\s+id: credit$/m);
+  assert.doesNotMatch(form, /^\s+id: terms$/m);
+  assert.match(form, /do \*\*not\*\* need to type them again/i);
 });
 
 test("the submission prompt is shown in every language, whether or not the catalog has loaded", async () => {
