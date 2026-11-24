@@ -1,4 +1,4 @@
-import { i18n } from "./i18n.mjs?v=2.4.9";
+import { i18n } from "./i18n.mjs?v=2.5.0";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
@@ -8,8 +8,9 @@ import {
   googleRequest,
   speech,
   music,
-} from "./gemini.mjs?v=2.4.9";
-import { generate, speechTurns } from "./harness.mjs?v=2.4.9";
+} from "./gemini.mjs?v=2.5.0";
+import { generate, speechTurns } from "./harness.mjs?v=2.5.0";
+import { validTurnTiming } from "./transcript.mjs?v=2.5.0";
 import {
   RATE,
   partsBlob,
@@ -21,9 +22,9 @@ import {
   wavBlob,
   base64Bytes,
   encodeMP3,
-} from "./audio.mjs?v=2.4.9";
+} from "./audio.mjs?v=2.5.0";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.4.9";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.5.0";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -321,7 +322,7 @@ export function createBrowserAPI({
               checkpoint,
               resume || {},
               (s, p, o) =>
-                import("./gemini.mjs?v=2.4.9").then((m) =>
+                import("./gemini.mjs?v=2.5.0").then((m) =>
                   m.textResult(s, p, { ...o, request: cloud }),
                 ),
             );
@@ -387,6 +388,7 @@ export function createBrowserAPI({
         voice.push(normalizeTurnPCM(trimSilencePCM(await blobPCM(blob))));
       }
       const pcm = joinPCM(voice, Math.round(RATE * 0.22));
+      const transcript_timing = { version: 1, gap: 0.22, durations: voice.map(block => block.length / RATE) };
       let musicPCM = null,
         musicNote = "",
         musicSource = "none";
@@ -409,6 +411,7 @@ export function createBrowserAPI({
           status: "ready",
           phase: "ready",
           duration_seconds: pcm.length / RATE,
+          transcript_timing,
           bytes: wav.size,
           music_source: musicSource,
           music_note: musicNote,
@@ -857,6 +860,39 @@ export function createBrowserAPI({
     if (signal?.aborted) { stagedImports.delete(preview.token); throw new DOMException("Cancelled", "AbortError"); }
     return preview;
   }
+  const featuredFlights = new Map();
+  async function featured(language = "en") {
+    if (!["en", "ja"].includes(language)) throw error("请选择收听语言。");
+    if (featuredFlights.has(language)) return featuredFlights.get(language);
+    const flight = (async () => {
+      const controller = new AbortController();
+      const abort = () => controller.abort();
+      pageController.signal.addEventListener("abort", abort, { once: true });
+      const timer = setTimeout(abort, 20000);
+      try {
+        if (pageController.signal.aborted) throw error("暂时无法载入样例，请重试。");
+        const entry = (await loadBundledEntries(controller.signal)).find(e => e.id === `show_starter_${language}`);
+        if (!entry) throw error("暂时无法载入样例，请重试。");
+        const response = await fetcher(entry.url, { signal: controller.signal, credentials: "omit", referrerPolicy: "no-referrer", redirect: "error" });
+        const bytes = await readBounded(response, SHARE_LIMIT, controller.signal);
+        if (bytes.byteLength !== entry.bytes || await sha256(bytes) !== entry.sha256) throw error("目录文件校验失败，未导入任何节目。");
+        const decoded = await decodeChannel(bytes);
+        if (!matchesCatalogEntry(decoded.manifest, entry)) throw error("目录资料与分享包不一致，未导入任何节目。");
+        if (pageController.signal.aborted) throw error("暂时无法载入样例，请重试。");
+        const ep = decoded.manifest.episodes[0];
+        const id = `featured_${language}`;
+        const url = URL.createObjectURL(new Blob([decoded.files[ep.audio.path]], { type: "audio/wav" }));
+        urls.set(id, url);
+        return { ...ep, id, url, language, difficulty: entry.difficulty };
+      } finally {
+        clearTimeout(timer);
+        pageController.signal.removeEventListener("abort", abort);
+      }
+    })();
+    featuredFlights.set(language, flight);
+    try { return await flight; }
+    catch (e) { featuredFlights.delete(language); throw e; }
+  }
   async function seedStarters() {
     if (!seedStarterChannels || !bundledCatalogURL || (await library.get("starter-seeded"))) return;
     if ((await list()).length > 0) {
@@ -992,6 +1028,8 @@ export function createBrowserAPI({
       language: show.language,
       difficulty: show.difficulty,
       duration_seconds: Number(old.duration_seconds) || 0,
+      ...(validTurnTiming(old.transcript_timing, script, Number(old.duration_seconds))
+        ? { transcript_timing: validTurnTiming(old.transcript_timing, script, Number(old.duration_seconds)) } : {}),
       error:
         old.status === "ready"
           ? ""
@@ -1185,6 +1223,7 @@ export function createBrowserAPI({
     exportChannel,
     catalog,
     prepareCatalog,
+    featured,
     isBusy: () =>
       jobs.size > 0 ||
       [...musicJobs.values()].some((j) => j.status === "running"),

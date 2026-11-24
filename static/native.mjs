@@ -184,6 +184,7 @@ export class NativeAudio extends EventTarget {
     this.paint();
   }
   mode() {
+    if (this.context.sample) return "once";
     return this.context.episodeId
       ? this._loop
         ? "single"
@@ -333,6 +334,7 @@ export class NativeAudio extends EventTarget {
         this.onTrack(null, "");
       }
     }
+    this.dispatchEvent(new Event("timeupdate"));
     if (status.error) this.emit("error");
     else if (this.ended && !wasEnded) this.emit("ended");
     else if (wasPaused !== this.paused)

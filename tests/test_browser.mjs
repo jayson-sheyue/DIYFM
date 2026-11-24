@@ -18,8 +18,8 @@ import {
   trimSilencePCM,
   normalizeTurnPCM,
   RATE,
-} from "../static/audio.mjs?v=2.4.9";
-import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.4.9";
+} from "../static/audio.mjs?v=2.5.0";
+import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.5.0";
 import {
   zipSync,
   strToU8,
@@ -489,7 +489,7 @@ test("required research without real sources fails before speech or script gener
   assert.equal(calls, 2);
 });
 test("episode metadata language is captured separately from the listening language", async () => {
-  const { i18n } = await import("../static/i18n.mjs?v=2.4.9");
+  const { i18n } = await import("../static/i18n.mjs?v=2.5.0");
   i18n.setLocale("ja");
   let seen;
   const gate = new Promise((resolve) => {
@@ -746,6 +746,10 @@ test("episode synthesis isolates Host and Guest into single-speaker requests on 
   const { ep } = await finished(api, show.id);
   assert.equal(ep.status, "ready");
   assert.equal(ttsRequests.length, 6);
+  assert.equal(ep.transcript_timing.durations.length, 6);
+  assert.equal(ep.transcript_timing.gap, 0.22);
+  const assembled = ep.transcript_timing.durations.reduce((sum, n) => sum + n, 0) + 5 * 0.22;
+  assert.ok(Math.abs(assembled - ep.duration_seconds) < 1e-9);
   const expectedVoices = [
     "Zephyr",
     "Charon",
@@ -879,4 +883,28 @@ test("speechTurns parses fallback scripts, strips duplicate labels and DSP helpe
   assert.ok(liftedPeak > origPeak * 2, "quiet turns should be lifted");
   const healthy = tonePCM(440, 1, 0.25);
   assert.equal(normalizeTurnPCM(healthy), healthy);
+});
+
+test('Japanese naturalness review uses the existing one-revision budget', async () => {
+  const text = 'そうですね。たしかに、今日は少し困りました。でも、友達と話して気持ちが楽になりました。'.repeat(2) + '本当に。';
+  const draft = { title: 'A little mix-up', summary: 'Fictional conversation', turns: Array.from({ length: 8 }, (_, i) => ({ speaker: i % 2 ? 'Guest' : 'Host', text })) };
+  const plan = { expressions: ['そうですね', 'たしかに'], needs_search: false };
+  assert.deepEqual(validateEpisode(draft, 'ja', [624, 975], plan.expressions), []);
+  const prompts = [];
+  const result = await generate({ language: 'ja', difficulty: 'basic', length: 'BRIEF' }, { models: DEFAULT_MODELS }, '', async () => {}, async () => {}, { plan, draft }, async (_snap, prompt) => {
+    prompts.push(prompt);
+    if (prompts.length === 1) return { text: JSON.stringify({ passed: false, issues: ['助词搭配不自然，请修改对应原句。'] }) };
+    if (prompts.length === 2) return { text: JSON.stringify(draft) };
+    return { text: JSON.stringify({ passed: true, issues: [] }) };
+  });
+  assert.equal(result.review.passed, true);
+  assert.equal(prompts.length, 3, 'review → one revision → review');
+  assert.match(prompts[0], /日语专项.*助词与常见搭配/);
+  assert.match(prompts[2], /日语专项/);
+  let calls = 0;
+  await assert.rejects(generate({ language: 'ja', difficulty: 'basic', length: 'BRIEF' }, { models: DEFAULT_MODELS }, '', async () => {}, async () => {}, { plan, draft }, async () => {
+    calls++;
+    return { text: JSON.stringify(calls === 2 ? draft : { passed: false, issues: ['仍然不自然'] }) };
+  }), /内容检查未通过/);
+  assert.equal(calls, 3, 'no unbounded rewrite loop or extra reviewer');
 });

@@ -1,5 +1,6 @@
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { readWav } from "./audio.mjs?v=2.4.9";
+import { readWav } from "./audio.mjs?v=2.5.0";
+import { validTurnTiming } from "./transcript.mjs?v=2.5.0";
 
 export const SHARE_LIMIT = 100 * 1024 * 1024;
 export const CATALOG_URL = "https://jayson-sheyue.github.io/DIYFM/catalog/index.json";
@@ -46,6 +47,8 @@ function publicEpisode(ep, audio) {
       return { title: text(s.title, 240), url: sourceURL(s.url) };
     }),
     duration_seconds: duration, created_at: text(ep.created_at || "", 40),
+    ...(validTurnTiming(ep.transcript_timing, ep.script || "", duration)
+      ? { transcript_timing: validTurnTiming(ep.transcript_timing, ep.script || "", duration) } : {}),
     music_source: text(ep.music_source || "", 30),
     ...(ep.origin ? { origin: provenance(ep.origin) } : {}), audio,
   };

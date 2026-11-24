@@ -315,3 +315,22 @@ test("library reconciliation invalidates old system snapshots and clears removed
   assert.equal(f.audio.loaded, false);
   assert.deepEqual(f.tracks.at(-1), [null, ""]);
 });
+
+test('native homepage samples play once and publish timeline updates for sentence following', async () => {
+  const f = fixture();
+  f.audio.reconcile(['featured_ja']);
+  f.audio.setContext({ title: 'Sample', episodeId: 'featured_ja', sample: true,
+    queue: [{ id: 'featured_ja', title: 'Sample', url: 'blob:sample' }] });
+  f.audio.src = 'blob:sample';
+  f.audio.loop = true;
+  let seenTime;
+  f.audio.addEventListener('timeupdate', () => { seenTime = f.audio.currentTime; });
+  await f.audio.play();
+  const load = f.calls.find(call => call.command === 'player.load').data;
+  assert.equal(load.mode, 'once');
+  assert.deepEqual(load.tracks.map(track => track.id), ['featured_ja']);
+  f.setStatus({ time: 2.5, paused: true });
+  await f.audio.poll();
+  assert.equal(seenTime, 2.5);
+  assert.equal(f.audio.paused, true);
+});

@@ -1,6 +1,6 @@
 import { textResult } from "./gemini.mjs";
 import { RULES, HOSTS, LEVEL_RULES } from "./editorial.mjs?v=2.1.0";
-export const VERSION = "letters-browser-2.1";
+export const VERSION = "letters-browser-2.2";
 const dump = (v) => JSON.stringify(v),
   str = (v, n = 1200) => (typeof v === "string" ? v.trim().slice(0, n) : "");
 const strings = (v, n = 6) =>
@@ -279,6 +279,7 @@ export async function generate(
           base +
             "\n你是严格的节目编辑。核对纯收听、难度、具体情境、自然幽默、无近期旧故事复用、目标语为主、表达自然复现、活用形式语义对应、无无依据现实断言。没有实质问题就通过。策划：" +
             dump(plan) +
+            (language === "ja" ? "\n日语专项：检查助词与常见搭配、敬体和常体是否符合各人的语气、是否有中文或英文直译腔、回应是否接得上。初级句子也应像日常口语，不为凑重点表达而生硬重复。只报告影响理解或明显不自然的问题，给出具体原句和改法；不要把口语省略或合理语体变化当成错误。不追求学术或考试教材标准。" : "") +
             "\n事实：" +
             research.text.slice(0, 16000) +
             "\n结构问题：" +

@@ -2,6 +2,8 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
+**v2.5.0: listen first.** The homepage plays an English or Japanese sample with its transcript open. Creation explains the key and cost requirements up front. Transcripts offer estimated sentence highlighting and scroll following; Japanese editorial review checks conversational naturalness within the existing one-revision budget, without adding human review.
+
 **v2.4.9 adds soft client updates and shows the version in Settings:** native apps check a Pages releases manifest, offer a browser download when newer, and never auto-install. Web and clients both display `DIYFM x.y.z` under Settings. [Client guide](docs/clients.md).
 
 **v2.4.8 replaces Discover snapshots for the same channel:** re-sharing and re-approving the same `channel.id` updates that curated listing and removes the previous ZIP; already-downloaded local copies stay manual. [Sharing guide](docs/sharing.md).
@@ -60,6 +62,14 @@ The first visit uses **English**, regardless of your operating system or browser
 The interface and listening languages are independent: you can use a Japanese interface to listen to English, for example. Wishes, existing titles and scripts keep their original text. New episodes capture the interface language for their supporting metadata when production starts; retries retain that choice. Switching does not translate saved works or generate additional model requests. Missing interface translations fall back to English.
 
 ## First use
+
+Choose English or Japanese on the homepage and press **Play**, without an account or API key. The transcript starts open. Browsing it manually suspends scroll following; **Back to current sentence** resumes it. Pausing retains the highlight; seeking updates it. Sentence positions are estimates: new episodes use measured audio turn durations, while older episodes and samples use the overall duration. No speech-recognition request is added.
+
+The homepage loads only the selected sample and no longer automatically imports the whole Discover catalog. First-time web playback needs a network connection; clients bundle the samples for offline playback. To keep a sample for offline web listening, use **Discover → Add to library**. Existing libraries and the last selected channel are preserved.
+
+These are AI-generated fictional letters and synthesized voices for casual listening. Some expressions may sound unnatural; this is not exam-prep material. Japanese generation uses model review and at most one revision, without per-episode human review or a promise of native-level accuracy.
+
+To create your own episodes:
 
 1. Open the test site and go to **Settings**. Get your own Gemini API key from Google AI Studio.
 2. Paste it into **Your API key**, then click **Enable key for this page**. The field clears; the UI shows only whether a key is enabled.

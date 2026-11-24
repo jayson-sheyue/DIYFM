@@ -77,12 +77,14 @@ test("parseReleases accepts only GitHub DIYFM release assets", () => {
   );
 });
 
-test("shipped releases index matches the published 2.4.9 assets", async () => {
+test("shipped releases index is internally consistent and never advertises an unreleased future version", async () => {
   const raw = JSON.parse(
     await readFile(new URL("../static/releases/index.json", import.meta.url)),
   );
   const parsed = parseReleases(raw, RELEASES_URL);
-  assert.equal(parsed.latest, "2.4.9");
+  assert.equal(parsed.latest, raw.latest);
+  assert.ok(compareSemver(parsed.latest, APP_VERSION) <= 0);
+  assert.equal(parsed.assets.android.name, `DIYFM-${parsed.latest}-android.apk`);
   assert.match(parsed.assets.mac_dmg.url, /mac-universal\.dmg$/);
   assert.equal(parsed.assets.android.sha256.length, 64);
 });

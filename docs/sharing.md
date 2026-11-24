@@ -66,3 +66,7 @@ Each ZIP has `channel.json` (`format: diyfm-channel`, `version: 1`) and exactly 
 The catalog uses `format: diyfm-catalog`, `version: 1` and a `channels` array. Each entry repeats the public channel metadata, attribution, episode count, package path, compressed byte count and SHA-256. Builds validate each listed package against the listing, and native Mac/Android installers bundle the validated `catalog/` directory for offline first-launch seeding and Discover fallback.
 
 See [verification notes](testing.md) for executed tests and platform limitations. Relevant APIs: [Fetch credentials](https://developer.mozilla.org/en-US/docs/Web/API/Request/credentials), [SubtleCrypto digest](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest), [HTML dialog](https://html.spec.whatwg.org/multipage/interactive-elements.html#the-dialog-element), and the bundled [fflate 0.8.2 ZIP implementation](https://github.com/101arrowz/fflate/tree/v0.8.2).
+
+## Transcript timing
+
+Channel packages may include optional `transcript_timing` (version 1, per-turn durations and inter-turn gap). Current readers validate its shape and total against the script and recording; invalid or missing timing falls back to whole-recording sentence estimates. Timing survives current-version channel sharing and library backups. Older clients may ignore it. This is estimated sentence following, not word alignment or speech recognition.

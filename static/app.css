@@ -1638,3 +1638,35 @@ p {
   .episode-section .section-heading { flex-wrap: nowrap; align-items: center; }
   .episode-section .section-heading h2 { min-width: 0; }
 }
+
+/* First listen and readable, selectable sentence following. */
+.home-listen { max-width: 880px; margin: 0 auto; }
+.home-listen .radio-heading { margin-bottom: 20px; min-height: 0; }
+.home-listen .radio-heading h1 { font-size: clamp(26px, 4vw, 40px); line-height: 1.2; }
+.featured-episode { padding: 24px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.featured-top, .featured-languages, .reader-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.featured-top { justify-content: space-between; }
+.featured-episode h2 { font-size: 23px; line-height: 1.3; margin: 14px 0 10px; overflow-wrap: anywhere; }
+.featured-episode > .primary { min-height: 48px; min-width: 140px; }
+.featured-languages button[aria-pressed="true"] { background: var(--blue-soft); color: var(--blue-ink); border-color: var(--blue); }
+.quality-note { margin: 16px 0; }
+.home-create { padding: 20px 0; }
+.home-create p { margin: 8px 0; }
+.key-requirement { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; padding: 12px 0; }
+.key-requirement p { margin: 0; flex: 1 1 240px; }
+.reader-tools { justify-content: space-between; padding: 12px 0; }
+.reader-tools button { min-height: 48px; }
+.transcript-reader { position: relative; max-height: 360px; overflow-y: auto; overscroll-behavior: contain; padding: 8px 12px; line-height: 2; font-size: 16px; overflow-wrap: anywhere; }
+.transcript-sentence { border-radius: 4px; box-decoration-break: clone; -webkit-box-decoration-break: clone; padding: 2px 0; }
+.transcript-sentence.is-current { background: var(--blue-soft); color: var(--blue-ink); box-shadow: 0 2px 0 var(--blue); }
+.speaker-label { display: block; margin-top: 14px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+@media (max-width: 720px) {
+  .featured-episode { padding: 16px; }
+  .home-listen .radio-heading { padding-top: 0; }
+  .home-listen .radio-heading h1 { font-size: 28px; }
+  .featured-episode h2 { font-size: 21px; }
+  .transcript-reader { max-height: 270px; padding: 6px; }
+}
+@media (max-width: 720px) {
+  .featured-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+}

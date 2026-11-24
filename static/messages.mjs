@@ -1,7 +1,26 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.4.9";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.5.0";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
+  "句子高亮为估算位置，可能略有偏差。": {"en": "Sentence highlighting is approximate and may be slightly off.", "ja": "文ごとのハイライト位置は推定のため、多少ずれることがあります。", "zh-CN": "句子高亮为估算位置，可能略有偏差。"},
+  "正在跟随播放": {"en": "Following playback", "ja": "再生に追従中", "zh-CN": "正在跟随播放"},
+  "回到当前句": {"en": "Back to current sentence", "ja": "再生中の文へ", "zh-CN": "回到当前句"},
+  "台本": {"en": "Transcript", "ja": "台本", "zh-CN": "台本"},
+  "暂时无法载入样例，请重试。": {"en": "Could not load the sample. Please try again.", "ja": "サンプルを読み込めませんでした。もう一度お試しください。", "zh-CN": "暂时无法载入样例，请重试。"},
+  "无需账号或 Key，先听一集。": {"en": "No account or API key. Start with a story.", "ja": "アカウントもキーも不要。まずは1話聴いてみましょう。", "zh-CN": "无需账号或 Key，先听一集。"},
+  "先听这一集": {"en": "Start here", "ja": "まずはこの1話", "zh-CN": "先听这一集"},
+  "收听语言": {"en": "Listening language", "ja": "聴く言語", "zh-CN": "收听语言"},
+  "来信语言电台": {"en": "Letter radio", "ja": "お便りラジオ", "zh-CN": "来信语言电台"},
+  "正在载入样例…": {"en": "Loading sample…", "ja": "サンプルを読み込み中…", "zh-CN": "正在载入样例…"},
+  "重新载入样例": {"en": "Reload sample", "ja": "サンプルを再読み込み", "zh-CN": "重新载入样例"},
+  "播放样例": {"en": "Play sample", "ja": "サンプルを再生", "zh-CN": "播放样例"},
+  "AI 生成的虚构来信，适合通勤、做家务时轻松练听力。偶尔可能有不自然的表达，不作为考试备考教材。": {"en": "AI-generated fictional letters for casual listening on your commute or while doing chores. Some expressions may sound unnatural; this is not exam-prep material.", "ja": "AIが作った架空のお便りです。通勤や家事の合間に気軽に聴けます。表現が不自然な場合もあり、試験対策用の教材ではありません。", "zh-CN": "AI 生成的虚构来信，适合通勤、做家务时轻松练听力。偶尔可能有不自然的表达，不作为考试备考教材。"},
+  "想听自己的主题？开设一个栏目。": {"en": "Have a topic in mind? Create your own series.", "ja": "好きなテーマで聴きたい？自分の番組を作りましょう。", "zh-CN": "想听自己的主题？开设一个栏目。"},
+  "开设自己的栏目": {"en": "Create your own series", "ja": "自分の番組を作る", "zh-CN": "开设自己的栏目"},
+  "制作节目需要自己的 Gemini API Key，调用可能产生费用。": {"en": "Creating episodes requires your own Gemini API key and may incur charges.", "ja": "番組の制作には自分のGemini APIキーが必要です。料金が発生する場合があります。", "zh-CN": "制作节目需要自己的 Gemini API Key，调用可能产生费用。"},
+  "先听样例": {"en": "Listen to a sample", "ja": "サンプルを聴く", "zh-CN": "先听样例"},
+  "收听样例无需 Key。制作节目需要自己的 Gemini API Key，调用可能产生费用。": {"en": "Samples need no key. Creating episodes requires your own Gemini API key and may incur charges.", "ja": "サンプルの再生にキーは不要です。番組の制作には自分のGemini APIキーが必要で、料金が発生する場合があります。", "zh-CN": "收听样例无需 Key。制作节目需要自己的 Gemini API Key，调用可能产生费用。"},
+  "设置 Key": {"en": "Set up key", "ja": "キーを設定", "zh-CN": "设置 Key"},
   "保存与制作说明": { en: "Storage & production", ja: "保存と制作について", "zh-CN": "保存与制作说明" },
   "模型设置": { en: "Model settings", ja: "モデル設定", "zh-CN": "模型设置" },
   "新一期": { en: "New episode", ja: "新しいエピソード", "zh-CN": "新一期" },

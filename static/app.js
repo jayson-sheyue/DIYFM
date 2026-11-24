@@ -116,6 +116,12 @@ const state = {
   settingsDirty: false,
   deleting: new Set(),
   libraryVersion: 0,
+  creating: false,
+  featuredLanguage: "en",
+  featured: new Map(),
+  featuredLoading: new Map(),
+  featuredErrors: new Map(),
+  readers: new Map(),
   playbackMode:
     readLocal("playback-mode", "channel") === "single" ? "single" : "channel",
 };
@@ -323,6 +329,7 @@ function stopPlayback() {
   playback.waiting = false;
   $("player").hidden = true;
   updatePlayButtons();
+  updateTranscriptHighlight();
 }
 function claimPlayback() {
   stopPlayback();
@@ -334,11 +341,13 @@ async function playSource(source, title, token, episodeId = null) {
     playback.url = URL.createObjectURL(source);
     source = playback.url;
   }
+  const featured = [...state.featured.values()].some(ep => ep.id === episodeId);
   audio.setContext?.({
     title,
     episodeId,
+    sample: featured,
     queue: episodeId
-      ? (
+      ? featured ? [{ id: episodeId, title, url: source }] : (
           state.shows.find((s) =>
             (s.episodes || []).some((e) => e.id === episodeId),
           )?.episodes || []
@@ -350,6 +359,7 @@ async function playSource(source, title, token, episodeId = null) {
   audio.src = source;
   audio.playbackRate = Number($("playback-speed").value);
   playback.episodeId = episodeId;
+  if (episodeId) reconcilePlayback();
   audio.onended = nativeClient ? null : () => advanceEpisode(token, episodeId);
   syncPlaybackMode();
   playback.waiting = false;
@@ -385,7 +395,8 @@ function setPlaybackMode(mode) {
   syncPlaybackMode();
 }
 function syncPlaybackMode() {
-  audio.loop = !!playback.episodeId && state.playbackMode === "single";
+  audio.loop = !!playback.episodeId && state.playbackMode === "single" &&
+    ![...state.featured.values()].some(ep => ep.id === playback.episodeId);
   document.querySelectorAll("[data-playback-mode]").forEach((select) => {
     select.value = state.playbackMode;
     select.onchange = () => setPlaybackMode(select.value);
@@ -397,6 +408,7 @@ function syncPlaybackMode() {
 function reconcilePlayback() {
   if (
     playback.episodeId &&
+    ![...state.featured.values()].some(ep => ep.id === playback.episodeId) &&
     !state.shows.some((s) =>
       (s.episodes || []).some(
         (ep) => ep.id === playback.episodeId && ep.status === "ready",
@@ -405,11 +417,11 @@ function reconcilePlayback() {
   )
     stopPlayback();
   audio.reconcile?.(
-    state.shows.flatMap((show) =>
+    [...state.featured.values()].map(ep => ep.id).concat(state.shows.flatMap((show) =>
       (show.episodes || [])
         .filter((ep) => ep.status === "ready")
         .map((ep) => ep.id),
-    ),
+    )),
   );
 }
 async function advanceEpisode(token, episodeId) {
@@ -444,6 +456,119 @@ function updatePlayButtons() {
         ? tr("暂停")
         : tr("播放");
   });
+}
+function readerMarkup(id, data) {
+  const cues = globalThis.DIYFM_TRANSCRIPT?.transcriptCues(data.script, data.duration_seconds, data.language, data.transcript_timing) || [];
+  const following = state.readers.get(id)?.following ?? true;
+  state.readers.set(id, { cues, following, active: -1 });
+  if (!cues.length) return `<pre>${escapeHtml(data.script)}</pre>`;
+  return `<div class="reader-tools"><span class="hint">${escapeHtml(tr("句子高亮为估算位置，可能略有偏差。"))}</span><button type="button" class="quiet" data-reader-follow="${escapeHtml(id)}">${escapeHtml(tr(following ? "正在跟随播放" : "回到当前句"))}</button></div>
+    <div class="transcript-reader" tabindex="0" data-reader="${escapeHtml(id)}" aria-label="${escapeHtml(tr("台本"))}">${cues.map((cue, i) => `<span class="transcript-sentence" data-cue="${i}">${i === 0 || cues[i - 1].speaker !== cue.speaker ? `<strong class="speaker-label">${escapeHtml(cue.speaker)}</strong>` : ""}${escapeHtml(cue.text)}</span>`).join(" ")}</div>`;
+}
+function bindReaders() {
+  document.querySelectorAll("[data-reader]").forEach(reader => {
+    const id = reader.dataset.reader;
+    const stopFollowing = () => {
+      const model = state.readers.get(id);
+      if (model) model.following = false;
+      const button = document.querySelector(`[data-reader-follow="${id}"]`);
+      if (button) button.textContent = tr("回到当前句");
+    };
+    reader.onwheel = stopFollowing;
+    reader.ontouchmove = stopFollowing;
+    reader.onpointerdown = stopFollowing;
+    reader.onkeydown = e => { if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(e.key)) stopFollowing(); };
+  });
+  document.querySelectorAll("[data-reader-follow]").forEach(button => {
+    button.onclick = () => {
+      const model = state.readers.get(button.dataset.readerFollow);
+      if (model) model.following = true;
+      button.textContent = tr("正在跟随播放");
+      updateTranscriptHighlight(true);
+    };
+  });
+  updateTranscriptHighlight();
+}
+function updateTranscriptHighlight(force = false) {
+  const helper = globalThis.DIYFM_TRANSCRIPT;
+  if (!helper) return;
+  document.querySelectorAll("[data-reader]").forEach(reader => {
+    const model = state.readers.get(reader.dataset.reader);
+    if (!model) return;
+    const index = reader.dataset.reader === playback.episodeId
+      ? helper.cueAt(model.cues, Number(audio.currentTime)) : -1;
+    if (index !== model.active) {
+      reader.querySelectorAll(".is-current").forEach(el => { el.classList.remove("is-current"); el.removeAttribute("aria-current"); });
+      model.active = index;
+      const sentence = reader.querySelector(`[data-cue="${index}"]`);
+      sentence?.classList.add("is-current");
+      sentence?.setAttribute("aria-current", "true");
+    }
+    if (index < 0 || !model.following || (audio.paused && !force)) return;
+    const sentence = reader.querySelector(`[data-cue="${index}"]`);
+    if (!sentence) return;
+    const r = reader.getBoundingClientRect(), s = sentence.getBoundingClientRect();
+    if (force || s.top < r.top || s.bottom > r.bottom)
+      reader.scrollTop += s.top - r.top - reader.clientHeight / 3;
+  });
+}
+audio.addEventListener("timeupdate", () => updateTranscriptHighlight());
+audio.addEventListener("seeked", () => updateTranscriptHighlight(true));
+audio.addEventListener("play", () => updateTranscriptHighlight());
+
+function loadFeatured(language) {
+  if (state.featured.has(language)) return Promise.resolve(state.featured.get(language));
+  if (state.featuredLoading.has(language)) return state.featuredLoading.get(language);
+  state.featuredErrors.delete(language);
+  const flight = runtime.featured(language).then(ep => {
+    state.featured.set(language, ep);
+    return ep;
+  }).catch(() => {
+    state.featuredErrors.set(language, tr("暂时无法载入样例，请重试。"));
+    return null;
+  }).finally(() => {
+    state.featuredLoading.delete(language);
+    if (!currentShow() && !state.creating && state.view === "studio" && state.featuredLanguage === language) renderHome();
+  });
+  state.featuredLoading.set(language, flight);
+  return flight;
+}
+function renderHome() {
+  const language = state.featuredLanguage;
+  const ep = state.featured.get(language);
+  const failure = state.featuredErrors.get(language);
+  $("studio").innerHTML = `<section class="home-listen">
+    <header class="radio-heading"><div><p class="eyebrow">DIYFM · LETTER RADIO</p><h1>${escapeHtml(tr("听一封来信，走进另一种语言。"))}</h1><p class="intro">${escapeHtml(tr("无需账号或 Key，先听一集。"))}</p></div></header>
+    <article class="featured-episode"><div class="featured-top"><span class="station-tag">${escapeHtml(tr("先听这一集"))}</span><div class="featured-languages" role="group" aria-label="${escapeHtml(tr("收听语言"))}">${["en", "ja"].map(lang => `<button type="button" class="quiet" data-featured-language="${lang}" aria-pressed="${language === lang}">${escapeHtml(LANG[lang])}</button>`).join("")}</div></div>
+    <h2>${escapeHtml(ep?.title || tr("来信语言电台"))}</h2>
+    ${ep ? `<p class="featured-summary">${escapeHtml(ep.summary)}</p><p class="hint">${escapeHtml(LANG[language])} · ${escapeHtml(LEVEL[ep.difficulty])} · ${durationLabel(ep.duration_seconds)}</p>` : `<p class="hint" role="status">${escapeHtml(failure || tr("正在载入样例…"))}</p>`}
+    <button type="button" class="primary" id="play-featured" ${ep ? `data-play="${ep.id}"` : ""}>${escapeHtml(tr(failure ? "重新载入样例" : "播放样例"))}</button>
+    <p class="hint quality-note">${escapeHtml(tr("AI 生成的虚构来信，适合通勤、做家务时轻松练听力。偶尔可能有不自然的表达，不作为考试备考教材。"))}</p>
+    ${ep ? `<details class="transcript" open><summary>${escapeHtml(tr("台本"))}</summary>${readerMarkup(ep.id, ep)}</details>` : ""}</article>
+    <div class="home-create"><p>${escapeHtml(tr("想听自己的主题？开设一个栏目。"))}</p><button type="button" class="quiet" id="home-create">${escapeHtml(tr("开设自己的栏目"))}</button><p class="hint">${escapeHtml(tr("制作节目需要自己的 Gemini API Key，调用可能产生费用。"))}</p></div>
+    </section>`;
+  $("home-create").onclick = () => { state.creating = true; openShow(null); };
+  document.querySelectorAll("[data-featured-language]").forEach(button => {
+    button.onclick = () => {
+      stopPlayback();
+      state.featuredLanguage = button.dataset.featuredLanguage;
+      renderHome();
+    };
+  });
+  $("play-featured").onclick = async () => {
+    if (ep && playback.episodeId === ep.id) {
+      if (audio.paused) audio.play().catch(() => notice(tr("浏览器未能播放，可在播放器重试。")));
+      else audio.pause();
+      return;
+    }
+    const token = claimPlayback();
+    $("play-featured").textContent = tr("正在载入样例…");
+    const sample = await loadFeatured(language);
+    if (sample && token === playback.token) await playSource(sample.url, sample.title, token, sample.id);
+  };
+  bindReaders();
+  updatePlayButtons();
+  if (!ep && !failure) loadFeatured(language);
 }
 $("stop-player").onclick = () => {
   const waiting = playback.waiting;
@@ -525,6 +650,11 @@ function changeChannelTab(tab) {
   $("studio").scrollTop = 0;
 }
 function renderStudio() {
+  if (!currentShow() && !state.creating && runtime?.featured) {
+    renderHome();
+    renderStatus();
+    return;
+  }
   const show = currentShow(),
     d = loadDraft(show),
     fresh = !show;
@@ -533,6 +663,7 @@ function renderStudio() {
         ${fresh ? `<h1 class="series-hero-title"><span class="title-line">${escapeHtml(tr("开设一个栏目，"))}</span><span class="title-line">${escapeHtml(tr("一期一期听下去。"))}</span></h1>` : `<h1>${escapeHtml(show.title)}</h1>`}
         <p class="intro" ${fresh ? "" : 'id="channel-meta"'}>${fresh ? tr("先定栏目名和主题，再选语言与难度。主题一旦定下，后面每一期都会沿用。") : `${LANG[show.language] || tr("英语")} · ${escapeHtml(themeLabel(show))} · ${trText`${(show.episodes || []).filter(e => e.status === "ready").length} 集可听`}`}</p></div>
         <img class="station-art" src="./letter-radio.svg" alt="" width="260" height="188"></header>
+        ${fresh && runtime?.featured ? `<button type="button" class="linkish" id="back-home">← ${escapeHtml(tr("先听样例"))}</button>` : ""}
         ${
           fresh
             ? ""
@@ -545,6 +676,7 @@ function renderStudio() {
                 <button type="button" class="danger" id="delete-channel">${icon("trash")}${tr("删除频道")}</button>
                 </div></details>
               </div>
+              ${state.tab === "listen" ? keyRequirement() : ""}
               ${state.tab === "listen" ? "" : trHTML`<nav class="tabs editor-tabs" aria-label="频道页面">
                   <button
                     type="button"
@@ -578,6 +710,7 @@ function renderStudio() {
                   ${trHTML`<label for="channel-title" class="wish-label">栏目名称</label>
                         <input id="channel-title" maxlength="80" required value="${escapeHtml(d.title || "")}" placeholder="${escapeHtml(tr("比如：周末小事电台"))}" />`}
                   ${themePicker(d.theme_id || "", d.custom_theme || "")}
+                  ${keyRequirement()}
                   <div class="series-options" role="group" aria-label="${escapeHtml(tr("收听选项"))}">
                     <label for="language"
                       ><span>想听什么语言？</span
@@ -622,6 +755,8 @@ function renderStudio() {
               `
         }</div>`;
   document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => changeChannelTab(b.dataset.tab));
+  if ($("back-home")) $("back-home").onclick = () => { state.creating = false; openShow(null); };
+  bindKeyLinks();
   if ($("make-next")) $("make-next").onclick = () => makeEpisode();
   if ($("delete-channel")) $("delete-channel").onclick = () => deleteChannel();
   if ($("share-channel")) $("share-channel").onclick = () => sharingUI?.share();
@@ -673,6 +808,7 @@ function renderStudio() {
   });
   syncThemeUI();
   bindVoiceControls(null);
+  bindKeyLinks();
   renderUnderstanding();
   syncPlaybackMode();
   renderEpisodes();
@@ -694,11 +830,21 @@ function lockedSeriesSummary(show) {
       <div><dt>${escapeHtml(tr("收听难度"))}</dt><dd>${escapeHtml(LEVEL[show.difficulty] || show.difficulty || "")}</dd></div>
       <div><dt>${escapeHtml(tr("大约听多久"))}</dt><dd>${escapeHtml(presetLabel(state.presets?.lengths, show.length))}</dd></div>
     </dl>
+    ${keyRequirement()}
     <div class="wish-actions">
       <p class="hint">${escapeHtml(tr("沿用栏目主题一键制作；已生成的节目保存在本浏览器。"))}</p>
       <div><button class="primary" type="button" id="make-locked">${escapeHtml(tr("制作新一期"))}</button></div>
     </div>
   </section>`;
+}
+function keyRequirement() {
+  if (!runtime) return "";
+  return `<aside class="key-requirement"><p class="hint">${escapeHtml(tr("收听样例无需 Key。制作节目需要自己的 Gemini API Key，调用可能产生费用。"))}</p>${!runtime.hasKey?.() ? `<button type="button" class="linkish" data-key-settings>${escapeHtml(tr("设置 Key"))} →</button>` : `<span class="hint">${escapeHtml(tr("本页 Key 已启用"))}</span>`}</aside>`;
+}
+function bindKeyLinks() {
+  document.querySelectorAll("[data-key-settings]").forEach(button => {
+    button.onclick = () => { setView("settings"); $("api-key").focus(); };
+  });
 }
 function renderUnderstanding() {
   if (!$("understanding")) return;
@@ -1089,7 +1235,7 @@ async function loadTranscript(id) {
           .map((e) => `<span>${escapeHtml(e)}</span>`)
           .join("")}
       </p>
-      <pre>${escapeHtml(data.script)}</pre>
+      ${readerMarkup(id, data)}
       ${
         (data.sources || []).length
           ? trHTML`<h4>本期参考资料</h4>
@@ -1127,6 +1273,7 @@ async function loadTranscript(id) {
         html;
       body.append(frame);
     }
+    bindReaders();
   } catch (e) {
     state.transcripts.delete(id);
     if ($("transcript-" + id))
@@ -1562,8 +1709,8 @@ document.addEventListener("keydown", e => {
     menu.open = false;
   });
 });
-$("channel-switch").onchange = () => openShow($("channel-switch").value || null);
-$("new-channel").onclick = () => openShow(null);
+$("channel-switch").onchange = () => { state.creating = false; openShow($("channel-switch").value || null); };
+$("new-channel").onclick = () => { state.creating = true; openShow(null); };
 $("nav-studio").onclick = () => {
   setView("studio");
   renderStudio();

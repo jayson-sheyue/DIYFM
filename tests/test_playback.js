@@ -562,3 +562,36 @@ test("episode changes refresh the listening header count without replacing the e
   run("state.shows[0].episodes.splice(0,1);renderEpisodes()");
   assert.match(elements.get('channel-meta').textContent,/1/);
 });
+
+test('leaving the homepage while a sample loads cancels playback intent and keeps the result reusable', async () => {
+  const pending = deferred();
+  let loads = 0;
+  const backend = { fetch: () => new Promise(() => {}), featured: () => { loads++; return pending.promise; } };
+  const f = setup({}, undefined, backend);
+  f.run('state.current=null; state.creating=false; renderStudio()');
+  assert.match(f.elements.get('studio').innerHTML, /play-featured/);
+  const playing = f.elements.get('play-featured').onclick();
+  f.run('stopPlayback(); state.view="settings"');
+  pending.resolve({ id: 'featured_en', title: 'Sample', script: 'Host: Hello.', summary: 'A sample.', language: 'en', difficulty: 'beginner', duration_seconds: 5, url: 'blob:sample' });
+  await playing;
+  assert.equal(loads, 1);
+  assert.equal(f.elements.get('shared-audio').src, undefined);
+  assert.equal(f.run('playback.episodeId'), null);
+  f.run('state.view="studio"; renderStudio()');
+  assert.match(f.elements.get('studio').innerHTML, /data-play="featured_en"/);
+  assert.equal(loads, 1);
+});
+
+test('homepage playback supplies a native queue and keeps samples out of library looping', async () => {
+  const f = setup();
+  let context, allowed;
+  f.elements.get('shared-audio').setContext = value => { context = value; };
+  f.elements.get('shared-audio').reconcile = value => { allowed = value; };
+  f.run('state.featured.set("ja", {id:"featured_ja",url:"blob:ja"}); state.playbackMode="single"');
+  await f.run('playSource("blob:ja", "Sample", claimPlayback(), "featured_ja")');
+  assert.equal(context.sample, true);
+  assert.equal(context.queue.length, 1);
+  assert.equal(context.queue[0].id, 'featured_ja');
+  assert.ok(allowed.includes('featured_ja'));
+  assert.equal(f.elements.get('shared-audio').loop, false);
+});
