@@ -2,88 +2,105 @@
 
 [English](README.md) · [日本語](README.ja.md) · [中文](README.zh-CN.md)
 
-**v2.5.0: listen first.** The homepage plays an English or Japanese sample with its transcript open. Creation explains the key and cost requirements up front. Transcripts offer estimated sentence highlighting and scroll following; Japanese editorial review checks conversational naturalness within the existing one-revision budget, without adding human review.
+**Listen to a little story in another language.** Two hosts open a fictional listener letter and chat about everyday surprises, friendships and small misunderstandings. Choose **English or Japanese**, listen while commuting or doing chores, and make your own themed series when you want something new.
 
-**v2.4.9 adds soft client updates and shows the version in Settings:** native apps check a Pages releases manifest, offer a browser download when newer, and never auto-install. Web and clients both display `DIYFM x.y.z` under Settings. [Client guide](docs/clients.md).
+**[Listen now — no account or key](https://jayson-sheyue.github.io/DIYFM/) · [Download Mac / Android](https://github.com/jayson-sheyue/DIYFM/releases/latest)**
 
-**v2.4.8 replaces Discover snapshots for the same channel:** re-sharing and re-approving the same `channel.id` updates that curated listing and removes the previous ZIP; already-downloaded local copies stay manual. [Sharing guide](docs/sharing.md).
+![DIYFM 2.5.0 homepage: English sample, Play button and expanded transcript](docs/images/listen-home.png)
 
-**v2.4.7 polishes series creation layout:** hero title line-breaks correctly (no literal `<br>`), and language / level / length sit in an even three-column grid with a full-width create button.
+*Screenshots show the 2.5.0 web edition using public samples. The interface supports English, Japanese and Chinese; listening language is a separate choice. [Release notes](https://github.com/jayson-sheyue/DIYFM/releases).*
 
-**v2.4.6 locks series preferences:** theme-first chips and one-tap episodes; theme, language, level and voices cannot change after creation. Per-episode angles stay optional. Sharing and Discover remain snapshot-based. [Sharing guide](docs/sharing.md).
+## Quick start
 
-**v2.4.4 unlists the Discover test submission** used to verify \`channel-approved\`, so curated starters are the only catalog entries again.
+| What you want | Where to start | API key? |
+| --- | --- | --- |
+| Try a finished episode | Homepage → English / Japanese → **Play** | No |
+| Keep a curated channel locally | **Discover → Add to library** | No |
+| Make your own themed episodes | **Settings** to enable your key, then **New series** | Your own Gemini key; requests may incur charges |
 
-**v2.4.2 adds channel submissions and an MIT license:** Discover now has **Submit your channel**, which opens a public GitHub form outside the app. After a maintainer with write access listens and adds the `channel-approved` label, Actions validates the ZIP and publishes it to Discover; nothing is listed on submit alone. DIYFM's own source code is now released under the [MIT License](LICENSE). [Sharing and curator guide](docs/sharing.md).
+1. [Open DIYFM](https://jayson-sheyue.github.io/DIYFM/) or install a client below.
+2. Choose **English** or **Japanese** on the homepage and press **Play**. No registration or configuration is required.
+3. Read the open transcript if you like. Use **Playback settings** in the bottom player for speed; sentence highlights follow the recording approximately.
+4. Want the sample in your library? Open **Discover**, find its channel and choose **Add to library**. On later visits, DIYFM restores your last selected saved channel.
 
-**v2.4.1 fixes multi-speaker voice collapse:** every `Host` and `Guest` turn is now synthesized with isolated single-speaker `voiceConfig` (`host_voice` vs `guest_voice`), per-turn silence trimming, loudness balancing, bounded `429`/`503` retry backoff, and turn-level resume checkpoints — eliminating cases where Gemini multi-speaker TTS read almost an entire episode in a single voice. Both bundled starter channels (**Starter · English Letters** and **Starter · 日本語のお便り**) have also been re-synthesized with verified distinct two-host voices.
+The homepage loads only the selected sample. First-time web playback needs a connection; Mac and Android bundle both samples for offline listening. Saved episodes can play offline while the application is available. There are no quizzes, microphone permissions, voice recordings or streaks to maintain.
 
-**v2.4.0 bundles English and Japanese starter channels:** brand-new installations on Web, Android and Mac open with two finished sample channels (**Starter · English Letters** and **Starter · 日本語のお便り**) — complete with mixed host dialogue, background music, transcripts and expressions — ready to play immediately offline without an API key. Deleting a starter channel never resurrects it, upgrading an existing library keeps your saved channels untouched, and both samples remain available anytime in **Discover**.
+## Make your own series
 
-**v2.3 adds channel sharing:** export selected finished episodes with public credits, preview ZIP imports, and use Discover to add curated channels locally without a key. [Sharing and curator guide](docs/sharing.md).
+### 1. Enable your key
 
-**Choose English or Japanese, start a series with a lasting theme, then one-tap each new episode—and listen to two hosts open a fictional letter.**
+![Settings: empty Gemini API key field, Enable key for this page and backup controls](docs/images/key-settings.png)
 
-DIYFM turns language listening into radio you want to return to: ongoing series episodes, natural conversation and useful expressions recurring in context. It is listening first. You do not need to supply research material, answer quizzes, record your voice, shadow the hosts or maintain a streak.
+1. Get your own Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
+2. Open **Settings → Your API key**, paste it, and choose **Enable key for this page**. The field clears and the page shows the enabled status.
+3. **Check key** is optional. It reads your selected text model's metadata; it does not test speech, music or all generation permissions.
+4. Return to **Listen → New series**, or choose **Create your own series** on the homepage. Going to Settings and back keeps your draft.
 
-[Open the public test site](https://jayson-sheyue.github.io/DIYFM/) · [Get a Google AI Studio key](https://aistudio.google.com/apikey) · [API references](docs/api-references.md) · [Verification record](docs/testing.md)
+**Listening to samples is free of model calls; creating episodes, first voice previews and music generation use your key and may cost money.** The key stays in memory only. Refreshing or quitting clears it, while saved episodes remain. You do not need to re-enter a key just to replay them. See [key, privacy and data boundaries](docs/security.md).
 
-> **The web edition is a static, bring-your-own-key application.** GitHub Pages hosts the application; your browser sends text, speech and music requests directly to Google. Each visitor provides their own key, pays for their own requests and has a separate browser library. Free hosting does not mean free model usage.
+### 2. Name the series and choose its theme
 
-## Android and Mac clients
+![New series form: name, theme, listening language, level, duration and upfront key guidance](docs/images/create-series.png)
 
-**v2.2.0 adds standalone clients with bundled application resources and native playback/files.** [Client guide and build instructions](docs/clients.md) · [Release downloads](https://github.com/jayson-sheyue/DIYFM/releases).
+1. Enter a **Series name**, such as `Small Everyday Surprises`.
+2. Choose **Everyday surprises**, **Love & friendship**, **Life at work**, **Surprise**, or **Custom**. For Custom, describe the kind of stories you would enjoy, for example:
+   > Funny roommate misunderstandings, warm and light, in easy Japanese.
+3. Select the **listening language**, **level** and **episode length**. Writing a wish in English does not choose English listening; the language selector does. Defaults are Elementary and about 5 minutes; 3 / 5 / 10 / 15 minute targets are available.
+4. Optionally open **Voices & background music** to choose both hosts and a music style, or no music, before creating the series.
+5. Press **Create series & make episode 1**. Follow progress in **Messages**. Keep the page open; switching views inside the app is fine. Keep Android in the foreground during generation.
+6. Once ready, press **Play**. Later, **Make a new episode** reuses the same theme without asking you to write another scenario.
 
-**v2.3.1 puts listening first on phones:** bottom navigation, a compact channel selector and episodes shown before editing. **New episode** opens production; **Channel options** contains preferences, voices, sharing and deletion. Playback mode/speed are under **Playback settings**, model controls under **Settings → Model settings**, and files under **Settings → Library & files**. Controls retain 48 px touch height and content scrolls independently. Android resizes the actual WebView viewport for system bars, cutouts and the keyboard; rotating back restores the portrait layout.
+**Series settings lock after creation**, including theme, language, level, duration, voices and music. Start another series for a different setup. The form screenshot is an example draft; no paid episode was generated for it.
 
-- **Android:** Android 8+ with a current System WebView; signed APK, foreground media service, background/channel playback and system media controls.
-- **Mac:** macOS 13+; Apple Silicon + Intel universal DMG/ZIP, native playback and save/open dialogs. The first test build is ad-hoc signed and **not Apple notarized**; downloaded copies may be blocked by macOS. Apple Silicon is tested; physical Intel Macs are not.
-- Saved episodes play offline. Making new episodes still needs internet and your own key. Keys remain in the app's current memory session and clear on exit.
-- Each client has an independent local library. Move programs using Settings → Export backup / Import file; no automatic cloud sync. Quit/force-stop interrupts production; keep the app foregrounded while generating on Android.
-- MP3 exports include the finished BGM mix. Native exports use the system file dialog. Manual updates use **Download app updates**; Android upgrades must retain the same signing identity and app data.
+## Listen and read along
 
-Developers: `npm run test:mac`, `npm run build:mac`, and (after JDK/SDK setup and one-time `npm run android:signing`) `npm run build:android`. End users only install the packages. See the client guide for signing, storage, update and validation boundaries.
+![Japanese public sample paused at 0:12, with the estimated current sentence highlighted and the player visible](docs/images/read-along.png)
 
-## Features
+- Open **Script & episode details** in a saved episode for its transcript, expressions and available reference sources. The homepage transcript starts open.
+- **Sentence highlighting is approximate.** New episodes use measured audio-turn lengths; sentence positions within each turn are estimated. Older recordings and samples use whole-recording estimates.
+- Scrolling or selecting text manually suspends scroll following. **Back to current sentence** turns following back on. Pausing keeps the highlight; seeking updates its position.
+- **Playback settings** controls speed, **Repeat one** and **Play channel**. Channel playback follows the ready-episode list and wraps after the last; samples and voice/music previews play once.
+- Finished episodes use the mixed audio, including BGM when available. Downloading MP3 does not call a model.
 
-- English or Japanese; Beginner, Elementary or Advanced; approximately 3, 5, 10 or 15 minutes.
-- One series theme (presets, surprise, or custom) reused for every episode—one tap to make the next. No material gathering required.
-- Two hosts and an independent fictional letter in each episode, without a long-running cast to remember.
-- Browser-based editorial rules: plan → Google Search verification when needed → write → structural checks and review → two-host speech → background music mixing.
-- Selectable, previewable voices; selectable and regenerable music, including a voice-only option.
-- Progress, failed attempts and retry controls in Messages. Reviewed scripts and compatible completed speech segments can be reused.
-- Play, pause, speed controls, repeat one, channel playback, MP3 downloads, scripts and actual search sources.
-- Delete channels or individual episodes; export ZIP backups and merge imports. Clearing previews does not delete finished episodes.
+AI-generated fictional letters and synthesized voices are intended for casual listening. Japanese uses model review and at most one correction, without per-episode human proofreading. Some expressions or pronunciation may be off; this is not an exam-prep textbook or a guarantee of learning progress.
 
-## Interface language
+## Save, discover and share
 
-The first visit uses **English**, regardless of your operating system or browser language. Open **Settings → Interface language** to choose **English / 日本語 / 中文**. Your explicit choice is saved in the current browser and restored after refreshing. Switching takes effect immediately without refreshing, clearing your key, interrupting production or resetting the player.
+![Discover: curated English and Japanese channels with Preview and Add to library actions](docs/images/discover.png)
 
-The interface and listening languages are independent: you can use a Japanese interface to listen to English, for example. Wishes, existing titles and scripts keep their original text. New episodes capture the interface language for their supporting metadata when production starts; retries retain that choice. Switching does not translate saved works or generate additional model requests. Missing interface translations fall back to English.
+| Task | Action | Result |
+| --- | --- | --- |
+| Keep an audio file | Episode → **Download MP3** | Finished audio, including its existing BGM mix |
+| Listen to a curated channel | **Discover → Preview**, then **Add to library** | Local copy, no key or account needed |
+| Share selected finished episodes | **Channel options → Share channel** | A channel ZIP with transcripts, audio and public credits |
+| Open a shared channel | **Settings → Import file** | Preview the ZIP, then confirm adding it locally |
+| Back up the whole library | **Settings → Export backup** | Channels, audio, scripts, ordinary settings and resumable work; no key |
+| Move to another browser or device | Export a backup, then import it there | Merges with the destination library; no automatic cloud sync |
 
-## First use
+Use a **channel package** for public sharing: a whole-library backup can contain private wishes and production material. Neither file exports your API key. Discover snapshots already on your device do not auto-update. Optional **Submit your channel** opens a public GitHub form and requires a GitHub account. [Sharing, credits and catalog guide](docs/sharing.md).
 
-Choose English or Japanese on the homepage and press **Play**, without an account or API key. The transcript starts open. Browsing it manually suspends scroll following; **Back to current sentence** resumes it. Pausing retains the highlight; seeking updates it. Sentence positions are estimates: new episodes use measured audio turn durations, while older episodes and samples use the overall duration. No speech-recognition request is added.
+## Install on Mac or Android
 
-The homepage loads only the selected sample and no longer automatically imports the whole Discover catalog. First-time web playback needs a network connection; clients bundle the samples for offline playback. To keep a sample for offline web listening, use **Discover → Add to library**. Existing libraries and the last selected channel are preserved.
+| Edition | Get started | Requirements |
+| --- | --- | --- |
+| Web | [Open DIYFM](https://jayson-sheyue.github.io/DIYFM/) in a modern browser | Connection for the first sample load; no developer tools |
+| Mac | [Download the latest Universal DMG or ZIP](https://github.com/jayson-sheyue/DIYFM/releases/latest), copy **DIYFM.app** to Applications and open it | macOS 13+, Apple Silicon or Intel |
+| Android | [Download the latest APK](https://github.com/jayson-sheyue/DIYFM/releases/latest) and install it using the system installer | Android 8+ and a recent System WebView |
 
-These are AI-generated fictional letters and synthesized voices for casual listening. Some expressions may sound unnatural; this is not exam-prep material. Japanese generation uses model review and at most one revision, without per-episode human review or a promise of native-level accuracy.
+The Mac build is ad-hoc signed, without Apple notarization; macOS may block downloaded copies. Apple Silicon is tested, while physical Intel hardware is not. Update Mac while the app is closed and install Android over the previous version to preserve data. **Settings** displays the version; the clients' update button opens a browser download and does not install automatically. [Client setup, storage and update guide](docs/clients.md).
 
-To create your own episodes:
+## Language, storage and common questions
 
-1. Open the test site and go to **Settings**. Get your own Gemini API key from Google AI Studio.
-2. Paste it into **Your API key**, then click **Enable key for this page**. The field clears; the UI shows only whether a key is enabled.
-3. Optionally click **Check key**. This reads metadata for the selected text model without generating content. It does not verify speech or music access.
-4. Return to **Listen**, name the series, pick a theme chip (or write a custom theme), and choose the listening language—for example Everyday mishaps or a custom “Funny roommate misunderstandings in easy English.”
-5. The defaults are Elementary and about 5 minutes. Expand **Voices & background music** to choose and preview the two hosts and music before your first episode.
-6. Click **Create series & make episode 1**. Later episodes reuse the theme via **Make next episode**. You may switch views inside the app and check Messages, but keep the webpage open.
-7. When ready, play the episode, download its MP3, or open **Script & episode details** for expressions, input and returned search sources.
-
-Refreshing, closing or leaving clears the key, so you will need to enter it again. **Saved channels and audio remain.** Opening the page, reading scripts, replaying and importing/exporting do not call generation models. Production, first previews and explicit regeneration send requests subject to Google's pricing, quota and regional rules.
-
-New AI Studio authorization keys, including those beginning with `AQ.`, are accepted without guessing their service from the prefix. The public application connects only to the **Gemini Developer API**. **Vertex AI Express Mode is not integrated**; it requires different endpoints and capability handling. Use a key authorized for the Generative Language API.
+- **Change the interface:** **Settings → Interface language → English / 日本語 / 中文**. First launch is English; your choice is remembered. This does not translate saved episodes or change the listening language.
+- **“I don't have a key.”** Use the homepage samples or Discover. A key is needed for production and uncached voice/music previews.
+- **“My key disappeared.”** This is expected after refreshing or quitting. Re-enable it for new production; saved audio remains playable.
+- **“Production failed.”** Open **Messages** for details and retry. Compatible completed stages are reused where possible; remaining calls may incur charges. If music alone fails, DIYFM keeps the voice-only episode.
+- **“Where are my episodes?”** Each browser, device and client has its own local library. Clearing site/app data or uninstalling can remove it. Back up before moving or clearing data. MP3 files alone cannot restore the whole library.
+- **“Can I delete something?”** Use an episode's **···** menu for that episode, or **Channel options** for the whole channel. Deletion asks for confirmation and cannot be undone; export a backup first if needed.
 
 ### Models
+
+Open **Settings → Model settings** for these advanced options. The defaults are enough to get started.
 
 | Function                                       | Default model                  | API                                                      |
 | ---------------------------------------------- | ------------------------------ | -------------------------------------------------------- |
@@ -93,40 +110,6 @@ New AI Studio authorization keys, including those beginning with `AQ.`, are acce
 
 Model IDs are editable. Availability depends on your key, region, billing and model capabilities; the application does not silently substitute models. Legacy Vertex `lyria-002` is not compatible with the AI Studio endpoint. A music model supported by the Developer API, such as `lyria-3.5`, may have different duration and costs. Music failure keeps the voice-only episode and shows a notice. Content or speech failure is not presented as a finished episode.
 
-### Playback and management
-
-- **Repeat one** repeats the current episode.
-- **Play channel** follows the displayed order of ready episodes within that channel, wraps to the first after the last, and skips failed or unfinished records.
-- Change the mode above the episode list or in the bottom player. The controls stay synchronized and the browser remembers your choice. Speed carries across episodes; pausing or stopping does not resume automatically.
-- Voice and music previews play once and never enter the channel queue.
-- MP3 downloads are encoded from the same finished audio used by the player, including its mixed background music. The cache is verified against that audio; old or imported unverified MP3s are rebuilt locally. No model request is needed. A voice-only episode or one made with **No background music** remains voice-only.
-- If the browser cannot start the MP3 Worker, encoding automatically falls back to small batches in the page. Keep the page open until the download starts; no audio or key is sent to an external conversion service.
-- **Delete episode** keeps channel preferences and other letters. **Delete channel** removes all its records and audio. Both ask for confirmation, cannot be undone, and can be preceded by a backup. Conflicting deletion is refused during channel production or MP3 preparation.
-
-## Key, privacy and data boundaries
-
-- Your key stays in this page's JavaScript memory. It is not written to `localStorage`, `sessionStorage`, IndexedDB, URLs, logs, ZIP backups, the repository or build artifacts.
-- Requests go only to the fixed `https://generativelanguage.googleapis.com` origin, with the key in an `x-goog-api-key` header. There is no arbitrary credential-carrying proxy address and API redirects are rejected.
-- Provider errors use sanitized messages rather than raw response bodies that might contain sensitive data.
-- There are no analytics, advertising or third-party CDN scripts. MP3 and ZIP libraries are hosted with the site; a content security policy restricts script and network sources.
-- This does not hide a shared key in frontend code. The visitor, developer tools, authorized extensions and a compromised page environment can still access runtime credentials. Use a trusted device, site and browser environment; restrict the key in Google, monitor usage, set budget alerts and revoke leaked keys promptly.
-- Google receives your wish, scripts needed for generation and associated requests under its own terms. This site does not replace Google's data or billing policies.
-- Channels, scripts, audio, music and ordinary model settings are stored in this origin's IndexedDB. Drafts, interface language, playback mode and message read state use local browser storage. Clearing site data, leaving private browsing or storage eviction can lose them: export backups.
-- Different browsers, devices, `localhost` versus `127.0.0.1`, and local versus Pages sites have independent libraries. Pages projects under the same GitHub account share an origin; browser storage is not a secret vault isolated from those projects.
-- There is no account system, server-side library or cross-device sync. Other visitors cannot browse your local library through this application. **Your local `data/` directory and existing recordings are not published to GitHub.**
-
-Additional details: [security notes](docs/security.md).
-
-## Saving, retrying and backups
-
-Each production task captures preferences, listening language, metadata language, models and the current key. Changing settings during a task does not change its inputs. Clearing the key blocks new tasks; submitted tasks may continue with their original in-memory snapshot until completion or failure.
-
-Failed attempts remain in Messages. A retry uses the original input and reuses saved plans, research, reviewed scripts and compatible voice segments where available. It uses current model settings; incomplete or incompatible stages still need new service calls.
-
-- **Export backup** includes channels, scripts, completed audio, music, production segments and ordinary model settings. It excludes keys and voice-preview cache.
-- **Import file** merges channels with new IDs, without replacing existing works or your current models/key. Invalid manifests and missing completed audio reject the import without replacing the library.
-- ZIP import/export is limited to 500 MB to control browser memory. For larger libraries, download individual MP3s and organize them in batches.
-- Refreshing or closing interrupts production. Reopening marks tasks without a surviving executor as interrupted and does not automatically resume paid generation. Browser throttling, sleep and network outages can also affect completion.
 
 ## Run the static application locally
 
