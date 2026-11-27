@@ -1,9 +1,21 @@
 // Fixed Google origin. Credentials never appear in URLs, exported configuration or errors.
 export const DEFAULT_MODELS = Object.freeze({
   llm_model: "gemini-3.8-flash",
-  tts_model: "gemini-3.1-flash-tts-preview",
+  tts_model: "gemini-3.8-flash-tts",
   lyria_model: "lyria-3-clip-preview",
 });
+// Catalog suggestions, not an account-level availability guarantee (checked 2026-11-27).
+export const MODEL_PRESETS = Object.freeze({
+  llm_model: Object.freeze(["gemini-3.8-flash", "gemini-3.5-flash-lite"]),
+  tts_model: Object.freeze([
+    "gemini-3.8-flash-tts",
+    "gemini-3.8-flash-lite-tts",
+    "gemini-3.1-flash-tts-preview",
+  ]),
+  lyria_model: Object.freeze(["lyria-3-clip-preview", "lyria-3.5"]),
+});
+// Separate old generated clips from requests using the corrected transcript contract.
+export const SPEECH_VERSION = "structured-tts-1";
 const ORIGIN = "https://generativelanguage.googleapis.com/v1beta/";
 export function modelId(value) {
   if (typeof value !== "string" || !/^[a-z][a-z0-9._-]{1,119}$/.test(value))
@@ -157,6 +169,17 @@ export async function textResult(
   };
 }
 export function audioParts(payload) {
+  if (payload.status && payload.status !== "completed")
+    throw new Error("模型没有返回可播放的音频，已保留台本。");
+  const modern = (payload.steps || [])
+    .filter((s) => s.type === "model_output")
+    .flatMap((s) => s.content || [])
+    .filter((p) => p.type === "audio" && p.data)
+    .map((p) => ({
+      data: p.data,
+      mime: p.mime_type || "audio/L16;rate=24000",
+    }));
+  if (modern.length) return modern;
   const parts = (payload.candidates || [])
     .flatMap((c) => c.content?.parts || [])
     .filter((p) => p.inlineData?.data)
@@ -210,7 +233,7 @@ function voiceRegisterAnchor(voiceName, speaker = "Host") {
     return `natural clear female ${role} voice in steady normal register`;
   return `consistent ${role} voice in natural register`;
 }
-export function speechBody(
+function legacySpeechBody(
   text,
   {
     host = "Kore",
@@ -263,17 +286,70 @@ export function speechBody(
     },
   };
 }
+const legacySpeechModel = (model) => /^gemini-(?:2\.5|3\.1)-.*tts/.test(model);
+export function speechBody(text, options = {}) {
+  const {
+    model = DEFAULT_MODELS.tts_model,
+    host = "Kore",
+    guest = "Puck",
+    voice = "",
+    single = false,
+    direction = "",
+  } = options;
+  if (legacySpeechModel(model)) return legacySpeechBody(text, options);
+  const style = String(direction || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
+  const turn = (line, speaker) => ({
+    type: "text",
+    text: line,
+    annotations: [{
+      type: "speech_metadata",
+      ...(speaker ? { speaker } : {}),
+      ...(style ? { style } : {}),
+    }],
+  });
+  let content;
+  if (single) {
+    const clean = String(text || "")
+      .replace(/^\s*(?:Host|Guest)\s*[:：]\s*/i, "")
+      .trim();
+    if (!clean) throw new Error("台本缺少可配音的对白，已保留草稿。");
+    content = [turn(clean)];
+  } else {
+    const turns = String(text || "").trim().split(/\n(?=\s*(?:Host|Guest)\s*[:：])/i);
+    content = turns.map((line) => {
+      const match = line.match(/^\s*(Host|Guest)\s*[:：]\s*([\s\S]+)$/i);
+      if (!match || !match[2].trim()) throw new Error("台本缺少可配音的对白，已保留草稿。");
+      return turn(match[2].trim(), /^host$/i.test(match[1]) ? "Host" : "Guest");
+    });
+  }
+  return {
+    model: modelId(model),
+    input: [{ type: "user_input", content }],
+    store: false,
+    // Request PCM explicitly: unary 3.8 defaults to a WAV container.
+    response_format: { type: "audio", mime_type: "audio/l16", sample_rate: 24000 },
+    generation_config: {
+      speech_config: single
+        ? [{ voice: voice || host }]
+        : { speakers: [{ speaker: "Host", voice: host }, { speaker: "Guest", voice: guest }] },
+    },
+  };
+}
 export async function speech(
   snapshot,
   text,
   options = {},
   request = googleRequest,
 ) {
+  const model = modelId(snapshot.models.tts_model);
   return audioParts(
     await request(
       snapshot,
-      `models/${modelId(snapshot.models.tts_model)}:generateContent`,
-      speechBody(text, options),
+      legacySpeechModel(model) ? `models/${model}:generateContent` : "interactions",
+      speechBody(text, { ...options, model }),
     ),
   );
 }

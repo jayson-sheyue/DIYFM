@@ -1160,7 +1160,7 @@ p {
 .spec-body {
   margin-top: 20px;
 }
-.spec-body input {
+.spec-body input, .spec-body select {
   display: block;
   margin-top: 8px;
   font-family: ui-monospace, monospace;

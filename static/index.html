@@ -10,7 +10,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob: https://generativelanguage.googleapis.com https://jayson-sheyue.github.io/DIYFM/catalog/ https://jayson-sheyue.github.io/DIYFM/releases/; worker-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'"
     />
-    <link rel="stylesheet" href="./app.css?v=2.5.0" />
+    <link rel="stylesheet" href="./app.css?v=2.5.1" />
   </head>
   <body>
     <div class="chassis">
@@ -250,6 +250,7 @@
           </div>
           </details>
           <details class="model-settings"><summary data-i18n="模型设置">Model settings</summary>
+          <p class="hint" data-i18n="可选择模型预设，也可直接输入自定义 ID。预设依据官方目录，实际可用性取决于账户、地区与计费；Preview 可能变更或停用。">Choose a model preset or enter a custom ID. Presets follow the official catalog; availability depends on your account, region and billing. Preview models may change or retire.</p>
           <div class="settings-rack">
             <article class="spec-card">
               <header class="spec-head">
@@ -265,6 +266,7 @@
                 </div>
               </header>
               <div class="spec-body">
+                <label><span data-i18n="文本模型预设">Text model preset</span><select id="set-llm-preset"></select></label>
                 <label
                   ><span data-i18n="文本模型 ID">Text model ID</span
                   ><input
@@ -299,14 +301,16 @@
                 </div>
               </header>
               <div class="spec-body">
+                <label><span data-i18n="语音模型预设">Speech model preset</span><select id="set-tts-preset"></select></label>
                 <label
                   ><span data-i18n="TTS 模型 ID">TTS model ID</span
                   ><input
                     id="set-tts"
                     spellcheck="false"
                     autocomplete="off"
-                    placeholder="gemini-3.1-flash-tts-preview"
+                    placeholder="gemini-3.8-flash-tts"
                 /></label>
+                <p class="hint" data-i18n="请选择支持语音输出的 TTS 模型，例如 gemini-3.8-flash-tts；普通文本模型不能代替 TTS。">Choose a TTS model with speech output, such as gemini-3.8-flash-tts; a text model cannot replace TTS.</p>
                 <p class="hint">
                   <a
                     href="https://ai.google.dev/gemini-api/docs/speech-generation"
@@ -334,6 +338,7 @@
                 </div>
               </header>
               <div class="spec-body">
+                <label><span data-i18n="音乐模型预设">Music model preset</span><select id="set-lyria-preset"></select></label>
                 <label
                   ><span data-i18n="音乐模型 ID">Music model ID</span
                   ><input
@@ -430,6 +435,6 @@
         </footer>
       </main>
     </div>
-    <script type="module" src="./app-entry.mjs?v=2.5.0"></script>
+    <script type="module" src="./app-entry.mjs?v=2.5.1"></script>
   </body>
 </html>

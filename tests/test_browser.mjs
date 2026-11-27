@@ -8,6 +8,10 @@ import {
   googleRequest,
   textResult,
   speechBody,
+  speech,
+  audioParts,
+  MODEL_PRESETS,
+  SPEECH_VERSION,
   music,
   DEFAULT_MODELS,
 } from "../static/gemini.mjs";
@@ -18,8 +22,8 @@ import {
   trimSilencePCM,
   normalizeTurnPCM,
   RATE,
-} from "../static/audio.mjs?v=2.5.0";
-import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.5.0";
+} from "../static/audio.mjs?v=2.5.1";
+import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.5.1";
 import {
   zipSync,
   strToU8,
@@ -230,9 +234,7 @@ test("search parses only actual grounding sources and speech uses exactly the se
     guest: "Charon",
   });
   assert.deepEqual(
-    body.generationConfig.speechConfig.multiSpeakerVoiceConfig.speakerVoiceConfigs.map(
-      (v) => v.voiceConfig.prebuiltVoiceConfig.voiceName,
-    ),
+    body.generation_config.speech_config.speakers.map((v) => v.voice),
     ["Zephyr", "Charon"],
   );
 });
@@ -258,6 +260,76 @@ test("music uses Developer API interactions with storage disabled and extracts o
     },
   );
   assert.equal(part.data, "abc");
+});
+test("modern speech keeps English and Japanese transcripts verbatim and directions outside speech text", async () => {
+  for (const model of ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts", "custom-future-tts"]) {
+    for (const [language, text] of [["en", 'A letter says: "Take your time."'], ["ja", "雨の音を聞きながら、ゆっくり休みましょう。"]]) {
+      const options = { single: true, voice: "Puck", speaker: "Guest", language, direction: "Quiet, sleepy and slow." };
+      const result = await speech({ models: { tts_model: model } }, "Guest: " + text, options, async (_snap, path, body) => {
+        assert.equal(path, "interactions");
+        assert.equal(body.model, model, "custom model must not be silently substituted");
+        assert.equal(body.store, false);
+        assert.deepEqual(body.response_format, { type: "audio", mime_type: "audio/l16", sample_rate: 24000 });
+        assert.deepEqual(body.generation_config.speech_config, [{ voice: "Puck" }]);
+        assert.deepEqual(body.input[0].content, [{ type: "text", text, annotations: [{ type: "speech_metadata", style: options.direction }] }]);
+        return { status: "completed", steps: [
+          { type: "user_input", content: [{ type: "audio", data: "do-not-use" }] },
+          { type: "model_output", content: [{ type: "text", text: "description" }, { type: "audio", mime_type: audioPart.mime, data: audioPart.data }] },
+        ] };
+      });
+      assert.deepEqual(result, [audioPart]);
+      const wav = readWav(await (await partsBlob(result)).arrayBuffer());
+      assert.equal(wav.rate, RATE);
+      assert.equal(wav.pcm.length, 12000);
+    }
+  }
+  const dual = speechBody("Host: Hello.\nA second line.\nGuest: Goodnight.", { direction: "Soft." });
+  assert.deepEqual(dual.input[0].content.map(p => [p.text, p.annotations[0].speaker]), [["Hello.\nA second line.", "Host"], ["Goodnight.", "Guest"]]);
+  assert.equal(speechBody("Hello.", { single: true }).input[0].content[0].annotations[0].style, undefined);
+  assert.throws(() => speechBody("Host:", {}), /台本/);
+  assert.throws(() => audioParts({ status: "failed", steps: [{ type: "model_output", content: [{ type: "audio", data: "partial" }] }] }), /台本/);
+  assert.throws(() => audioParts({ status: "completed", steps: [{ type: "model_output", content: [{ type: "text", text: "unsupported" }] }] }), /台本/);
+});
+test("legacy preview models keep their original generateContent protocol", async () => {
+  for (const model of ["gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"]) {
+    const result = await speech({ models: { tts_model: model } }, "Guest: Goodnight.", { single: true, voice: "Puck", speaker: "Guest" }, async (_snap, path, body) => {
+      assert.equal(path, `models/${model}:generateContent`);
+      assert.match(body.contents[0].parts[0].text, /^Say the following/);
+      assert.match(body.contents[0].parts[0].text, /natural grounded male/);
+      assert.equal(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, "Puck");
+      return { candidates: [{ content: { parts: [{ inlineData: { mimeType: audioPart.mime, data: audioPart.data } }] } }] };
+    });
+    assert.deepEqual(result, [audioPart]);
+  }
+});
+test("model presets accompany editable settings; custom values survive reload and restore is explicit", async () => {
+  const library = makeLibrary();
+  const api = createBrowserAPI({ library });
+  await api.ready;
+  assert.deepEqual((await call(api, "/api/settings")).data.model_presets, MODEL_PRESETS);
+  const custom = { llm_model: "custom-writer", tts_model: "custom-speaker", lyria_model: "custom-music" };
+  assert.equal((await call(api, "/api/settings", "PUT", custom)).status, 200);
+  const reloaded = createBrowserAPI({ library });
+  await reloaded.ready;
+  assert.deepEqual((await call(reloaded, "/api/settings")).data.settings, custom);
+  assert.equal((await call(reloaded, "/api/settings", "PUT", { tts_model: "bad model!" })).status, 400);
+  assert.deepEqual((await call(reloaded, "/api/settings")).data.settings, custom);
+  assert.deepEqual((await call(reloaded, "/api/settings/restore", "POST")).data.settings, DEFAULT_MODELS);
+  assert.equal(DEFAULT_MODELS.tts_model, "gemini-3.8-flash-tts");
+});
+test("voice previews ignore old prompt-bearing cache and reuse corrected results", async () => {
+  let requests = 0;
+  const { api, library } = await fixture({ synthesize: async () => { requests++; return [audioPart]; } });
+  const account = (await call(api, "/api/settings")).data.effective_project_id;
+  const oldKey = `preview:${account}:${DEFAULT_MODELS.tts_model}:en:Puck`;
+  await library.write([[oldKey, { blob: new Blob(["old prompt audio"]), created: new Date().toISOString() }]]);
+  const input = jsonRequest("POST", { voice: "Puck", language: "en" });
+  const first = await api.fetch("/api/voices/preview", input);
+  assert.equal(first.headers.get("X-DIYFM-Cache"), "generated");
+  const second = await api.fetch("/api/voices/preview", input);
+  assert.equal(second.headers.get("X-DIYFM-Cache"), "hit");
+  assert.equal(requests, 1);
+  assert.ok(await library.get(`preview:${SPEECH_VERSION}:${account}:${DEFAULT_MODELS.tts_model}:en:Puck`));
 });
 test("keys never enter IndexedDB, ordinary settings, backups or the reload state", async () => {
   const { api, library } = await fixture();
@@ -489,7 +561,7 @@ test("required research without real sources fails before speech or script gener
   assert.equal(calls, 2);
 });
 test("episode metadata language is captured separately from the listening language", async () => {
-  const { i18n } = await import("../static/i18n.mjs?v=2.5.0");
+  const { i18n } = await import("../static/i18n.mjs?v=2.5.1");
   i18n.setLocale("ja");
   let seen;
   const gate = new Promise((resolve) => {
@@ -712,18 +784,11 @@ test("episode synthesis isolates Host and Guest into single-speaker requests on 
       editor: async () => structuredClone(multiTurn),
       request: async (_snap, path, body) => {
         ttsRequests.push({ path, body });
-        const voiceName =
-          body.generationConfig?.speechConfig?.voiceConfig?.prebuiltVoiceConfig
-            ?.voiceName;
+        const voiceName = body.generation_config.speech_config[0].voice;
         const part = voiceName === "Charon" ? guestPart : hostPart;
         return {
-          candidates: [
-            {
-              content: {
-                parts: [{ inlineData: { mimeType: part.mime, data: part.data } }],
-              },
-            },
-          ],
+          status: "completed",
+          steps: [{ type: "model_output", content: [{ type: "audio", mime_type: part.mime, data: part.data }] }],
         };
       },
     });
@@ -759,25 +824,11 @@ test("episode synthesis isolates Host and Guest into single-speaker requests on 
     "Charon",
   ];
   ttsRequests.forEach(({ path, body }, idx) => {
-    assert.match(path, /:generateContent$/);
-    const sc = body.generationConfig.speechConfig;
-    assert.equal(
-      sc.multiSpeakerVoiceConfig,
-      undefined,
-      "episode turns must not use multiSpeakerVoiceConfig",
-    );
-    assert.equal(sc.voiceConfig.prebuiltVoiceConfig.voiceName, expectedVoices[idx]);
-    assert.equal(sc.languageCode, "en-US");
-    const promptText = body.contents[0].parts[0].text;
-    assert.ok(!/(?:^|\s)(?:Host|Guest)\s*:/.test(promptText));
-    assert.ok(
-      promptText.includes(
-        expectedVoices[idx] === "Charon"
-          ? "natural grounded male"
-          : "natural clear female",
-      ),
-    );
-    assert.ok(promptText.includes(multiTurn.turns[idx].text));
+    assert.equal(path, "interactions");
+    assert.deepEqual(body.generation_config.speech_config, [{ voice: expectedVoices[idx] }]);
+    assert.equal(body.input[0].content[0].text, multiTurn.turns[idx].text);
+    assert.equal(body.store, false);
+    assert.equal(body.response_format.mime_type, "audio/l16");
   });
   const master = readWav(await (await library.get("audio:" + ep.id)).arrayBuffer());
   const windowAmp = (startSec, freq) => {
@@ -883,6 +934,32 @@ test("speechTurns parses fallback scripts, strips duplicate labels and DSP helpe
   assert.ok(liftedPeak > origPeak * 2, "quiet turns should be lifted");
   const healthy = tonePCM(440, 1, 0.25);
   assert.equal(normalizeTurnPCM(healthy), healthy);
+});
+test("retry after a speech contract upgrade keeps the script but regenerates old voice fragments", async () => {
+  let fail = true, edits = 0;
+  const seen = [];
+  const { api, library, show } = await fixture({
+    editor: async () => { edits++; return structuredClone(content); },
+    synthesize: async (_snap, text) => {
+      seen.push(text);
+      if (fail && text === "Welcome.") throw new Error("controlled failure");
+      return [audioPart];
+    },
+  });
+  await call(api, `/api/shows/${show.id}/episodes`, "POST", episodeBody());
+  const first = await finished(api, show.id);
+  assert.equal(first.ep.status, "failed");
+  const shows = await library.get("shows");
+  delete shows[0].episodes[0].speech_version;
+  await library.write([["shows", shows], [`voice:${first.ep.id}:turn:0`, new Blob(["old spoken prompt"])]]);
+  fail = false;
+  seen.length = 0;
+  await call(api, `/api/shows/${show.id}/episodes`, "POST", episodeBody({ retry_episode_id: first.ep.id }));
+  const result = await finished(api, show.id);
+  assert.equal(result.ep.status, "ready");
+  assert.deepEqual(seen, ["Hello.", "Welcome."]);
+  assert.equal(edits, 1);
+  assert.equal(result.ep.speech_version, SPEECH_VERSION);
 });
 
 test('Japanese naturalness review uses the existing one-revision budget', async () => {

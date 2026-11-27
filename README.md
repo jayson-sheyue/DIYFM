@@ -10,6 +10,8 @@
 
 *Screenshots show the 2.5.0 web edition using public samples. The interface supports English, Japanese and Chinese; listening language is a separate choice. [Release notes](https://github.com/jayson-sheyue/DIYFM/releases).*
 
+Version **2.5.1** fixes spoken TTS directions and adds model presets with custom IDs across Web, macOS and Android.
+
 ## Quick start
 
 | What you want | Where to start | API key? |
@@ -105,8 +107,10 @@ Open **Settings → Model settings** for these advanced options. The defaults ar
 | Function                                       | Default model                  | API                                                      |
 | ---------------------------------------------- | ------------------------------ | -------------------------------------------------------- |
 | Planning, verification, writing and review     | `gemini-3.8-flash`             | Gemini `generateContent`; Google Search for verification |
-| Two-host speech and voice previews             | `gemini-3.1-flash-tts-preview` | Gemini `generateContent` with audio output               |
+| Two-host speech and voice previews             | `gemini-3.8-flash-tts` | Gemini Interactions, structured speech metadata               |
 | Approximately 30 seconds of instrumental music | `lyria-3-clip-preview`         | Gemini Interactions with `store: false`                  |
+
+Choose a preset for text, speech or music, or type a custom model ID in the editable field. Presets are catalog suggestions (checked 2026-11-27), not a guarantee of account access; Preview models can change or retire. Saved IDs are preserved until you change them or choose **Restore default models**. The default speech model is `gemini-3.8-flash-tts`, with `gemini-3.8-flash-lite-tts` and the legacy `gemini-3.1-flash-tts-preview` also listed. New TTS requests send only the spoken transcript in text and put delivery directions in `speech_metadata.style`; they request 24 kHz PCM explicitly. Legacy preview IDs retain their older `generateContent` request format. Custom speech IDs use the current Interactions TTS contract and must support it; plain text models cannot replace TTS. Old preview clips and failed-task voice fragments are not reused across this request-format change; saved finished episodes are kept and are not automatically repaired. See the [official speech guide](https://ai.google.dev/gemini-api/docs/speech-generation) and [migration guide](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/text-to-speech/migration-guide).
 
 Model IDs are editable. Availability depends on your key, region, billing and model capabilities; the application does not silently substitute models. Legacy Vertex `lyria-002` is not compatible with the AI Studio endpoint. A music model supported by the Developer API, such as `lyria-3.5`, may have different duration and costs. Music failure keeps the voice-only episode and shows a notice. Content or speech failure is not presented as a finished episode.
 

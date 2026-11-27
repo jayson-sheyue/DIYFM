@@ -10,6 +10,8 @@
 
 *画像は2.5.0 Web版の公開サンプルです。ホームは日本語、以降の操作例は初期設定の英語UIで表示しています。設定で英語・日本語・中国語に切り替えられ、聴く言語は別に選びます。[更新履歴](https://github.com/jayson-sheyue/DIYFM/releases)。*
 
+**2.5.1** では新TTSによる演技指示の読み上げを修正し、Web・macOS・AndroidにモデルプリセットとカスタムID入力を追加しました。
+
 ## まずは聴いてみる
 
 | やりたいこと | 最初の操作 | APIキー |
@@ -105,8 +107,10 @@ Macはアドホック署名でApple公証は未実施のため、ダウンロー
 | 用途                            | 既定のモデル                   | API                                                   |
 | ------------------------------- | ------------------------------ | ----------------------------------------------------- |
 | 構成・事実確認・創作・レビュー  | `gemini-3.8-flash`             | Gemini `generateContent`、確認時にGoogle Searchを使用 |
-| 二人の音声と声の試聴            | `gemini-3.1-flash-tts-preview` | Gemini `generateContent`の音声出力                    |
+| 二人の音声と声の試聴            | `gemini-3.8-flash-tts` | Gemini Interactions、構造化音声メタデータ                    |
 | 約30秒のインストゥルメンタルBGM | `lyria-3-clip-preview`         | Gemini Interactions、`store: false`                   |
+
+テキスト・音声・音楽それぞれのプリセットを選ぶか、モデルIDを直接入力できます。プリセットは公式一覧に基づきます（確認日：2026-11-27）が、アカウントでの利用を保証しません。Previewは変更・廃止される場合があります。保存したIDは、変更するか **モデルを初期値に戻す** を選ぶまで保持されます。音声の初期値は `gemini-3.8-flash-tts` で、`gemini-3.8-flash-lite-tts` と旧 `gemini-3.1-flash-tts-preview` も選べます。新TTSでは本文は台詞のみとし、演技指示は `speech_metadata.style` に分離して24 kHz PCMを指定します。旧PreviewのIDでは従来の `generateContent` 形式を維持します。カスタム音声IDは現在のInteractions TTS仕様に対応する必要があり、通常のテキストモデルでは代用できません。この仕様変更前の試聴・失敗タスクの音声断片は再利用しません。保存済みの完成番組は保持され、自動修復されません。[公式音声ガイド](https://ai.google.dev/gemini-api/docs/speech-generation)と[移行ガイド](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/text-to-speech/migration-guide)を参照してください。
 
 モデルIDは手入力で変更できます。利用可否はキー・地域・課金・モデルの機能によって異なり、別モデルへ自動で置き換えることはありません。旧Vertexの`lyria-002`はAI Studioの接続先では使用できません。Developer APIに対応する`lyria-3.5`などは、長さや費用が異なる場合があります。音楽の生成に失敗した場合は声のみを保存して通知します。内容や音声の失敗を完成した番組として表示することはありません。
 

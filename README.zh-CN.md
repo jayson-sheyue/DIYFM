@@ -10,6 +10,8 @@
 
 *配图来自 2.5.0 网页版，使用公开样例。首页展示中文界面，后续操作图使用默认英文界面；可在设置切换中／英／日语。界面语言与收听语言独立。[版本更新说明](https://github.com/jayson-sheyue/DIYFM/releases)。*
 
+**2.5.1** 修复新版 TTS 把表演指示念出来的问题，并为 Web、macOS 和 Android 增加模型预设与自定义 ID。
+
 ## 快速开始：先听一集
 
 | 你想做什么 | 从哪里开始 | 需要 API Key 吗？ |
@@ -105,8 +107,10 @@ Mac 目前采用本地签名，尚未完成 Apple 公证，下载后可能被系
 | 功能                   | 默认模型                       | 接口                                               |
 | ---------------------- | ------------------------------ | -------------------------------------------------- |
 | 策划、核查、创作与审稿 | `gemini-3.8-flash`             | Gemini `generateContent`，核查时使用 Google Search |
-| 双人语音与声线试听     | `gemini-3.1-flash-tts-preview` | Gemini `generateContent` 音频输出                  |
+| 双人语音与声线试听     | `gemini-3.8-flash-tts` | Gemini Interactions，独立语音元数据                  |
 | 约 30 秒器乐底乐       | `lyria-3-clip-preview`         | Gemini Interactions，`store: false`                |
+
+文本、语音与音乐均提供预设列表，也可直接填写自定义模型 ID。预设依据官方目录（核对于 2026-11-27），不保证当前账户可用；Preview 模型可能变更或停用。已保存的 ID 会保留，只有手工更改或点击 **恢复模型默认** 才会改变。语音默认改为 `gemini-3.8-flash-tts`，另列出 `gemini-3.8-flash-lite-tts` 和旧版 `gemini-3.1-flash-tts-preview`。新版 TTS 的正文只含台词，表演指导放入 `speech_metadata.style`，显式请求 24 kHz PCM；旧 Preview ID 保留原 `generateContent` 请求格式。自定义语音 ID 使用当前 Interactions TTS 契约，必须支持该接口；普通文本模型不能代替 TTS。本次请求格式更新不会复用旧试听或失败任务中的旧配音片段；已有完整节目仍保留，不会自动修复。参见[官方语音文档](https://ai.google.dev/gemini-api/docs/speech-generation)和[迁移说明](https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/text-to-speech/migration-guide)。
 
 模型 ID 可以手工修改；是否可用取决于你的 Key、地区、计费和模型能力，不会偷偷换模型。旧版的 Vertex `lyria-002` 不适用于 AI Studio 接口；可填写 Developer API 支持的音乐模型，例如 `lyria-3.5`，但时长与费用可能不同。底乐失败会保留纯人声成片，并明确提示；内容或语音失败不会伪装成完整节目。
 

@@ -1728,8 +1728,16 @@ const settingsFields = {
 };
 function paintSettings(data) {
   state.settings = data;
-  for (const [id, key] of Object.entries(settingsFields))
+  for (const [id, key] of Object.entries(settingsFields)) {
     $(id).value = data.settings[key] || "";
+    const preset = $(id + "-preset"),
+      choices = data.model_presets?.[key] || [];
+    preset.innerHTML = choices.map(model =>
+      `<option value="${escapeHtml(model)}">${escapeHtml(model)}</option>`
+    ).join("") +
+      `<option value="" data-i18n="自定义模型">${tr("自定义模型")}</option>`;
+    preset.value = choices.includes($(id).value) ? $(id).value : "";
+  }
   $("auth-note").textContent = tr(data.auth_note);
   $("settings-effect").textContent = [tr(data.effect), tr(data.priority)].join(
     " ",
@@ -1743,9 +1751,17 @@ async function loadSettings() {
   const data = await api("/api/settings");
   if (!state.settingsDirty) paintSettings(data);
 }
-Object.keys(settingsFields).forEach((id) =>
-  $(id).addEventListener("input", () => (state.settingsDirty = true)),
-);
+Object.entries(settingsFields).forEach(([id, key]) => {
+  $(id).addEventListener("input", () => {
+    state.settingsDirty = true;
+    $(id + "-preset").value = (state.settings?.model_presets?.[key] || []).includes($(id).value.trim()) ? $(id).value.trim() : "";
+  });
+  $(id + "-preset").addEventListener("change", (event) => {
+    if (event.target.value) $(id).value = event.target.value;
+    else $(id).focus();
+    state.settingsDirty = true;
+  });
+});
 $("enable-api-key").onclick = async () => {
   const button = $("enable-api-key");
   button.disabled = true;

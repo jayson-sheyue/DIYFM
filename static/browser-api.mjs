@@ -1,16 +1,18 @@
-import { i18n } from "./i18n.mjs?v=2.5.0";
+import { i18n } from "./i18n.mjs?v=2.5.1";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
   DEFAULT_MODELS,
+  MODEL_PRESETS,
+  SPEECH_VERSION,
   newVault,
   modelId,
   googleRequest,
   speech,
   music,
-} from "./gemini.mjs?v=2.5.0";
-import { generate, speechTurns } from "./harness.mjs?v=2.5.0";
-import { validTurnTiming } from "./transcript.mjs?v=2.5.0";
+} from "./gemini.mjs?v=2.5.1";
+import { generate, speechTurns } from "./harness.mjs?v=2.5.1";
+import { validTurnTiming } from "./transcript.mjs?v=2.5.1";
 import {
   RATE,
   partsBlob,
@@ -22,9 +24,9 @@ import {
   wavBlob,
   base64Bytes,
   encodeMP3,
-} from "./audio.mjs?v=2.5.0";
+} from "./audio.mjs?v=2.5.1";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.5.0";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.5.1";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -184,6 +186,7 @@ export function createBrowserAPI({
   async function settings() {
     return {
       settings: await models(),
+      model_presets: MODEL_PRESETS,
       auth: "api_key",
       has_key: vault.has(),
       effective_project_id: account,
@@ -322,7 +325,7 @@ export function createBrowserAPI({
               checkpoint,
               resume || {},
               (s, p, o) =>
-                import("./gemini.mjs?v=2.5.0").then((m) =>
+                import("./gemini.mjs?v=2.5.1").then((m) =>
                   m.textResult(s, p, { ...o, request: cloud }),
                 ),
             );
@@ -331,6 +334,7 @@ export function createBrowserAPI({
         config: { ...snap.models },
         language: show.language,
         difficulty: show.difficulty,
+        speech_version: SPEECH_VERSION,
       });
       await phase("voice");
       const turns = speechTurns(content.turns, content.script),
@@ -339,6 +343,7 @@ export function createBrowserAPI({
         throw error("台本缺少可配音的对白，已保留草稿。");
       const same =
         resume &&
+        resume.speech_version === SPEECH_VERSION &&
         resume.config?.tts_model === snap.models.tts_model &&
         resume.input?.host_voice === show.host_voice &&
         resume.input?.guest_voice === show.guest_voice &&
@@ -557,7 +562,7 @@ export function createBrowserAPI({
       !["en", "ja"].includes(input.language)
     )
       throw error("声线或语言无效。");
-    const key = `preview:${snap.account}:${snap.models.tts_model}:${input.language}:${input.voice}`;
+    const key = `preview:${SPEECH_VERSION}:${snap.account}:${snap.models.tts_model}:${input.language}:${input.voice}`;
     const old = await library.get(key);
     if (
       old &&

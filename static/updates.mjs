@@ -3,7 +3,7 @@
 // No automatic download or install is claimed.
 
 /** Keep in sync with package.json version (and cache-bust query strings). */
-export const APP_VERSION = "2.5.0";
+export const APP_VERSION = "2.5.1";
 
 export const RELEASES_URL =
   "https://jayson-sheyue.github.io/DIYFM/releases/index.json";

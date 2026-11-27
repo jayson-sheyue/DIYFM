@@ -1,5 +1,5 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.5.0";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.5.1";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
   "句子高亮为估算位置，可能略有偏差。": {"en": "Sentence highlighting is approximate and may be slightly off.", "ja": "文ごとのハイライト位置は推定のため、多少ずれることがあります。", "zh-CN": "句子高亮为估算位置，可能略有偏差。"},
@@ -2028,6 +2028,20 @@ export const MESSAGES = {
     en: "TTS model ID",
     ja: "TTSモデルID",
     "zh-CN": "TTS 模型 ID",
+  },
+  "文本模型预设": { en: "Text model preset", ja: "テキストモデルのプリセット", "zh-CN": "文本模型预设" },
+  "语音模型预设": { en: "Speech model preset", ja: "音声モデルのプリセット", "zh-CN": "语音模型预设" },
+  "音乐模型预设": { en: "Music model preset", ja: "音楽モデルのプリセット", "zh-CN": "音乐模型预设" },
+  "自定义模型": { en: "Custom model", ja: "カスタムモデル", "zh-CN": "自定义模型" },
+  "可选择模型预设，也可直接输入自定义 ID。预设依据官方目录，实际可用性取决于账户、地区与计费；Preview 可能变更或停用。": {
+    en: "Choose a model preset or enter a custom ID. Presets follow the official catalog; availability depends on your account, region and billing. Preview models may change or retire.",
+    ja: "プリセットを選ぶか、モデルIDを直接入力できます。プリセットは公式一覧に基づきますが、利用可否はアカウント・地域・課金に依存します。Previewは変更・廃止される場合があります。",
+    "zh-CN": "可选择模型预设，也可直接输入自定义 ID。预设依据官方目录，实际可用性取决于账户、地区与计费；Preview 可能变更或停用。",
+  },
+  "请选择支持语音输出的 TTS 模型，例如 gemini-3.8-flash-tts；普通文本模型不能代替 TTS。": {
+    en: "Choose a TTS model with speech output, such as gemini-3.8-flash-tts; a text model cannot replace TTS.",
+    ja: "gemini-3.8-flash-ttsなど、音声出力に対応するTTSモデルを選んでください。通常のテキストモデルはTTSの代わりにはなりません。",
+    "zh-CN": "请选择支持语音输出的 TTS 模型，例如 gemini-3.8-flash-tts；普通文本模型不能代替 TTS。",
   },
   语音生成文档: {
     en: "Speech generation docs",
