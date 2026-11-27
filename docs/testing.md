@@ -7,6 +7,14 @@
 - `./scripts/check.sh` 的 39 项 Python、132 项 JavaScript 测试及语法检查通过；`npm run build` 和 `npm run test:mac` 通过。新增回归覆盖校验、润色契约、缓存隔离/容量、失败断点、并发合并、成片与备份，以及晚到预览不抢播。
 - Chrome 受控完整流程已验证：空关键词禁用 → 输入中文短句 → 润色/音乐各一次 → 重复试听/切页/刷新不再调用 → 创建栏目、制作成片并复用底乐 → 查看锁定设定。390px 窄屏及中英日界面通过；实际调用用合成音轨模拟，未使用真实 Key，不代表音乐审美效果已验收。
 
+### 2.6.0 发布与升级验收
+
+- 最终 APK 在隔离 API 36 ARM64 模拟器（1080×2400 / 420dpi）通过 **10 项原生集成测试**，新增关键词输入校验、切页草稿保留、刷新持久化、已存栏目只读及拒绝 PATCH。真实签名 2.5.2 → 2.6.0 覆盖安装保留合成频道、模型偏好、节目数量与 WAV SHA-256。
+- [Release v2.6.0](https://github.com/jayson-sheyue/DIYFM/releases/tag/v2.6.0) 基于远端 main 的干净运行时 `aa7791b6e80b`。Mac Universal ZIP/DMG 应用逐文件一致，双架构、严格 ad-hoc 签名和镜像 checksum 验证通过；APK 签名证书与 2.5.2 一致。最终上传白名单深度脱敏扫描通过，GitHub 资产 digest 与本地产物相同。Pages 运行时部署 Actions `45967251988` 成功。
+- APK SHA-256：`c52e3f2b5856897c5e18611e9b3395df6449b8d51b6248adefc20667de38677b`。DMG：`92c2e525f9f2f0f7d027d293cb817cbe39cb0a04e3f309c7ac1f067bc4b3a31b`。ZIP：`8e232f7c1a729043937896f3a0fb1509a419b3fe85b05136ba7c93e9db08c3a4`。
+- 重新下载公开 DMG 并匹配校验值；正常退出 2.5.2 后替换 `/Applications/DIYFM.app`，只归档旧程序包，未读取或改写用户数据目录。新版实际界面保留原节目库，设置显示 `DIYFM 2.6.0 · macOS`。更新清单在 Release 公开后生成，6 项版本/清单测试及静态构建通过。后续记录与清单提交不改动安装包。
+- 本轮未使用真实 Key、未验收真实音乐听感；Mac 未做 Apple 公证，Intel 实机与实体 Android 未测试。APK 证书检查首次因未指定 JAVA_HOME 未运行，设置现有 JDK 17 后通过；安装包未重建。
+
 ## v2.5.2：消息盒子的原始报错（2026-11-27）
 
 - 服务商 HTTP 失败响应保留状态码、状态文本与原始正文的空白/格式；JSON 的 error.code/status/message/details、纯文本和 HTML 都不被通用解释替换。HTTP 200 内的失败、截断和安全拦截保留原始响应；网络/中止失败显示浏览器原始异常，不虚构 HTTP 状态码。仅脱敏响应中回显的当前 API Key，不记录请求头。
