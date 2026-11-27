@@ -1,4 +1,4 @@
-import { MESSAGES } from "./messages.mjs?v=2.5.2";
+import { MESSAGES } from "./messages.mjs?v=2.6.0";
 export const LOCALES = Object.freeze(["en", "ja", "zh-CN"]);
 export const LOCALE_STORAGE = "diyfm:ui-language";
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

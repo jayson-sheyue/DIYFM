@@ -181,6 +181,7 @@ export const PRESETS = {
       prompt:
         "Warm calm piano instrumental with soft pads, slow steady tempo, quiet. Instrumental.",
     },
+    { id: "custom", label: "自定义关键词或场景" },
   ],
   lengths: [
     {

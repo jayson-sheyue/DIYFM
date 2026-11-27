@@ -595,3 +595,26 @@ test('homepage playback supplies a native queue and keeps samples out of library
   assert.ok(allowed.includes('featured_ja'));
   assert.equal(f.elements.get('shared-audio').loop, false);
 });
+
+test("custom music previews keep the newest playback intent and cache distinct keyword/model inputs", async () => {
+  const { ctx, run } = setup();
+  ctx.DIYFM_MUSIC = await import("../static/music.mjs");
+  const pending = [deferred(), deferred(), deferred()];
+  let calls = 0;
+  ctx.fetch = () => pending[calls++].promise;
+  run("$('music').value='custom';$('music-keywords').value='心碎'");
+  const a = run("previewMusic()");
+  run("$('music-keywords').value='史诗般宏大'");
+  const b = run("previewMusic()");
+  pending[1].resolve(response()); await b;
+  const source = run("audio.src");
+  pending[0].resolve(response()); await a;
+  assert.equal(run("audio.src"), source);
+  assert.equal(run("bgmCache.size"), 2);
+  run("$('music-keywords').value='心碎'"); await run("previewMusic()");
+  assert.equal(calls, 2);
+  run("state.settings.settings.lyria_model='changed-model'");
+  const c = run("previewMusic()");
+  assert.equal(calls, 3);
+  pending[2].resolve(response()); await c;
+});

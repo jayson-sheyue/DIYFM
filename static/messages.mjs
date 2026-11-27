@@ -1,5 +1,5 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.5.2";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.6.0";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
   "句子高亮为估算位置，可能略有偏差。": {"en": "Sentence highlighting is approximate and may be slightly off.", "ja": "文ごとのハイライト位置は推定のため、多少ずれることがあります。", "zh-CN": "句子高亮为估算位置，可能略有偏差。"},
@@ -2029,6 +2029,24 @@ export const MESSAGES = {
     ja: "TTSモデルID",
     "zh-CN": "TTS 模型 ID",
   },
+  "自定义关键词或场景": { en: "Custom mood or scene", ja: "気分・シーンを指定", "zh-CN": "自定义关键词或场景" },
+  "底乐关键词或场景": { en: "Music mood or scene", ja: "BGMの気分・シーン", "zh-CN": "底乐关键词或场景" },
+  "生成底乐": { en: "Generate music", ja: "BGMを生成", "zh-CN": "生成底乐" },
+  "正在整理底乐关键词": { en: "Shaping the music direction", ja: "BGMのイメージを整理しています", "zh-CN": "正在整理底乐关键词" },
+  "例如：悲伤、心碎、情侣争吵后的夜晚；或史诗般的宏大": {
+    en: "For example: sadness, heartbreak, a night after an argument; or epic grandeur",
+    ja: "例：悲しみ、失恋、恋人とのけんかの後の夜。または壮大な叙事詩の雰囲気",
+    "zh-CN": "例如：悲伤、心碎、情侣争吵后的夜晚；或史诗般的宏大",
+  },
+  "几个关键词或一句场景描述即可。会先自动整理为器乐提示词，再生成底乐；首次需要文本与音乐两次模型调用。": {
+    en: "A few keywords or one scene description are enough. They are shaped into an instrumental prompt before music is generated; the first generation uses both text and music models.",
+    ja: "キーワード数個か短い場面説明だけで大丈夫です。器楽BGMの指示に整理してから生成するため、初回はテキストと音楽の両モデルを呼び出します。",
+    "zh-CN": "几个关键词或一句场景描述即可。会先自动整理为器乐提示词，再生成底乐；首次需要文本与音乐两次模型调用。",
+  },
+  "底乐关键词格式无效。": { en: "Invalid music keywords.", ja: "BGMキーワードの形式が無効です。", "zh-CN": "底乐关键词格式无效。" },
+  "底乐关键词或场景描述请控制在 240 字以内。": { en: "Keep the music keywords or scene description within 240 characters.", ja: "BGMのキーワード・場面説明は240文字以内にしてください。", "zh-CN": "底乐关键词或场景描述请控制在 240 字以内。" },
+  "请填写底乐关键词或场景描述。": { en: "Enter music keywords or a scene description.", ja: "BGMのキーワードか場面説明を入力してください。", "zh-CN": "请填写底乐关键词或场景描述。" },
+  "本页最多同时生成两条底乐，请等待完成。": { en: "Up to two music generations can run at once. Wait for one to finish.", ja: "同時に生成できるBGMは2件までです。完了をお待ちください。", "zh-CN": "本页最多同时生成两条底乐，请等待完成。" },
   "文本模型预设": { en: "Text model preset", ja: "テキストモデルのプリセット", "zh-CN": "文本模型预设" },
   "语音模型预设": { en: "Speech model preset", ja: "音声モデルのプリセット", "zh-CN": "语音模型预设" },
   "音乐模型预设": { en: "Music model preset", ja: "音楽モデルのプリセット", "zh-CN": "音乐模型预设" },

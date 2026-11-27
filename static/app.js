@@ -1,4 +1,6 @@
 "use strict";
+const musicInput = (...args) => globalThis.DIYFM_MUSIC.musicInput(...args);
+const musicInputKey = (...args) => globalThis.DIYFM_MUSIC.musicInputKey(...args);
 const i18n = globalThis.DIYFM_I18N;
 const tr = (key, values) => (i18n ? i18n.t(key, values) : key);
 const trText = (parts, ...values) =>
@@ -30,6 +32,7 @@ const PHASE = localizedLabels({
   review: "正在检查故事与语言",
   voice: "正在合成双人语音",
   music: "正在准备底乐",
+  music_prompt: "正在整理底乐关键词",
   mix: "正在混音",
   interrupted: "制作已中断",
 });
@@ -135,7 +138,7 @@ state.tasks = state.tasks.map((t) =>
             ? tr("页面曾刷新，试听等待已结束。再次试听会优先使用本浏览器缓存。")
             : tr("页面曾刷新，请重新确认下载结果，已有作品仍保留。"),
       }
-    : t,
+    : { ...t, pending: false },
 );
 const nativeClient = globalThis.DIYFM_NATIVE;
 const audio = nativeClient
@@ -257,6 +260,7 @@ function formValues() {
     guest_voice: $("guest")?.value || currentShow()?.guest_voice || "Puck",
     music_style:
       $("music")?.value || currentShow()?.music_style || "morning_acoustic",
+    music_keywords: $("music-keywords")?.value ?? currentShow()?.music_keywords ?? "",
     revision: Number($("wish-form")?.dataset.revision || 0),
     custom_theme: customText,
   };
@@ -286,6 +290,7 @@ function loadDraft(show) {
     host_voice: show?.host_voice || "Kore",
     guest_voice: show?.guest_voice || "Puck",
     music_style: show?.music_style || "morning_acoustic",
+    music_keywords: show?.music_keywords || "",
     ...(readLocal("draft:" + (show?.id || "new"), null) || {}),
   };
 }
@@ -302,6 +307,10 @@ function seriesFormError(values, { retry = false } = {}) {
   if (!(values.theme_id || "").trim()) return tr("请先选择栏目主题。");
   if (!(values.wish || "").trim() || values.wish.trim().length < 8)
     return tr("请选择或填写栏目主题。");
+  if (values.music_style === "custom") {
+    try { musicInput("custom", values.music_keywords); }
+    catch (e) { return tr(e.message); }
+  }
   return "";
 }
 function themePicker(selectedId, customText) {
@@ -1365,6 +1374,11 @@ function voiceFields(show, { locked = false } = {}) {
         重新生成底乐
       </button>
     </div>
+    <div class="music-keywords" id="music-keywords-label" ${show.music_style === "custom" ? "" : "hidden"}>
+      <label for="music-keywords">底乐关键词或场景</label>
+      <textarea id="music-keywords" rows="2" maxlength="240" ${locked ? "readonly" : ""} aria-describedby="music-keywords-hint" placeholder="例如：悲伤、心碎、情侣争吵后的夜晚；或史诗般的宏大">${escapeHtml(show.music_keywords || "")}</textarea>
+      <p class="hint" id="music-keywords-hint">几个关键词或一句场景描述即可。会先自动整理为器乐提示词，再生成底乐；首次需要文本与音乐两次模型调用。</p>
+    </div>
     <p class="hint">
       ${
         locked
@@ -1384,13 +1398,27 @@ function renderVoice(show) {
   bindVoiceControls(null, { locked: true });
 }
 function bindVoiceControls(show, { locked = false } = {}) {
+  const syncMusicControls = () => {
+    const custom = $("music")?.value === "custom";
+    if ($("music-keywords-label")) $("music-keywords-label").hidden = !custom;
+    const unavailable = $("music")?.value === "none" || (custom && !$("music-keywords")?.value.trim());
+    if ($("regenerate-music")) $("regenerate-music").textContent = tr(custom ? "生成底乐" : "重新生成底乐");
+    for (const id of ["preview-music", "regenerate-music"])
+      if ($(id)) $(id).disabled = unavailable;
+  };
+  syncMusicControls();
   if (!locked) {
     for (const id of ["host", "guest", "music"])
       if ($(id))
         $(id).onchange = () => {
           if (show) return;
+          syncMusicControls();
           captureDraft();
         };
+    if ($("music-keywords")) $("music-keywords").oninput = () => {
+      syncMusicControls();
+      captureDraft();
+    };
   }
   document
     .querySelectorAll("[data-preview]")
@@ -1486,18 +1514,25 @@ async function previewVoice(role, force) {
   }
 }
 async function previewMusic() {
-  const style = $("music").value,
-    token = claimPlayback();
+  const token = claimPlayback();
   try {
-    let blob = bgmCache.get(style);
+    const input = musicInput($("music").value, $("music-keywords")?.value || "");
+    const cacheKey = musicInputKey(input, state.settings?.settings);
+    let blob = bgmCache.get(cacheKey);
     if (!blob) {
-      const r = await fmFetch(`/media/bgm/${encodeURIComponent(style)}.wav`);
-      if (!r.ok)
+      const r = await fmFetch("/api/bgm/preview", jsonRequest("POST", input));
+      if (!r.ok) {
+        if (r.status === 404 && state.tasks.some(t => t.kind === "bgm" && t.input_key === cacheKey && t.status === "generating")) {
+          notice(tr("这条底乐正在生成，可在消息中查看。"), "busy");
+          return;
+        }
         throw new Error(
           (await r.json()).message || tr("底乐还没有生成，请先生成底乐。"),
         );
+      }
       blob = await r.blob();
-      bgmCache.set(style, blob);
+      bgmCache.set(cacheKey, blob);
+      if (bgmCache.size > 20) bgmCache.delete(bgmCache.keys().next().value);
     }
     await playSource(blob, tr("底乐试听"), token);
   } catch (e) {
@@ -1505,10 +1540,15 @@ async function previewMusic() {
   }
 }
 async function regenerateMusic() {
-  const style = $("music").value;
+  let input, inputKey;
+  try {
+    input = musicInput($("music").value, $("music-keywords")?.value || "");
+    inputKey = musicInputKey(input, state.settings?.settings);
+  } catch (e) { notice(tr(e.message)); return; }
+  const style = input.style;
   if (
     state.tasks.some(
-      (t) => t.kind === "bgm" && t.style === style && t.status === "generating",
+      (t) => t.kind === "bgm" && t.input_key === inputKey && t.status === "generating",
     )
   ) {
     notice(tr("这条底乐正在生成，可在消息中查看。"), "busy");
@@ -1518,15 +1558,20 @@ async function regenerateMusic() {
     kind: "bgm",
     title: tr("重新生成底乐"),
     style,
+    keywords: input.keywords,
+    input_key: inputKey,
+    pending: true,
     showId: state.current,
   });
   try {
-    await api(`/api/bgm/${encodeURIComponent(style)}/regenerate`, {
-      method: "POST",
-    });
+    const result = await api(`/api/bgm/${encodeURIComponent(style)}/regenerate`, jsonRequest("POST", { keywords: input.keywords }));
+    task.job_key = result.job_key;
+    task.pending = false;
+    persistTasks();
     notice(tr("底乐正在生成，完成后可再次试听。"), "busy");
   } catch (e) {
     task.status = "failed";
+    task.pending = false;
     task.error = e.message;
     persistTasks();
     notice(e.message);
@@ -1923,11 +1968,13 @@ async function poll() {
       state.tasks
         .filter((t) => t.kind === "bgm" && t.status === "generating")
         .forEach((t) => {
-          const job = jobs.jobs[t.style];
+          if (t.pending) return;
+          const job = jobs.jobs[t.job_key || t.style];
+          if (job?.phase) t.phase = job.phase;
           if (job && job.status !== "running") {
             t.status = job.status;
             t.error = job.error || "";
-            bgmCache.delete(t.style);
+            bgmCache.delete(t.input_key || t.style);
           } else if (!job) {
             t.status = "unknown";
             t.error = tr("服务已重启，底乐任务状态未知。可再次试听本地结果。");

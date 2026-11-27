@@ -1,6 +1,7 @@
-import { i18n } from "./i18n.mjs?v=2.5.2";
+import { i18n } from "./i18n.mjs?v=2.6.0";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
+import { musicInput, musicSpec, normalizeMusicKeywords, polishMusic, MUSIC_PROMPT_VERSION } from "./music.mjs?v=2.6.0";
 import {
   DEFAULT_MODELS,
   MODEL_PRESETS,
@@ -10,9 +11,9 @@ import {
   googleRequest,
   speech,
   music,
-} from "./gemini.mjs?v=2.5.2";
-import { generate, speechTurns } from "./harness.mjs?v=2.5.2";
-import { validTurnTiming } from "./transcript.mjs?v=2.5.2";
+} from "./gemini.mjs?v=2.6.0";
+import { generate, speechTurns } from "./harness.mjs?v=2.6.0";
+import { validTurnTiming } from "./transcript.mjs?v=2.6.0";
 import {
   RATE,
   partsBlob,
@@ -24,9 +25,9 @@ import {
   wavBlob,
   base64Bytes,
   encodeMP3,
-} from "./audio.mjs?v=2.5.2";
+} from "./audio.mjs?v=2.6.0";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.5.2";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.6.0";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -59,12 +60,13 @@ const showFields = [
   "host_voice",
   "guest_voice",
   "music_style",
+  "music_keywords",
 ];
 const snapshotShow = (show) =>
   Object.fromEntries(
     showFields.map((k) => [
       k,
-      k === "description" || k === "theme_id" ? show[k] || "" : show[k],
+      ["description", "theme_id", "music_keywords"].includes(k) ? show[k] || "" : show[k],
     ]),
   );
 export function cleanPreferences(input, current = {}) {
@@ -90,6 +92,8 @@ export function cleanPreferences(input, current = {}) {
           ? input[k].trim().slice(0, 80) || current.title || "未命名栏目"
           : input[k].trim();
     }
+  next.music_keywords = normalizeMusicKeywords(next.music_keywords || "");
+  if (next.music_style === "custom") musicInput("custom", next.music_keywords);
   if (next.description === undefined) next.description = current.description || "";
   if (next.theme_id === undefined) next.theme_id = current.theme_id || "";
   if (!(next.theme_id || "").trim() && (next.wish || "").trim())
@@ -272,21 +276,40 @@ export function createBrowserAPI({
           });
       }
   }
-  async function getMusic(style, snap, force = false) {
-    const preset = PRESETS.music.find((x) => x.id === style);
-    if (!preset || style === "none") return null;
-    const key = `music:${snap.models.lyria_model}:${style}`;
+  async function getMusic(spec, snap, force = false, phase = async () => {}) {
+    const { key } = spec;
     if (!force) {
       const cached = await library.get(key);
-      if (cached) return cached;
+      if (cached) return { blob: cached, prompt: (await library.get("music-meta:" + key))?.prompt || spec.prompt };
     }
     if (musicFlights.has(key)) return musicFlights.get(key);
+    if (musicFlights.size >= 2) throw error("本页最多同时生成两条底乐，请等待完成。");
     const job = (async () => {
-      const part = await makeMusic(snap, preset.prompt, cloud),
+      let prompt = spec.prompt;
+      if (spec.style === "custom") {
+        prompt = (await library.get("music-meta:" + key))?.prompt;
+        if (!prompt) {
+          await phase("music_prompt");
+          prompt = await polishMusic(snap, spec.keywords, cloud);
+          await library.write([["music-meta:" + key, {
+            prompt, keywords: spec.keywords, version: MUSIC_PROMPT_VERSION,
+            text_model: snap.models.llm_model, music_model: snap.models.lyria_model, created_at: now(),
+          }]]);
+        }
+      }
+      await phase("music");
+      const part = await makeMusic(snap, prompt, cloud),
         blob = new Blob([base64Bytes(part.data)], { type: part.mime });
       await blobPCM(blob);
-      await library.write([[key, blob]]);
-      return blob;
+      if (spec.style === "custom") {
+        await library.mutate("music-custom-index", raw => {
+          const all = [key, ...(Array.isArray(raw) ? raw : []).filter(k => k !== key)];
+          const keep = all.filter((k, i) => i < 20 || musicFlights.has(k));
+          const dropped = all.filter(k => !keep.includes(k));
+          return { puts: [[key, blob], ["music-custom-index", keep]], deletes: dropped.flatMap(k => [k, "music-meta:" + k]) };
+        });
+      } else await library.write([[key, blob]]);
+      return { blob, prompt };
     })();
     musicFlights.set(key, job);
     try {
@@ -325,7 +348,7 @@ export function createBrowserAPI({
               checkpoint,
               resume || {},
               (s, p, o) =>
-                import("./gemini.mjs?v=2.5.2").then((m) =>
+                import("./gemini.mjs?v=2.6.0").then((m) =>
                   m.textResult(s, p, { ...o, request: cloud }),
                 ),
             );
@@ -397,11 +420,15 @@ export function createBrowserAPI({
       let musicPCM = null,
         musicNote = "",
         musicError = "",
+        musicPrompt = "",
         musicSource = "none";
       if (show.music_style !== "none") {
         await phase("music");
         try {
-          musicPCM = await blobPCM(await getMusic(show.music_style, snap));
+          const spec = await musicSpec({ style: show.music_style, keywords: show.music_keywords || "" }, snap.models);
+          const result = await getMusic(spec, snap, false, phase);
+          musicPCM = await blobPCM(result.blob);
+          musicPrompt = result.prompt;
           musicSource = "library";
         } catch (e) {
           musicError = e.message || String(e);
@@ -423,6 +450,8 @@ export function createBrowserAPI({
           music_source: musicSource,
           music_note: musicNote,
           music_error: musicError,
+          music_prompt: musicPrompt,
+          music_prompt_version: show.music_style === "custom" ? MUSIC_PROMPT_VERSION : "",
           error: "",
           title: content.title,
         });
@@ -1043,6 +1072,8 @@ export function createBrowserAPI({
           ? ""
           : "导入了未完成记录。原台本如有保留，可重新制作。",
       music_source: text(old.music_source, 30),
+      music_prompt: text(old.music_prompt, 1200),
+      music_prompt_version: text(old.music_prompt_version, 40),
       ...(old.provenance ? { provenance: provenance(old.provenance) } : {}),
     };
   }
@@ -1081,18 +1112,25 @@ export function createBrowserAPI({
     }
     if (path === "/api/bgm/jobs")
       return json({ jobs: Object.fromEntries(musicJobs) });
+    if (path === "/api/bgm/preview") {
+      const spec = await musicSpec(input, await models());
+      const blob = await library.get(spec.key);
+      if (!blob) throw error("底乐还没有生成，请先生成底乐。", 404);
+      return new Response(blob);
+    }
     let match;
     if ((match = path.match(/^\/api\/bgm\/([A-Za-z0-9_-]+)\/regenerate$/))) {
       const snap = await capture(),
         style = match[1];
-      if (!PRESETS.music.some((p) => p.id === style) || style === "none")
-        throw error("请先选择一种底乐风格。");
-      musicJobs.set(style, { status: "running" });
-      getMusic(style, snap, true).then(
-        () => musicJobs.set(style, { status: "ready" }),
-        (e) => musicJobs.set(style, { status: "failed", error: e.message }),
+      const spec = await musicSpec({ style, keywords: input.keywords || "" }, snap.models);
+      const jobKey = spec.key;
+      if (musicJobs.get(jobKey)?.status === "running") return json({ ok: true, job_key: jobKey });
+      musicJobs.set(jobKey, { status: "running", phase: style === "custom" ? "music_prompt" : "music" });
+      getMusic(spec, snap, true, async phase => musicJobs.set(jobKey, { status: "running", phase })).then(
+        () => musicJobs.set(jobKey, { status: "ready" }),
+        (e) => musicJobs.set(jobKey, { status: "failed", error: e.message }),
       );
-      return json({ ok: true });
+      return json({ ok: true, job_key: jobKey });
     }
     if ((match = path.match(/^\/media\/bgm\/([A-Za-z0-9_-]+)\.wav$/))) {
       const blob = await library.get(
