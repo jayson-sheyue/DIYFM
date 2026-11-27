@@ -618,3 +618,15 @@ test("custom music previews keep the newest playback intent and cache distinct k
   assert.equal(calls, 3);
   pending[2].resolve(response()); await c;
 });
+
+test("make next on an imported channel opens setup before Key or generation checks", async()=>{
+  const {PRESETS}=await import('../static/presets.mjs');
+  const {ctx,run,elements}=setup({},undefined,{hasKey:()=>false});ctx.testPresets=PRESETS;
+  run("state.presets=testPresets;state.shows[0]={id:'channel',title:'Imported',language:'en',difficulty:'basic',length:'SHORT',host_voice:'Kore',guest_voice:'Puck',music_style:'none',wish:'',setup_required:true,episodes:[]};state.tab='listen'");
+  await run('makeEpisode()');
+  assert.equal(run('state.tab'),'compose');
+  assert.match(elements.get('studio').innerHTML,/id="wish-form"/);
+  assert.match(elements.get('studio').innerHTML,/补全一次/);
+  assert.equal(elements.get('make').textContent,'保存栏目设定');
+  assert.equal(run('state.submitting'),false);
+});

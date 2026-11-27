@@ -1,7 +1,7 @@
-import { i18n } from "./i18n.mjs?v=2.6.0";
+import { i18n } from "./i18n.mjs?v=2.6.1";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
-import { musicInput, musicSpec, normalizeMusicKeywords, polishMusic, MUSIC_PROMPT_VERSION } from "./music.mjs?v=2.6.0";
+import { musicInput, musicSpec, normalizeMusicKeywords, polishMusic, MUSIC_PROMPT_VERSION } from "./music.mjs?v=2.6.1";
 import {
   DEFAULT_MODELS,
   MODEL_PRESETS,
@@ -11,9 +11,9 @@ import {
   googleRequest,
   speech,
   music,
-} from "./gemini.mjs?v=2.6.0";
-import { generate, speechTurns } from "./harness.mjs?v=2.6.0";
-import { validTurnTiming } from "./transcript.mjs?v=2.6.0";
+} from "./gemini.mjs?v=2.6.1";
+import { generate, speechTurns } from "./harness.mjs?v=2.6.1";
+import { validTurnTiming } from "./transcript.mjs?v=2.6.1";
 import {
   RATE,
   partsBlob,
@@ -25,9 +25,9 @@ import {
   wavBlob,
   base64Bytes,
   encodeMP3,
-} from "./audio.mjs?v=2.6.0";
+} from "./audio.mjs?v=2.6.1";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.6.0";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.6.1";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -113,6 +113,10 @@ export function assertSeriesPitch(show) {
     throw error("请先选择栏目主题。");
   if (!(show.wish || "").trim() || show.wish.trim().length < 8)
     throw error("请选择或填写栏目主题。");
+}
+export function seriesSetupRequired(show) {
+  try { assertSeriesPitch(show); return false; }
+  catch { return true; }
 }
 export function assertSeriesPreferencesLocked(input, current) {
   for (const k of showFields) {
@@ -242,7 +246,7 @@ export function createBrowserAPI({
       }
       episodes.push(ep);
     }
-    return { ...show, episodes, materials: [] };
+    return { ...show, setup_required: seriesSetupRequired(show), episodes, materials: [] };
   }
   async function findEpisode(id) {
     for (const show of await list()) {
@@ -348,7 +352,7 @@ export function createBrowserAPI({
               checkpoint,
               resume || {},
               (s, p, o) =>
-                import("./gemini.mjs?v=2.6.0").then((m) =>
+                import("./gemini.mjs?v=2.6.1").then((m) =>
                   m.textResult(s, p, { ...o, request: cloud }),
                 ),
             );
@@ -1196,6 +1200,23 @@ export function createBrowserAPI({
           show.episodes.find((e) => e.request_id === input.request_id) ||
           show.episodes[0],
       });
+    }
+    if ((match = path.match(/^\/api\/shows\/([A-Za-z0-9_-]+)\/setup$/)) && method === "POST") {
+      let conflict;
+      const show = await mutateShow(match[1], s => {
+        if (!Number.isInteger(input.revision) || input.revision !== (s.revision || 0)) {
+          conflict = structuredClone(s); return;
+        }
+        if (!seriesSetupRequired(s)) throw error("栏目设定在开设后不可修改。");
+        if (s.episodes.some(e => e.status === "generating")) throw error("这个频道已有节目正在制作。", 409);
+        const next = cleanPreferences(input, s);
+        assertSeriesPitch(next);
+        for (const key of showFields) s[key] = next[key];
+        s.revision = (s.revision || 0) + 1;
+        s.updated_at = now();
+      });
+      if (conflict) return json({ message: "这个频道刚刚在另一页保存过，当前输入仍保留。", show: await publicShow(conflict) }, 409);
+      return json({ show: await publicShow(show) });
     }
     if ((match = path.match(/^\/api\/shows\/([A-Za-z0-9_-]+)$/))) {
       const id = match[1];

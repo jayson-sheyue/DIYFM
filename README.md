@@ -10,6 +10,8 @@
 
 *Screenshots show the 2.5.0 web edition using public samples. The interface supports English, Japanese and Chinese; listening language is a separate choice. [Release notes](https://github.com/jayson-sheyue/DIYFM/releases).*
 
+Version **2.6.1** fixes continuing an imported ZIP channel: if its production theme is missing, **Make next episode** opens a one-time series setup. Save the theme and preferences without a key or model call, then make a new episode. Existing episodes and credits are preserved; complete backups retain their existing locked setup.
+
 Version **2.6.0** adds **Custom keywords or scene** under background music. Enter a few words such as “heartbreak, rainy night” or “epic grandeur”; DIYFM polishes them with your selected text model and sends the instrumental prompt to Lyria. The first custom result uses both text and music calls. Cached previews make no model call; regenerate reuses the polished prompt. Keywords (up to 240 characters) are saved with the series and remain locked after creation.
 
 Version **2.5.2** displays original provider error bodies and HTTP status codes in Messages. Version 2.5.1 fixed spoken TTS directions and added model presets with custom IDs across Web, macOS and Android.

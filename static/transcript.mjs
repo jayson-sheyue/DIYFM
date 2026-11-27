@@ -1,4 +1,4 @@
-import { speechTurns } from "./harness.mjs?v=2.6.0";
+import { speechTurns } from "./harness.mjs?v=2.6.1";
 
 // TTS returns audio per turn, not sentence timestamps. Sentence positions within
 // each turn are estimates; old recordings fall back to whole-recording estimates.

@@ -1,7 +1,12 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.6.0";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.6.1";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
+  "保存后固定用于后续新节目，已有节目不会重新制作。保存设定不调用模型。": {"en": "Saved preferences apply to future episodes and become fixed. Existing episodes are not remade. Saving setup makes no model call.", "ja": "保存後は設定が固定され、今後の制作に使われます。既存の音声は作り直されません。設定の保存ではモデルを呼び出しません。", "zh-CN": "保存后固定用于后续新节目，已有节目不会重新制作。保存设定不调用模型。"},
+  "这个导入栏目缺少制作主题。续作前请补全一次栏目设定；保存后固定，已有节目仍保留。": {"en": "This imported channel has no production theme. Complete its series setup once before continuing. Saved preferences become fixed; existing episodes remain available.", "ja": "この取り込み番組には制作テーマがありません。続きの制作前に一度だけ設定してください。保存後は固定され、既存のエピソードは残ります。", "zh-CN": "这个导入栏目缺少制作主题。续作前请补全一次栏目设定；保存后固定，已有节目仍保留。"},
+  "保存栏目设定": {"en": "Save series setup", "ja": "番組設定を保存", "zh-CN": "保存栏目设定"},
+  "栏目设定已保存，可以制作新一期。": {"en": "Series setup saved. You can now make the next episode.", "ja": "番組設定を保存しました。新しいエピソードを制作できます。", "zh-CN": "栏目设定已保存，可以制作新一期。"},
+
   "句子高亮为估算位置，可能略有偏差。": {"en": "Sentence highlighting is approximate and may be slightly off.", "ja": "文ごとのハイライト位置は推定のため、多少ずれることがあります。", "zh-CN": "句子高亮为估算位置，可能略有偏差。"},
   "正在跟随播放": {"en": "Following playback", "ja": "再生に追従中", "zh-CN": "正在跟随播放"},
   "回到当前句": {"en": "Back to current sentence", "ja": "再生中の文へ", "zh-CN": "回到当前句"},

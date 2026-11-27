@@ -22,8 +22,8 @@ import {
   trimSilencePCM,
   normalizeTurnPCM,
   RATE,
-} from "../static/audio.mjs?v=2.6.0";
-import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.6.0";
+} from "../static/audio.mjs?v=2.6.1";
+import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.6.1";
 import {
   zipSync,
   strToU8,
@@ -561,7 +561,7 @@ test("required research without real sources fails before speech or script gener
   assert.equal(calls, 2);
 });
 test("episode metadata language is captured separately from the listening language", async () => {
-  const { i18n } = await import("../static/i18n.mjs?v=2.6.0");
+  const { i18n } = await import("../static/i18n.mjs?v=2.6.1");
   i18n.setLocale("ja");
   let seen;
   const gate = new Promise((resolve) => {

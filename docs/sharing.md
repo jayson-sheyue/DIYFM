@@ -70,3 +70,7 @@ See [verification notes](testing.md) for executed tests and platform limitations
 ## Transcript timing
 
 Channel packages may include optional `transcript_timing` (version 1, per-turn durations and inter-turn gap). Current readers validate its shape and total against the script and recording; invalid or missing timing falls back to whole-recording sentence estimates. Timing survives current-version channel sharing and library backups. Older clients may ignore it. This is estimated sentence following, not word alignment or speech recognition.
+
+## Continuing an imported channel
+
+Public channel ZIPs omit the author’s private production theme. In 2.6.1+, **Make next episode** opens a one-time series setup when the theme is missing, including channels already imported by older versions. Choose a theme and confirm language, voices and background music, then **Save series setup**. Saving needs no API key or model request and preserves imported audio and source credits. The saved preferences then become fixed; new production needs your own key. Complete library backups already containing a theme remain fixed without this step.

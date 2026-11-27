@@ -1,5 +1,5 @@
 import { PRESETS } from "./presets.mjs";
-import { textResult } from "./gemini.mjs?v=2.6.0";
+import { textResult } from "./gemini.mjs?v=2.6.1";
 
 export const MUSIC_PROMPT_VERSION = "keywords-1";
 export const MUSIC_KEYWORDS_LIMIT = 240;

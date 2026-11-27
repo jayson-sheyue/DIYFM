@@ -301,3 +301,45 @@ test("starter seeding populates fresh installs once, respects deletions/upgrades
   assert.equal(kept[0].title, "My existing channel");
   assert.equal(await upgradeDB.get("starter-seeded"), true);
 });
+
+test("imported public ZIP completes setup once and generates without losing the original audio or credits", async () => {
+  const s = await source(); let editorInput;
+  const { api, db } = await target({
+    editor: async show => { editorInput = show; return {title:"Local continuation",summary:"Synthetic QA",script:"Host: Hi.\nGuest: Hello.",turns:[{speaker:"Host",text:"Hi."},{speaker:"Guest",text:"Hello."}],plan:{},review:{passed:true},expressions:[],sources:[]}; },
+    synthesize: async () => [{mime:"audio/wav",data:Buffer.from(await tone.arrayBuffer()).toString("base64")}],
+    request: () => {throw Error("Unexpected cloud call")},
+  });
+  const preview = await api.prepareImport(await s.blob.arrayBuffer()), {showId} = await api.commitImport(preview.token);
+  const original = (await list(api))[0], ep = original.episodes[0], bytes = await (await db.get("audio:"+ep.id)).arrayBuffer();
+  assert.equal(original.setup_required,true);
+  const post = async (path,body) => {const r=await api.fetch(path,{method:"POST",body:JSON.stringify(body)});return {status:r.status,data:await r.json()};};
+  const bad = await post(`/api/shows/${showId}/setup`,{revision:0,title:original.title,theme_id:"custom",wish:""});
+  assert.equal(bad.status,400); assert.equal((await list(api))[0].setup_required,true);
+  const stale = await post(`/api/shows/${showId}/setup`,{revision:9,theme_id:"daily",wish:"Light everyday English stories"});
+  assert.equal(stale.status,409); assert.equal(stale.data.show.setup_required,true);
+  const prefs={revision:0,theme_id:"custom",wish:"Warm stories about mistakes on public transport",description:original.description,host_voice:"Kore",guest_voice:"Puck",music_style:"none"};
+  const saved=await post(`/api/shows/${showId}/setup`,prefs);
+  assert.equal(saved.status,200); assert.equal(saved.data.show.setup_required,false); assert.equal(saved.data.show.revision,1);
+  assert.equal(saved.data.show.description,original.description); assert.deepEqual(saved.data.show.provenance,original.provenance);
+  assert.equal((await post(`/api/shows/${showId}/setup`,{...prefs,revision:1,wish:"Overwriting the fixed theme"})).status,400);
+  await api.setKey("unit-test-only-key-"+"a".repeat(30));
+  const start=await post(`/api/shows/${showId}/episodes`,{request_id:"continued-import-episode",revision:1});
+  assert.equal(start.status,200);
+  let continued;
+  for(let i=0;i<100;i++){continued=(await list(api))[0].episodes.find(e=>e.request_id==="continued-import-episode");if(continued.status!=="generating")break;await new Promise(r=>setTimeout(r,5));}
+  assert.equal(continued.status,"ready"); assert.equal(continued.input.wish,prefs.wish); assert.equal(editorInput.wish,prefs.wish);
+  assert.equal((await list(api))[0].episodes.length,2); assert.deepEqual(await (await db.get("audio:"+ep.id)).arrayBuffer(),bytes);
+  const reload=createBrowserAPI({library:db});await reload.ready;assert.equal((await list(reload))[0].setup_required,false);
+});
+
+test("already-imported legacy channels gain a setup path while complete backups stay locked; concurrent setup saves once", async () => {
+  const { api, db }=await target();
+  const base={id:"show_legacy",title:"Legacy imported",language:"en",difficulty:"basic",length:"SHORT",host_voice:"Kore",guest_voice:"Puck",music_style:"none",wish:"",revision:0,episodes:[],materials:[]};
+  await db.write([["shows",[base]]]);
+  assert.equal((await list(api))[0].setup_required,true);
+  const save=()=>api.fetch("/api/shows/show_legacy/setup",{method:"POST",body:JSON.stringify({revision:0,theme_id:"daily",wish:"Everyday stories in English"})});
+  const responses=await Promise.all([save(),save()]);assert.deepEqual(responses.map(r=>r.status).sort(),[200,409]);
+  assert.equal((await list(api))[0].revision,1);
+  const archive=await(await api.fetch("/api/backup")).arrayBuffer(), other=await target();await other.api.importBackup(archive);
+  assert.equal((await list(other.api))[0].setup_required,false);
+});

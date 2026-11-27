@@ -654,7 +654,7 @@ function changeChannelTab(tab) {
   if (!currentShow() || !["listen", "compose", "voice"].includes(tab)) return;
   captureDraft();
   stopPlayback();
-  state.tab = tab;
+  state.tab = currentShow().setup_required && tab === "voice" ? "compose" : tab;
   renderStudio();
   $("studio").scrollTop = 0;
 }
@@ -666,7 +666,9 @@ function renderStudio() {
   }
   const show = currentShow(),
     d = loadDraft(show),
-    fresh = !show;
+    fresh = !show,
+    setup = show?.setup_required === true;
+  if (setup && state.tab === "voice") state.tab = "compose";
   $("studio").innerHTML = `
         <header class="radio-heading ${fresh ? "" : "channel-heading"}"><div>${fresh ? `<p class="eyebrow">${tr("LETTERS, JUST FOR YOUR EARS")}</p>` : ""}
         ${fresh ? `<h1 class="series-hero-title"><span class="title-line">${escapeHtml(tr("开设一个栏目，"))}</span><span class="title-line">${escapeHtml(tr("一期一期听下去。"))}</span></h1>` : `<h1>${escapeHtml(show.title)}</h1>`}
@@ -706,9 +708,9 @@ function renderStudio() {
         <div id="channel-body">${
           show && state.tab === "listen"
             ? `<section class="episode-section"><div class="section-heading"><h2>${tr("栏目里的来信")}</h2><label class="mode-control"><span>${tr("播放模式")}</span><select id="channel-playback-mode" data-playback-mode>${playbackModeOptions()}</select></label></div><div id="episode-mount"></div></section>`
-            : show && state.tab === "compose"
+            : show && state.tab === "compose" && !setup
               ? lockedSeriesSummary(show)
-              : show
+              : show && !setup
                 ? ""
             : trHTML`
                 <form
@@ -716,6 +718,7 @@ function renderStudio() {
                   class="wish-card"
                   data-revision="${d.revision}"
                 >
+                  ${setup ? `<p class="hint">${escapeHtml(tr("这个导入栏目缺少制作主题。续作前请补全一次栏目设定；保存后固定，已有节目仍保留。"))}</p>` : ""}
                   ${trHTML`<label for="channel-title" class="wish-label">栏目名称</label>
                         <input id="channel-title" maxlength="80" required value="${escapeHtml(d.title || "")}" placeholder="${escapeHtml(tr("比如：周末小事电台"))}" />`}
                   ${themePicker(d.theme_id || "", d.custom_theme || "")}
@@ -749,7 +752,7 @@ function renderStudio() {
                       </details>`}
                   <div class="wish-actions wish-actions-create">
                     <p class="hint">
-                      ${tr("主题、语言、难度与声音一经开设就固定；点一下制作第一期。")}
+                      ${tr(setup ? "保存后固定用于后续新节目，已有节目不会重新制作。保存设定不调用模型。" : "主题、语言、难度与声音一经开设就固定；点一下制作第一期。")}
                     </p>
                     <button class="primary" id="make" type="submit">
                       ${tr("开设栏目并制作第一期")}
@@ -781,7 +784,7 @@ function renderStudio() {
     renderConflict();
     return;
   }
-  if (show && state.tab === "compose") {
+  if (show && state.tab === "compose" && !setup) {
     if ($("make-locked")) $("make-locked").onclick = () => makeEpisode();
     renderStatus();
     renderConflict();
@@ -789,7 +792,8 @@ function renderStudio() {
   }
   $("wish-form").onsubmit = (e) => {
     e.preventDefault();
-    makeEpisode();
+    if (setup) saveSeriesSetup();
+    else makeEpisode();
   };
   const syncThemeUI = () => {
     const selected =
@@ -895,7 +899,9 @@ function renderStatus() {
       ? tr("正在开始…")
       : job
         ? tr("正在制作…")
-        : currentShow()
+        : currentShow()?.setup_required
+          ? tr("保存栏目设定")
+          : currentShow()
           ? tr("制作新一期")
           : tr("开设栏目并制作第一期");
   }
@@ -939,7 +945,42 @@ function renderConflict() {
     renderStudio();
   };
 }
+async function saveSeriesSetup() {
+  const show = currentShow();
+  if (!show?.setup_required || state.saving || state.submitting) return;
+  captureDraft();
+  const values = formValues(), gate = seriesFormError(values);
+  if (gate) { notice(gate); return; }
+  state.saving = true;
+  renderStatus();
+  try {
+    const data = await api(`/api/shows/${show.id}/setup`, jsonRequest("POST", {
+      ...values, description: show.description || values.description,
+    }));
+    replaceShow(data.show);
+    writeLocal("draft:" + show.id, null);
+    writeLocal("pending:" + show.id, null);
+    if (state.current === show.id) {
+      state.tab = "listen";
+      renderStudio();
+    }
+    notice(tr("栏目设定已保存，可以制作新一期。"), "info");
+  } catch (e) {
+    if (e.status === 409 && e.show) state.conflict = { message: e.message, show: e.show };
+    renderConflict();
+    notice(e.message);
+  } finally { state.saving = false; renderStatus(); }
+}
 async function makeEpisode(retryEpisodeId = "", showId = state.current) {
+  const selected = state.shows.find(s => s.id === showId);
+  if (!retryEpisodeId && selected?.setup_required) {
+    state.current = showId;
+    state.tab = "compose";
+    renderStudio();
+    notice(tr("这个导入栏目缺少制作主题。续作前请补全一次栏目设定；保存后固定，已有节目仍保留。"), "info");
+    return;
+  }
+
   if (runtime && !runtime.hasKey()) {
     setView("settings");
     notice(tr("请先填写自己的 AI Studio API Key。收听愿望已保留。"), "info");
