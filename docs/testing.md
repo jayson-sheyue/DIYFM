@@ -10,6 +10,13 @@
 - 最终 APK 通过 **9 项原生集成测试**（隔离 API 36 ARM64 模拟器，1080×2400 / 420dpi），包含消息原文逐字一致、刷新保留、切换语言不改写和 HTML 不执行。
 - 安装包基于已在远端 main 的干净运行时 `d70f68f2f4ac` 构建。Mac Universal ZIP/DMG 的应用内容逐文件一致、严格 ad-hoc 签名、DMG checksum 通过；APK 维持原发布签名。最终上传白名单目录深度脱敏检查通过。实际签名 2.5.1 → 2.5.2 Android 覆盖安装保留合成频道、模型偏好、节目数量和 WAV SHA-256。
 
+### 2.5.2 发布与本机替换
+
+- [Release v2.5.2](https://github.com/jayson-sheyue/DIYFM/releases/tag/v2.5.2) 已公开，包含 APK、Universal DMG/ZIP 与 SHA256SUMS；tag 的运行时 `d70f68f2f4ac` 已合入远端 main。运行时 Pages 部署成功（Actions `45960655729`）。旧 Release 和旧校验文件未覆盖。
+- APK SHA-256：`4401f3acc02e5e39d61abdbac1b5c1d584feb54f72fb19bc420d4fce8a0e16cb`。DMG：`60ec2d18585ffed4e2f8124312ac4a695da18f488ae638093d9278fc3b4649f3`。ZIP：`dbcfb3129a179706c75dfe095a955abc89269dc9f59a227654e212bfa33fe7f2`。GitHub 上传 digest 与最终产物一致；发布过程中没有重建或替换包。
+- 重新下载公开 DMG 并匹配哈希；正常退出原 2.5.1 后，以同一公开包替换 `/Applications/DIYFM.app` 并启动。包内版本/修订、运行路径、签名与公开 DMG 应用逐文件一致性验证通过。只归档旧程序包，未读取或改写用户数据目录；真实 Mac 界面原有频道与本集仍可见，设置显示 `DIYFM 2.5.2 · macOS`。没有给用户节目库植入测试失败记录或发起真实模型请求。
+- 更新清单仅在公开包可下载后切换至 2.5.2；版本/清单测试 6 项及静态构建通过。后续清单/验证记录提交不改变已发布包。Mac 保持原有 ad-hoc 签名，未做 Apple 公证；无真实付费 API 失败调用、Intel 实机或实体 Android 设备验收。
+
 ## v2.5.1：TTS 正文边界与模型选择（2026-11-27）
 
 - `./scripts/check.sh`：39 项 Python 测试、118 项 JavaScript 测试及语法检查通过。新增回归覆盖英文/日文台词与表演指示分离、新旧 TTS 请求协议、自定义模型原样传递、设置持久化与恢复，以及旧试听/断点音频失效。
