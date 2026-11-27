@@ -189,6 +189,29 @@ public class ClientIntegrationTest {
             Thread.sleep(100);
         }
         assertTrue("Application document navigation did not complete",ready);
+        // Runtime/DOM creation precedes app.js handlers and the initial library/settings render.
+        boolean controlsReady=false;
+        for(int i=0;i<100;i++){
+            if(readJS(web,"!!document.getElementById('new-channel')?.onclick && !!document.getElementById('set-tts')?.value && !!document.querySelector('#play-featured, [data-play], #channel-title')").equals("true")){controlsReady=true;break;}
+            Thread.sleep(100);
+        }
+        assertTrue("Application controls did not finish initialization",controlsReady);
+    }
+    @Test public void modelPresetsAndCustomIDsSaveReloadAndRestore() throws Exception {
+        java.lang.reflect.Field field=MainActivity.class.getDeclaredField("web");field.setAccessible(true);WebView web=(WebView)field.get(activity.getActivity());
+        waitDocument(web);
+        String ui="window.__modelQA=null;(async()=>{const $=id=>document.getElementById(id);const check=(ok,msg)=>{if(!ok)throw Error(msg)};const wait=async fn=>{for(let i=0;i<100;i++){if(await fn())return;await new Promise(r=>setTimeout(r,50))}throw Error('Settings state timed out')};$('nav-settings').click();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));const preset=$('set-tts-preset');check([...preset.options].some(o=>o.value==='gemini-3.8-flash-tts'),'Current TTS preset missing');check([...preset.options].some(o=>o.value==='gemini-3.8-flash-lite-tts'),'Lite TTS preset missing');preset.value='gemini-3.8-flash-lite-tts';preset.dispatchEvent(new Event('change',{bubbles:true}));check($('set-tts').value===preset.value,'Preset did not update editable ID');$('set-tts').value='custom-native-tts';$('set-tts').dispatchEvent(new Event('input',{bubbles:true}));check(preset.value==='','Custom ID did not select custom mode');$('save-settings').click();await wait(async()=>(await(await window.DIYFM.fetch('/api/settings')).json()).settings.tts_model==='custom-native-tts');location.reload();})().catch(e=>window.__modelQA={error:e.message});";
+        main(()->{web.evaluateJavascript(ui,null);return new JSONObject();});
+        boolean reloaded=false;
+        for(int i=0;i<100;i++){
+            if(readJS(web,"typeof window.__modelQA==='undefined'&&document.getElementById('set-tts')?.value==='custom-native-tts'").equals("true")){reloaded=true;break;}
+            Thread.sleep(100);
+        }
+        assertTrue("Custom model ID did not survive reload",reloaded);
+        String restore="window.__modelQA=null;(async()=>{document.getElementById('nav-settings').click();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));document.getElementById('restore-settings').click();for(let i=0;i<100;i++){const config=await(await window.DIYFM.fetch('/api/settings')).json();if(config.settings.tts_model==='gemini-3.8-flash-tts'&&document.getElementById('set-tts').value==='gemini-3.8-flash-tts'){window.__modelQA={ok:true};return;}await new Promise(r=>setTimeout(r,50));}throw Error('Defaults not restored')})().catch(e=>window.__modelQA={error:e.message});";
+        main(()->{web.evaluateJavascript(restore,null);return new JSONObject();});
+        String raw="null";for(int i=0;i<100;i++){raw=readJS(web,"window.__modelQA");if(!raw.equals("null"))break;Thread.sleep(100);}
+        JSONObject result=new JSONObject(raw);assertFalse(result.toString(),result.has("error"));assertTrue(result.toString(),result.getBoolean("ok"));
     }
     String readJS(WebView web,String expression) throws Exception {
         CountDownLatch gate=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>("null");
