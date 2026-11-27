@@ -1,24 +1,24 @@
 {
   "format": "diyfm-releases",
   "version": 1,
-  "latest": "2.6.0",
+  "latest": "2.6.1",
   "published_at": "2026-11-27",
-  "notes_url": "https://github.com/jayson-sheyue/DIYFM/releases/tag/v2.6.0",
+  "notes_url": "https://github.com/jayson-sheyue/DIYFM/releases/tag/v2.6.1",
   "assets": {
     "android": {
-      "name": "DIYFM-2.6.0-android.apk",
-      "url": "https://github.com/jayson-sheyue/DIYFM/releases/download/v2.6.0/DIYFM-2.6.0-android.apk",
-      "sha256": "c52e3f2b5856897c5e18611e9b3395df6449b8d51b6248adefc20667de38677b"
+      "name": "DIYFM-2.6.1-android.apk",
+      "url": "https://github.com/jayson-sheyue/DIYFM/releases/download/v2.6.1/DIYFM-2.6.1-android.apk",
+      "sha256": "358e47531dbe82ab06d2d9dc267bc7425faf9fca9d48361f928510882607682e"
     },
     "mac_dmg": {
-      "name": "DIYFM-2.6.0-mac-universal.dmg",
-      "url": "https://github.com/jayson-sheyue/DIYFM/releases/download/v2.6.0/DIYFM-2.6.0-mac-universal.dmg",
-      "sha256": "92c2e525f9f2f0f7d027d293cb817cbe39cb0a04e3f309c7ac1f067bc4b3a31b"
+      "name": "DIYFM-2.6.1-mac-universal.dmg",
+      "url": "https://github.com/jayson-sheyue/DIYFM/releases/download/v2.6.1/DIYFM-2.6.1-mac-universal.dmg",
+      "sha256": "e2cf95f2ba5175a8aba92fecb1e02485730d992d5074af7078de7cc500a4d471"
     },
     "mac_zip": {
-      "name": "DIYFM-2.6.0-mac-universal.zip",
-      "url": "https://github.com/jayson-sheyue/DIYFM/releases/download/v2.6.0/DIYFM-2.6.0-mac-universal.zip",
-      "sha256": "8e232f7c1a729043937896f3a0fb1509a419b3fe85b05136ba7c93e9db08c3a4"
+      "name": "DIYFM-2.6.1-mac-universal.zip",
+      "url": "https://github.com/jayson-sheyue/DIYFM/releases/download/v2.6.1/DIYFM-2.6.1-mac-universal.zip",
+      "sha256": "f43f7338f731d0ff7869e7c2ab0f99523528d1a7324de63daa90d251eb0ac6e1"
     }
   }
 }
