@@ -22,8 +22,8 @@ import {
   trimSilencePCM,
   normalizeTurnPCM,
   RATE,
-} from "../static/audio.mjs?v=2.5.1";
-import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.5.1";
+} from "../static/audio.mjs?v=2.5.2";
+import { generate, validateEpisode, speechTurns } from "../static/harness.mjs?v=2.5.2";
 import {
   zipSync,
   strToU8,
@@ -287,8 +287,8 @@ test("modern speech keeps English and Japanese transcripts verbatim and directio
   assert.deepEqual(dual.input[0].content.map(p => [p.text, p.annotations[0].speaker]), [["Hello.\nA second line.", "Host"], ["Goodnight.", "Guest"]]);
   assert.equal(speechBody("Hello.", { single: true }).input[0].content[0].annotations[0].style, undefined);
   assert.throws(() => speechBody("Host:", {}), /台本/);
-  assert.throws(() => audioParts({ status: "failed", steps: [{ type: "model_output", content: [{ type: "audio", data: "partial" }] }] }), /台本/);
-  assert.throws(() => audioParts({ status: "completed", steps: [{ type: "model_output", content: [{ type: "text", text: "unsupported" }] }] }), /台本/);
+  assert.throws(() => audioParts({ status: "failed", steps: [{ type: "model_output", content: [{ type: "audio", data: "partial" }] }] }), /"status": "failed"/);
+  assert.throws(() => audioParts({ status: "completed", steps: [{ type: "model_output", content: [{ type: "text", text: "unsupported" }] }] }), /unsupported/);
 });
 test("legacy preview models keep their original generateContent protocol", async () => {
   for (const model of ["gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"]) {
@@ -561,7 +561,7 @@ test("required research without real sources fails before speech or script gener
   assert.equal(calls, 2);
 });
 test("episode metadata language is captured separately from the listening language", async () => {
-  const { i18n } = await import("../static/i18n.mjs?v=2.5.1");
+  const { i18n } = await import("../static/i18n.mjs?v=2.5.2");
   i18n.setLocale("ja");
   let seen;
   const gate = new Promise((resolve) => {
@@ -984,4 +984,73 @@ test('Japanese naturalness review uses the existing one-revision budget', async 
     return { text: JSON.stringify(calls === 2 ? draft : { passed: false, issues: ['仍然不自然'] }) };
   }), /内容检查未通过/);
   assert.equal(calls, 3, 'no unbounded rewrite loop or extra reviewer');
+});
+
+test("provider HTTP codes and response text survive unchanged except an echoed active key", async () => {
+  for (const code of [400, 401, 403, 404, 429, 500, 503]) {
+    const raw = '{\n "error": {"code": ' + code + ', "status": "PROVIDER_CODE", "message": "provider says exactly this", "details": [{"reason": "MODEL_ACCESS"}]}\n}\n';
+    await assert.rejects(googleRequest({ key: KEY }, "models/test-model:generateContent", {}, {
+      fetcher: async () => new Response(raw, { status: code, statusText: "Provider status" }),
+    }), error => error.httpStatus === code && error.message === `HTTP ${code} Provider status\n${raw}`);
+  }
+  for (const raw of ["service unavailable\nrequest: abc-123", "<html><script>doNotRun()</script>upstream failed</html>", ""]) {
+    await assert.rejects(googleRequest({ key: KEY }, "interactions", {}, {
+      fetcher: async () => new Response(raw, { status: 502 }),
+    }), error => error.message === `HTTP 502${raw ? '\n' + raw : ''}`);
+  }
+  const raw = JSON.stringify({ error: { message: KEY + ": original provider reason" } });
+  await assert.rejects(googleRequest({ key: KEY }, "interactions", {}, {
+    fetcher: async () => new Response(raw, { status: 403 }),
+  }), error => error.message === "HTTP 403\n" + raw.replace(KEY, "[REDACTED]"));
+});
+
+test("network failures expose their actual browser exception without inventing HTTP codes", async () => {
+  for (const exception of [new TypeError("Failed to fetch"), new DOMException("The operation was aborted.", "AbortError")]) {
+    await assert.rejects(googleRequest({ key: KEY }, "interactions", {}, { fetcher: async () => { throw exception; } }),
+      error => error.message === `${exception.name}: ${exception.message}` && error.httpStatus === undefined);
+  }
+});
+
+test("HTTP 200 provider failures, blocked/truncated content and malformed responses retain the original response", async () => {
+  const bodies = [
+    '{ "error": {"code": 13, "message": "provider failure", "status": "INTERNAL"} }\n',
+    '{ "status": "failed", "error": {"code": "MODEL_UNAVAILABLE", "message": "offline"} }',
+    '{ "candidates": [{"finishReason": "MAX_TOKENS", "content": {"parts": [{"text": "partial"}]}}] }',
+    '{ "promptFeedback": {"blockReason": "SAFETY"} }',
+    '<html>bad gateway from upstream</html>',
+  ];
+  for (const body of bodies) {
+    await assert.rejects(textResult({ key: KEY, models: DEFAULT_MODELS }, "test", {
+      request: (snap, path, payload) => googleRequest(snap, path, payload, { fetcher: async () => new Response(body, { status: 200 }) }),
+    }), error => error.message === `HTTP 200\n${body}`);
+  }
+});
+
+test("text and speech failures persist original provider errors; music failures retain the playable episode and raw diagnostics", async () => {
+  const raw = '{ "error": { "code": 404, "status": "NOT_FOUND", "message": "Exact provider reason: test-model is unavailable" } }';
+  const expected = `HTTP 404 Not Found\n${raw}`;
+  const request = (snap, path, body) => googleRequest(snap, path, body, { fetcher: async () => new Response(raw, { status: 404, statusText: "Not Found" }) });
+  for (const stage of ["text", "speech", "music"]) {
+    const { api, library, show } = await fixture({
+      request,
+      ...(stage === "text" ? { editor: async (_show, snap) => textResult(snap, "test", { request }) } : {}),
+      ...(stage === "speech" ? { synthesize: speech } : {}),
+      ...(stage === "music" ? { makeMusic: music } : {}),
+    });
+    // Reuse a real music preset rather than assuming a provider-specific style ID.
+    if (stage === "music") {
+      const presets = (await call(api, "/api/presets")).data;
+      const shows = await library.get("shows");
+      shows[0].music_style = presets.music.find(p => p.id !== "none").id;
+      await library.write([["shows", shows]]);
+    }
+    await call(api, `/api/shows/${show.id}/episodes`, "POST", episodeBody());
+    const result = await finished(api, show.id);
+    assert.equal(result.ep.status, stage === "music" ? "ready" : "failed");
+    assert.equal(stage === "music" ? result.ep.music_error : result.ep.error, expected);
+    const saved = (await library.get("shows"))[0].episodes[0];
+    assert.equal(stage === "music" ? saved.music_error : saved.error, expected);
+    const preview = await api.fetch("/api/voices/preview", jsonRequest("POST", { voice: "Puck", language: "en", force: true }));
+    if (stage === "speech") assert.equal((await preview.json()).message, expected);
+  }
 });

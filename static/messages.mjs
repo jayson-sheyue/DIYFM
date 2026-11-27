@@ -1,5 +1,5 @@
 // UI messages only. Source messages are stable keys, including legacy local errors.
-import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.5.1";
+import { SHARING_MESSAGES } from "./sharing-messages.mjs?v=2.5.2";
 export const MESSAGES = {
   ...SHARING_MESSAGES,
   "句子高亮为估算位置，可能略有偏差。": {"en": "Sentence highlighting is approximate and may be slightly off.", "ja": "文ごとのハイライト位置は推定のため、多少ずれることがあります。", "zh-CN": "句子高亮为估算位置，可能略有偏差。"},

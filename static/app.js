@@ -1534,12 +1534,16 @@ async function regenerateMusic() {
 }
 function inboxRows() {
   const episodes = state.shows.flatMap((s) =>
-    (s.episodes || []).map((ep) => ({
+    (s.episodes || []).flatMap((ep) => [{
       ...ep,
       showId: s.id,
       channelTitle: s.title,
       kind: "episode",
-    })),
+    }, ...(ep.music_error ? [{
+      id: ep.id + ":music", kind: "bgm", status: "failed",
+      title: tr("背景音乐"), channelTitle: s.title + " · " + tr("背景音乐"), showId: s.id,
+      created_at: ep.created_at, error: ep.music_error,
+    }] : [])]),
   );
   return [...episodes, ...state.tasks]
     .sort(
@@ -1566,7 +1570,7 @@ function renderInbox() {
               state.inboxTask === r.id &&
               r.status !== "ready" &&
               r.status !== "generating"
-                ? `<div class="inbox-failure"><p class="inbox-error">${escapeHtml(tr(r.error) || tr("制作未完成，请重试。"))}</p>${
+                ? `<div class="inbox-failure"><pre class="inbox-error">${escapeHtml(/^(?:HTTP \d{3}\b|[A-Za-z]+Error:)/.test(r.error || "") ? r.error : tr(r.error) || tr("制作未完成，请重试。"))}</pre>${
                     r.kind === "episode"
                       ? trHTML`<p class="hint">
                             愿望与已完成阶段保留。重试沿用本期原输入，使用当前模型配置。

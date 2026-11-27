@@ -10,7 +10,7 @@
 
 *Screenshots show the 2.5.0 web edition using public samples. The interface supports English, Japanese and Chinese; listening language is a separate choice. [Release notes](https://github.com/jayson-sheyue/DIYFM/releases).*
 
-Version **2.5.1** fixes spoken TTS directions and adds model presets with custom IDs across Web, macOS and Android.
+Version **2.5.2** displays original provider error bodies and HTTP status codes in Messages. Version 2.5.1 fixed spoken TTS directions and added model presets with custom IDs across Web, macOS and Android.
 
 ## Quick start
 
@@ -96,7 +96,7 @@ The Mac build is ad-hoc signed, without Apple notarization; macOS may block down
 - **Change the interface:** **Settings → Interface language → English / 日本語 / 中文**. First launch is English; your choice is remembered. This does not translate saved episodes or change the listening language.
 - **“I don't have a key.”** Use the homepage samples or Discover. A key is needed for production and uncached voice/music previews.
 - **“My key disappeared.”** This is expected after refreshing or quitting. Re-enable it for new production; saved audio remains playable.
-- **“Production failed.”** Open **Messages** for details and retry. Compatible completed stages are reused where possible; remaining calls may incur charges. If music alone fails, DIYFM keeps the voice-only episode.
+- **“Production failed.”** Open **Messages** and expand the failed item to see the HTTP status and original provider response, including error codes and details. Responses are not summarized or translated; an echoed active API key is redacted. Network failures show the original browser exception without an invented HTTP code. Original responses discarded by older versions cannot be recovered. Failed background music has its own message while the voice-only episode remains playable. Retry when appropriate. Compatible completed stages are reused where possible; remaining calls may incur charges. If music alone fails, DIYFM keeps the voice-only episode.
 - **“Where are my episodes?”** Each browser, device and client has its own local library. Clearing site/app data or uninstalling can remove it. Back up before moving or clearing data. MP3 files alone cannot restore the whole library.
 - **“Can I delete something?”** Use an episode's **···** menu for that episode, or **Channel options** for the whole channel. Deletion asks for confirmation and cannot be undone; export a backup first if needed.
 

@@ -1457,6 +1457,10 @@ p {
   font-size: 12px;
   overflow-wrap: anywhere;
   margin: 6px 0;
+  white-space: pre-wrap;
+  max-height: 360px;
+  overflow-y: auto;
+  user-select: text;
 }
 .inbox-failure .quiet {
   margin-top: 10px;

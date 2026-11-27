@@ -1,4 +1,4 @@
-import { i18n } from "./i18n.mjs?v=2.5.1";
+import { i18n } from "./i18n.mjs?v=2.5.2";
 import { Library } from "./library.mjs";
 import { PRESETS } from "./presets.mjs";
 import {
@@ -10,9 +10,9 @@ import {
   googleRequest,
   speech,
   music,
-} from "./gemini.mjs?v=2.5.1";
-import { generate, speechTurns } from "./harness.mjs?v=2.5.1";
-import { validTurnTiming } from "./transcript.mjs?v=2.5.1";
+} from "./gemini.mjs?v=2.5.2";
+import { generate, speechTurns } from "./harness.mjs?v=2.5.2";
+import { validTurnTiming } from "./transcript.mjs?v=2.5.2";
 import {
   RATE,
   partsBlob,
@@ -24,9 +24,9 @@ import {
   wavBlob,
   base64Bytes,
   encodeMP3,
-} from "./audio.mjs?v=2.5.1";
+} from "./audio.mjs?v=2.5.2";
 import { zipSync, unzipSync, strToU8, strFromU8 } from "./vendor/fflate.mjs";
-import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.5.1";
+import { encodeChannel, decodeChannel, isChannelPackage, provenance, parseCatalog, readBounded, sha256, SHARE_LIMIT, CATALOG_URL } from "./sharing.mjs?v=2.5.2";
 const uuid = () => crypto.randomUUID(),
   now = () => new Date().toISOString();
 const error = (message, status = 400) =>
@@ -325,7 +325,7 @@ export function createBrowserAPI({
               checkpoint,
               resume || {},
               (s, p, o) =>
-                import("./gemini.mjs?v=2.5.1").then((m) =>
+                import("./gemini.mjs?v=2.5.2").then((m) =>
                   m.textResult(s, p, { ...o, request: cloud }),
                 ),
             );
@@ -378,7 +378,7 @@ export function createBrowserAPI({
               );
               break;
             } catch (err) {
-              if (attempt < 3 && /HTTP (?:429|503)/.test(err?.message || "")) {
+              if (attempt < 3 && ([429, 503].includes(err.httpStatus) || /HTTP (?:429|503)\b/.test(err?.message || ""))) {
                 await sleep(retryBaseMs * 2 ** attempt);
                 continue;
               }
@@ -396,13 +396,15 @@ export function createBrowserAPI({
       const transcript_timing = { version: 1, gap: 0.22, durations: voice.map(block => block.length / RATE) };
       let musicPCM = null,
         musicNote = "",
+        musicError = "",
         musicSource = "none";
       if (show.music_style !== "none") {
         await phase("music");
         try {
           musicPCM = await blobPCM(await getMusic(show.music_style, snap));
           musicSource = "library";
-        } catch {
+        } catch (e) {
+          musicError = e.message || String(e);
           musicNote = "底乐未能生成，本期保留纯人声。可在声音设置重试底乐。";
           musicSource = "skipped";
         }
@@ -420,6 +422,7 @@ export function createBrowserAPI({
           bytes: wav.size,
           music_source: musicSource,
           music_note: musicNote,
+          music_error: musicError,
           error: "",
           title: content.title,
         });

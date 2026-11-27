@@ -17,6 +17,22 @@ export const MODEL_PRESETS = Object.freeze({
 // Separate old generated clips from requests using the corrected transcript contract.
 export const SPEECH_VERSION = "structured-tts-1";
 const ORIGIN = "https://generativelanguage.googleapis.com/v1beta/";
+const responses = new WeakMap();
+function rawError(message, key = "", httpStatus) {
+  // A provider may echo the credential in its error body. Never persist that value.
+  const clean = key ? String(message).split(key).join("[REDACTED]") : String(message);
+  const error = new Error(clean);
+  if (httpStatus !== undefined) error.httpStatus = httpStatus;
+  return error;
+}
+function responseError(payload, key = "") {
+  const response = payload && responses.get(payload);
+  return rawError(
+    `HTTP ${response?.status || 200}${response?.statusText ? ` ${response.statusText}` : ""}\n${response?.text ?? JSON.stringify(payload, null, 2)}`,
+    key,
+    response?.status || 200,
+  );
+}
 export function modelId(value) {
   if (typeof value !== "string" || !/^[a-z][a-z0-9._-]{1,119}$/.test(value))
     throw new Error("模型 ID 格式无效，请使用 AI Studio 支持的模型名称。");
@@ -71,50 +87,43 @@ export async function googleRequest(
   signal?.addEventListener("abort", abort, { once: true });
   const timer = setTimeout(abort, timeout);
   try {
-    const r = await fetcher(ORIGIN + path, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": snapshot.key,
-      },
-      ...(method === "GET" ? {} : { body: JSON.stringify(body) }),
-      signal: controller.signal,
-      credentials: "omit",
-      redirect: "error",
-      cache: "no-store",
-      referrerPolicy: "no-referrer",
-    });
+    let r;
+    try {
+      r = await fetcher(ORIGIN + path, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": snapshot.key,
+        },
+        ...(method === "GET" ? {} : { body: JSON.stringify(body) }),
+        signal: controller.signal,
+        credentials: "omit",
+        redirect: "error",
+        cache: "no-store",
+        referrerPolicy: "no-referrer",
+      });
+    } catch (e) {
+      throw rawError(`${e.name || "Error"}: ${e.message || String(e)}`, snapshot.key);
+    }
     if (!r.ok) {
-      const hints = {
-        400: "模型不支持此请求，或输入格式不合要求。请检查模型能力。",
-        401: "API Key 无效，请重新填写。",
-        403: "请检查 Key 权限、地区、API 限制和计费设置。",
-        404: "模型不存在或当前账户不可用，请检查设置。",
-        429: "配额或速率受限，请稍后重试。",
-      };
-      throw new Error(
-        `Google 请求失败（HTTP ${r.status}）。${hints[r.status] || "服务暂时不可用，请稍后重试。"}`,
-      );
+      let body;
+      try { body = await r.text(); }
+      catch (e) { body = `${e.name || "Error"}: ${e.message || String(e)}`; }
+      throw rawError(`HTTP ${r.status}${r.statusText ? ` ${r.statusText}` : ""}${body ? `\n${body}` : ""}`, snapshot.key, r.status);
     }
     if (Number(r.headers?.get("Content-Length")) > 80 * 1024 * 1024)
       throw new Error("模型结果过大，请缩短节目时长。");
-    return await r.json();
-  } catch (e) {
-    if (e.name === "AbortError")
-      throw new Error(
-        "Google 请求已超时或停止。已有台本和成片仍保留，可在消息中重试。",
-      );
-    if (e instanceof TypeError || e instanceof SyntaxError)
-      throw new Error(
-        "无法读取 Google 响应，请检查网络、浏览器限制或代理后重试。",
-      );
-    // Do not forward provider error bodies, request headers, or fetch exception messages.
-    if (
-      e.message?.startsWith("Google 请求失败") ||
-      e.message?.startsWith("模型结果过大")
-    )
-      throw e;
-    throw new Error("Google 请求未完成，请检查网络后重试。");
+    let text, payload;
+    try {
+      text = await r.text();
+      payload = JSON.parse(text);
+    } catch (e) {
+      throw rawError(`HTTP ${r.status}${r.statusText ? ` ${r.statusText}` : ""}\n${text ?? `${e.name || "Error"}: ${e.message || String(e)}`}`, snapshot.key, r.status);
+    }
+    if (payload && typeof payload === "object")
+      responses.set(payload, { status: r.status, statusText: r.statusText, text });
+    if (payload?.error || payload?.status === "failed") throw responseError(payload, snapshot.key);
+    return payload;
   } finally {
     clearTimeout(timer);
     signal?.removeEventListener("abort", abort);
@@ -136,14 +145,15 @@ export async function textResult(
     `models/${modelId(snapshot.models.llm_model)}:generateContent`,
     body,
   );
+  if (!payload || typeof payload !== "object") throw responseError(payload, snapshot.key);
   const c = payload.candidates?.[0];
   if (!c || (c.finishReason && c.finishReason !== "STOP"))
-    throw new Error("模型没有返回完整内容，本期未进入配音。");
+    throw responseError(payload, snapshot.key);
   const text = (c.content?.parts || [])
     .filter((p) => !p.thought)
     .map((p) => p.text || "")
     .join("");
-  if (!text.trim()) throw new Error("模型没有返回可用内容，本期未进入配音。");
+  if (!text.trim()) throw responseError(payload, snapshot.key);
   const grounding = c.groundingMetadata || {};
   const sources = (grounding.groundingChunks || []).flatMap((chunk) => {
     try {
@@ -168,9 +178,12 @@ export async function textResult(
     search_suggestions: grounding.searchEntryPoint?.renderedContent || "",
   };
 }
-export function audioParts(payload) {
+export function audioParts(payload, key = "") {
+  if (!payload || typeof payload !== "object") throw responseError(payload, key);
   if (payload.status && payload.status !== "completed")
-    throw new Error("模型没有返回可播放的音频，已保留台本。");
+    throw responseError(payload, key);
+  if (payload.error || payload.promptFeedback?.blockReason || (payload.candidates || []).some(c => c.finishReason && c.finishReason !== "STOP"))
+    throw responseError(payload, key);
   const modern = (payload.steps || [])
     .filter((s) => s.type === "model_output")
     .flatMap((s) => s.content || [])
@@ -187,7 +200,7 @@ export function audioParts(payload) {
       data: p.inlineData.data,
       mime: p.inlineData.mimeType || "audio/L16;rate=24000",
     }));
-  if (!parts.length) throw new Error("模型没有返回可播放的音频，已保留台本。");
+  if (!parts.length) throw responseError(payload, key);
   return parts;
 }
 const MALE_VOICES = new Set([
@@ -351,6 +364,7 @@ export async function speech(
       legacySpeechModel(model) ? `models/${model}:generateContent` : "interactions",
       speechBody(text, { ...options, model }),
     ),
+    snapshot.key,
   );
 }
 export async function music(snapshot, prompt, request = googleRequest) {
@@ -361,10 +375,12 @@ export async function music(snapshot, prompt, request = googleRequest) {
       " Instrumental only, no vocals, singing, speech or lyrics. Suitable as a quiet loop under spoken radio.",
     store: false,
   });
+  if (!payload || typeof payload !== "object") throw responseError(payload, snapshot.key);
   const blocks = (payload.steps || [])
     .filter((s) => s.type === "model_output")
     .flatMap((s) => s.content || []);
   const block = blocks.filter((b) => b.type === "audio" && b.data).at(-1);
-  if (!block) throw new Error("音乐模型没有返回音频，旧底乐仍保留。");
+  if (!block || (payload.status && payload.status !== "completed") || payload.error)
+    throw responseError(payload, snapshot.key);
   return { data: block.data, mime: block.mime_type || "audio/mpeg" };
 }
